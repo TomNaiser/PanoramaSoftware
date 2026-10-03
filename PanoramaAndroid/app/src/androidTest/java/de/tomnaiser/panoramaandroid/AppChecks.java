@@ -1,0 +1,311 @@
+package de.tomnaiser.panoramaandroid;
+
+import android.app.Instrumentation;
+import android.os.Bundle;
+import android.content.Context;
+import android.content.Intent;
+import java.util.*;
+
+/** Default checks are hardware-free; connectionCheck explicitly opts into HELLO/heartbeat diagnostics. */
+public final class AppChecks extends Instrumentation {
+    private int assertions;
+    private boolean connectionCheck;
+    private boolean abortPlanCheck;
+    private long connectionDelayMs=3000;
+    private boolean connectionSecure=true;
+    @Override public void onCreate(Bundle arguments) {
+        super.onCreate(arguments); connectionCheck=arguments!=null && "true".equals(arguments.getString("connectionCheck"));
+        abortPlanCheck=arguments!=null && "true".equals(arguments.getString("abortPlanCheck"));
+        if (arguments!=null && arguments.containsKey("connectionDelayMs")) connectionDelayMs=Long.parseLong(arguments.getString("connectionDelayMs"));
+        if (arguments!=null && arguments.containsKey("connectionTransport")) {
+            String transport=arguments.getString("connectionTransport");
+            if (!"secure".equals(transport) && !"insecure".equals(transport)) throw new IllegalArgumentException("connectionTransport: secure oder insecure");
+            connectionSecure="secure".equals(transport);
+        }
+        start();
+    }
+    @Override public void onStart() {
+        Bundle report = new Bundle();
+        int result=android.app.Activity.RESULT_OK;
+        Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
+        try {
+            if(abortPlanCheck) {
+                abortPlanChecks(context);
+                report.putString("stream","\nPASS: Realer Service: Einpunktplan geladen, STOP/STOPPED, CLEAR_RUN/IDLE, manuelle Freigabe. Kein START und kein Kamerabefehl.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if (connectionCheck) {
+                new ConnectionChecks().run(this,connectionDelayMs,connectionSecure);
+                report.putString("stream","\nPASS: Zwei Bluetooth-Sitzungen mit aktuellem Firmware-/Statusnachweis.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            storageChecks(context,name);
+            manualFeedbackChecks();
+            context.getSharedPreferences("settings",Context.MODE_PRIVATE).edit()
+                .putString("startPan","-40").putString("startTilt","10")
+                .putString("endPan","-30").putString("endTilt","5").commit();
+            android.app.Activity activity = launchActivity(context);
+            check(activity != null,"Activity startet");
+            android.app.KeyguardManager keyguard=context.getSystemService(android.app.KeyguardManager.class);
+            check(!keyguard.isKeyguardLocked(),"Handy vor UI-/Rotationstest entsperren");
+            android.app.Activity visible=activity;
+            mainCall(() -> visible.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
+            draftChecks(activity,true);
+            graphicalChecks(activity);
+            activity=landscapeChecks(activity);
+            ActivityMonitor recreated=addMonitor(MainActivity.class.getName(),null,false);
+            try {
+                android.app.Activity current=activity;
+                mainCall(current::recreate);
+                android.app.Activity replacement=recreated.waitForActivityWithTimeout(5000);
+                check(replacement!=null && replacement!=activity,"Activity-Neuerstellung abgeschlossen");
+                draftChecks(replacement,false);
+            } finally { removeMonitor(recreated); }
+            report.putString("stream", "\n"+assertions+" assertions passed: SQLite, XML/CSV, graphical touch/projection, saved plot, duplicate events, reconstruction, manual completion/quiet feedback, Activity recreation.\n");
+        } catch (Throwable error) {
+            report.putString("stream","\nFAILED: "+error.toString()+"\n"); result=android.app.Activity.RESULT_CANCELED;
+        } finally { context.deleteDatabase(name); }
+        finish(result,report);
+    }
+    @SuppressWarnings("unchecked")
+    private void draftChecks(android.app.Activity activity,boolean coldStart) throws Exception {
+        java.lang.reflect.Field inputField=MainActivity.class.getDeclaredField("inputs"); inputField.setAccessible(true);
+        java.lang.reflect.Field serviceField=MainActivity.class.getDeclaredField("service"); serviceField.setAccessible(true);
+        java.lang.reflect.Field planField=MainActivity.class.getDeclaredField("pendingPlan"); planField.setAccessible(true);
+        java.lang.reflect.Method calculate=MainActivity.class.getDeclaredMethod("calculate"); calculate.setAccessible(true);
+        java.lang.reflect.Method remove=MainActivity.class.getDeclaredMethod("removePlan"); remove.setAccessible(true);
+        awaitUi(() -> { try { return serviceField.get(activity)!=null; } catch(Exception ex) { throw new RuntimeException(ex); } });
+        mainCall(() -> {
+            try {
+                Map<String,android.widget.EditText> fields=(Map<String,android.widget.EditText>)inputField.get(activity);
+                PanoramaService service=(PanoramaService)serviceField.get(activity);
+                if(coldStart) {
+                    for(String key:new String[]{"startPan","startTilt","endPan","endTilt"})
+                        check(fields.get(key).getText().length()==0,"Frischer Start ignoriert alten Endpunkt "+key);
+                    fields.get("startPan").setText("-40"); fields.get("startTilt").setText("10");
+                    fields.get("endPan").setText("-30"); fields.get("endTilt").setText("5");
+                    calculate.invoke(activity);
+                    check(planField.get(activity)!=null,"Neuer Entwurf berechenbar");
+                    remove.invoke(activity);
+                } else {
+                    check(fields.get("endPan").getText().toString().equals("-30"),"Entwurf bei Activity-Neuerstellung erhalten");
+                    remove.invoke(activity);
+                }
+                for(String key:new String[]{"startPan","startTilt","endPan","endTilt"})
+                    check(fields.get(key).getText().length()==0,"Plan entfernen leert "+key);
+                check(planField.get(activity)==null && service.draftEndpoints.values().stream().allMatch(String::isEmpty),"Entfernen verwirft Rezept und Entwurf");
+                if(coldStart) {
+                    fields.get("startPan").setText("-40"); fields.get("startTilt").setText("10");
+                    fields.get("endPan").setText("-30"); fields.get("endTilt").setText("5");
+                    calculate.invoke(activity);
+                }
+            } catch(Exception ex) { throw new RuntimeException(ex); }
+        });
+    }
+    private android.app.Activity launchActivity(Context context) throws Exception {
+        ActivityMonitor monitor=addMonitor(MainActivity.class.getName(),null,false);
+        try {
+            mainCall(() -> context.startActivity(new Intent(context,MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK)));
+            android.app.Activity activity=monitor.waitForActivityWithTimeout(5000);
+            if(activity==null) throw new AssertionError("Activity-Start nach 5 s nicht abgeschlossen");
+            return activity;
+        } finally { removeMonitor(monitor); }
+    }
+    /** Explicit hardware opt-in: loads a stationary recipe, never starts it. */
+    private void abortPlanChecks(Context context) throws Exception {
+        android.app.Activity activity=launchActivity(context);
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("service"); field.setAccessible(true);
+        java.util.concurrent.atomic.AtomicReference<PanoramaService> reference=new java.util.concurrent.atomic.AtomicReference<>();
+        awaitUi(() -> { try { reference.set((PanoramaService)field.get(activity)); return reference.get()!=null; } catch(Exception ex) { throw new RuntimeException(ex); } });
+        PanoramaService service=reference.get();
+        mainCall(() -> {
+            android.bluetooth.BluetoothAdapter adapter=context.getSystemService(android.bluetooth.BluetoothManager.class).getAdapter();
+            android.bluetooth.BluetoothDevice target=null;
+            for(android.bluetooth.BluetoothDevice device:adapter.getBondedDevices()) if("RNBT-18E4".equals(device.getName())) target=device;
+            if(target==null) throw new AssertionError("Gekoppeltes RNBT-18E4 fehlt");
+            context.startForegroundService(new Intent(context,PanoramaService.class).putExtra("address",target.getAddress()));
+        });
+        awaitUi(() -> service.fresh() && !service.busy);
+        long run=System.currentTimeMillis()%2000000000+1;
+        mainCall(() -> {
+            check(service.state.state.equals("IDLE"),"Hardwaretest beginnt nur ohne bestehenden Auftrag");
+            service.loadPlan(PanoramaPlan.create(run,false,-service.state.pan/1000.0,service.state.tilt/1000.0,-service.state.pan/1000.0,service.state.tilt/1000.0,5,5,0,10,30,50,500,false));
+        });
+        awaitUi(() -> service.fresh() && !service.busy && service.state.state.equals("PLAN_READY") && service.state.runId==run);
+        mainCall(() -> { check(!service.manualAllowed(),"Geladener Plan sperrt manuelle Fahrt"); service.abortPlan(); });
+        awaitUi(() -> service.fresh() && !service.busy && !service.abortingPlan && service.state.state.equals("IDLE"));
+        mainCall(() -> {
+            check(service.manualAllowed(),"Nach Abbruch wieder manuelle Freigabe");
+            check(service.state.completed==0,"Abbruchtest ohne Aufnahme");
+        });
+    }
+    private void awaitUi(java.util.function.BooleanSupplier predicate) throws Exception {
+        for(int attempt=0;attempt<200;attempt++) {
+            java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+            mainCall(() -> ready.set(predicate.getAsBoolean()));
+            if(ready.get()) return;
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Erwarteter Gerätestand nach 20 s nicht erreicht");
+    }
+    @SuppressWarnings("unchecked")
+    private android.app.Activity landscapeChecks(android.app.Activity activity) throws Exception {
+        java.lang.reflect.Field previewField=MainActivity.class.getDeclaredField("preview"); previewField.setAccessible(true);
+        java.lang.reflect.Field inputField=MainActivity.class.getDeclaredField("inputs"); inputField.setAccessible(true);
+        java.lang.reflect.Field fineField=MainActivity.class.getDeclaredField("finePicker"); fineField.setAccessible(true);
+        PlanPreview before=(PlanPreview)previewField.get(activity);
+        Map<String,android.widget.EditText> inputs=(Map<String,android.widget.EditText>)inputField.get(activity);
+        String start=inputs.get("startPan").getText().toString(),end=inputs.get("endTilt").getText().toString();
+        double left=before.viewport.left,top=before.viewport.top;
+        int original=activity.getRequestedOrientation();
+        android.app.Activity rotated=rotate(activity,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        PlanPreview after=(PlanPreview)previewField.get(rotated);
+        android.widget.Spinner fine=(android.widget.Spinner)fineField.get(rotated);
+        for(int attempt=0;attempt<30 && after.getWidth()==0;attempt++) Thread.sleep(100);
+        mainCall(() -> {
+            int[] plotPosition=new int[2],controlPosition=new int[2];
+            after.getLocationOnScreen(plotPosition); fine.getLocationOnScreen(controlPosition);
+            check(controlPosition[1]>=plotPosition[1]+after.getHeight(),"Pfeilsteuerung im Querformat unter Grafik");
+            check(after.getWidth()>=rotated.getWindow().getDecorView().getWidth()*.85,"Pan-Grafik nutzt nahezu gesamte Displaybreite");
+            check(after.getWidth()>after.getHeight() && after.getHeight()>0,"Querformatgrafik nutzt breite Ansicht");
+            check(after.getHeight()>=after.alignmentHeight(),"Tilt-Zeichenfläche mindestens 25 mm hoch, unabhängig von Scrollhöhe");
+        });
+        Map<String,android.widget.EditText> restored=(Map<String,android.widget.EditText>)inputField.get(rotated);
+        check(restored.get("startPan").getText().toString().equals(start) && restored.get("endTilt").getText().toString().equals(end),"Panorama-Endpunkte nach Drehung erhalten");
+        check(after.viewport.left==left && after.viewport.top==top,"Grafikausschnitt nach Drehung erhalten");
+        return rotate(rotated,original);
+    }
+    private android.app.Activity rotate(android.app.Activity activity,int orientation) throws Exception {
+        ActivityMonitor monitor=addMonitor(MainActivity.class.getName(),null,false);
+        try {
+            mainCall(() -> activity.setRequestedOrientation(orientation));
+            android.app.Activity replacement=monitor.waitForActivityWithTimeout(500);
+            if(replacement==null) {
+                int actual=activity.getResources().getConfiguration().orientation;
+                boolean alreadyMatches=orientation==android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    || (orientation==android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE && actual==android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+                    || (orientation==android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT && actual==android.content.res.Configuration.ORIENTATION_PORTRAIT);
+                if(alreadyMatches) return activity;
+                replacement=monitor.waitForActivityWithTimeout(4500);
+            }
+            if(replacement==null) throw new AssertionError("Orientierungswechsel nach 5 s nicht abgeschlossen");
+            for(int attempt=0;attempt<30 && !replacement.hasWindowFocus();attempt++) Thread.sleep(100);
+            return replacement;
+        } finally { removeMonitor(monitor); }
+    }
+    /** Wait for our own operation, not for an idle UI receiving continuous telemetry. */
+    private void mainCall(Runnable action) throws Exception {
+        java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Throwable> error=new java.util.concurrent.atomic.AtomicReference<>();
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            try { action.run(); } catch(Throwable ex) { error.set(ex); } finally { done.countDown(); }
+        });
+        if(!done.await(5,java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("UI-Operation nach 5 s nicht abgeschlossen");
+        if(error.get()!=null) throw new AssertionError(error.get());
+    }
+    private void manualFeedbackChecks() throws Exception {
+        PanoramaService service = new PanoramaService();
+        service.message = "Bestätigt: Fahrziel angenommen";
+        service.commandFeedback("Geräteabfrage wird gesendet …",true,true);
+        service.commandFeedback("Bestätigt: Geräteabfrage angenommen",true,true);
+        check(service.message.equals("Bestätigt: Fahrziel angenommen"),"Hintergrundabfrage verändert Fahrmeldung nicht");
+        java.lang.reflect.Field tracker=PanoramaService.class.getDeclaredField("manualProgress"); tracker.setAccessible(true);
+        tracker.set(service,new ManualMoveProgress(40,22028,264)); service.manualMoving=true;
+        service.acceptManualEvent(new String[]{"41","3841000","13","0","0","IDLE","NONE","22000","200","21000","200","1000","0","0"});
+        service.acceptManualEvent(new String[]{"42","3841766","14","0","0","IDLE","NONE","22000","200","22700","200","-700","0","0"});
+        check(!service.manualMoving && service.message.equals("Manuelles Ziel erreicht"),"Firmware-Abschluss mit null stabilen Samples erkannt");
+        service.commandFeedback("Bestätigt: Geräteabfrage angenommen",true,true);
+        check(service.message.equals("Manuelles Ziel erreicht"),"Späte Abfragebestätigung überschreibt Abschluss nicht");
+        service.commandFeedback("Keine eindeutige Bestätigung",true,false);
+        check(service.message.equals("Keine eindeutige Bestätigung"),"Hintergrundfehler bleibt sichtbar");
+    }
+    @SuppressWarnings("unchecked")
+    private void graphicalChecks(android.app.Activity activity) throws Exception {
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("preview"); field.setAccessible(true);
+        PlanPreview view=(PlanPreview)field.get(activity);
+        java.lang.reflect.Field inputField=MainActivity.class.getDeclaredField("inputs"); inputField.setAccessible(true);
+        Map<String,android.widget.EditText> inputs=(Map<String,android.widget.EditText>)inputField.get(activity);
+        String oldPan=inputs.get("startPan").getText().toString(),oldTilt=inputs.get("startTilt").getText().toString();
+        java.lang.reflect.Method select=MainActivity.class.getDeclaredMethod("selectPage",int.class); select.setAccessible(true);
+        mainCall(() -> { try { select.invoke(activity,2); } catch(Exception ex) { throw new RuntimeException(ex); } });
+        for(int attempt=0;attempt<30 && view.getWidth()==0;attempt++) Thread.sleep(100);
+        check(view.getWidth()>0 && view.getHeight()>0,"Diagramm vor Touch gemessen");
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure=new java.util.concurrent.atomic.AtomicReference<>();
+        mainCall(() -> {
+            try {
+                PlanPreview ranges=new PlanPreview(activity);
+                DeviceState limits=new DeviceState(); limits.limitsKnown=true;
+                limits.panMin=-180000; limits.panMax=180000; limits.tiltMin=-45000; limits.tiltMax=50000;
+                ranges.setLive(limits,new RunPlotModel(),true);
+                ranges.alignmentRange(25);
+                check(ranges.viewport.bottom==-25 && ranges.viewport.top==25 && ranges.viewport.left==-180 && ranges.viewport.right==180,"Tilt ±25° bei vollem Pan-Bereich");
+                ranges.alignmentRange(45);
+                check(ranges.viewport.bottom==-45 && ranges.viewport.top==45,"Tilt ±45° auswählbar");
+                ranges.alignmentRange(0);
+                check(ranges.viewport.bottom==-45 && ranges.viewport.top==50,"Gesamter Tilt-Bereich folgt tatsächlichen Gerätegrenzen, positive Werte nach oben");
+                check(limits.tiltMin==-45000 && limits.tiltMax==50000,"Grafikstufen ändern keine Fahrgrenzen");
+                view.setEditMode(1); view.viewport.fit(-54,-50,-7,-1);
+                float d=activity.getResources().getDisplayMetrics().density;
+                float x=55*d+(view.getWidth()-69*d)*.25f,y=28*d+(view.getHeight()-76*d)*.25f;
+                double expectedPan=Math.rint(view.viewport.pan(.25)*1000)/1000, expectedTilt=Math.rint(view.viewport.tilt(.25)*1000)/1000;
+                long time=android.os.SystemClock.uptimeMillis();
+                android.view.MotionEvent down=android.view.MotionEvent.obtain(time,time,0,x,y,0),up=android.view.MotionEvent.obtain(time,time+20,1,x,y,0);
+                view.dispatchTouchEvent(down); view.dispatchTouchEvent(up); down.recycle(); up.recycle();
+                check(inputs.get("startPan").getText().toString().equals(oldPan) && inputs.get("startTilt").getText().toString().equals(oldTilt),"Touch verändert ohne Übernahme keinen Startpunkt");
+                check(view.selection.pending && Math.abs(view.selection.tilt-expectedTilt)<.002,"Beide Achsen frei als Vorschlag wählbar");
+                view.commitSelection();
+                check(Math.abs(Double.parseDouble(inputs.get("startPan").getText().toString())-expectedPan)<.002,"Touch schreibt Pan in echte Eingabe: Ist="+inputs.get("startPan").getText()+", Soll="+expectedPan+", Breite="+view.getWidth());
+                check(Math.abs(Double.parseDouble(inputs.get("startTilt").getText().toString())-expectedTilt)<.002,"Touch schreibt Tilt mit richtigem Vorzeichen");
+                android.os.Bundle saved=new android.os.Bundle(); view.zoom(.5); view.save(saved,"view");
+                PlanPreview restored=new PlanPreview(activity); restored.restore(saved,"view");
+                check(restored.viewport.left==view.viewport.left && restored.viewport.top==view.viewport.top,"Zoom und Ausschnitt wiederherstellbar");
+                view.setEditMode(3);
+                down=android.view.MotionEvent.obtain(time,time,0,x,y,0); up=android.view.MotionEvent.obtain(time,time+20,1,x,y,0);
+                String committed=inputs.get("startPan").getText().toString();
+                view.dispatchTouchEvent(down); view.dispatchTouchEvent(up); down.recycle(); up.recycle();
+                view.commitSelection();
+                check(inputs.get("startPan").getText().toString().equals(committed),"Fahrpunkt-Vorschlag verändert keine Panorama-Endpunkte");
+            } catch(Throwable ex) { failure.set(ex); }
+            finally { inputs.get("startPan").setText(oldPan); inputs.get("startTilt").setText(oldTilt); view.setEditMode(0); view.fit(); }
+        });
+        if(failure.get()!=null) throw new AssertionError(failure.get());
+    }
+    private void storageChecks(Context context,String name) throws Exception {
+        DeviceState state = new DeviceState();
+        PanoramaPlan plan = PanoramaPlan.create(5,false,0,0,10,-10,5,5,0,10,30,50,500,false);
+        try (CaptureStore store = new CaptureStore(context,name)) {
+            feed(store,state,"PLAN",plan.fields());
+            feed(store,state,"RUN_SEGMENT","5","0","0","0");
+            String[] image = {"1","5","1","0","0","0","0","0","0","123","456","0"};
+            feed(store,state,"IMAGE_COMPLETED",image); feed(store,state,"IMAGE_COMPLETED",image);
+            feed(store,state,"STATUS","5","RUNNING","MOVING","2","9","0","1","0","5000","0","0","0","2","NONE","2","0","1","2");
+            List<CaptureStore.Run> runs=store.runs(); check(runs.size()==1,"Ein Lauf");
+            String csv=store.export(runs.get(0).key,false), xml=store.export(runs.get(0).key,true);
+            check(csv.split("\n").length==3,"Eine gemessene und eine rekonstruierte Aufnahme");
+            check(csv.contains("RECONSTRUCTED_RASTER_TARGET"),"Rekonstruktion markiert");
+            CaptureStore.PlotSnapshot plot=store.plotSnapshot(runs.get(0).key);
+            check(plot.model.captures.size()==2 && plot.plan.runId==5,"Grafik liest gespeicherten Lauf ohne Zusatzaufnahme");
+            check(!plot.model.captures.get(0).reconstructed && plot.model.captures.get(1).reconstructed,"Grafik unterscheidet gemessen und rekonstruiert");
+            check(csv.contains("-0.123;0.456"),"Istposition in UI-Koordinaten, Tilt positiv nach oben");
+            check(count(xml,"<pict ")==2,"XML ohne Duplikate");
+            javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new java.io.ByteArrayInputStream(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            feed(store,state,"IMAGE_COMPLETED","2","5","2","0","1","0","1","0","5000","10","5010","0");
+            csv=store.export(runs.get(0).key,false);
+            check(!csv.contains("RECONSTRUCTED_RASTER_TARGET"),"Spätes Ereignis ersetzt Rekonstruktion");
+            check(csv.split("\n").length==3,"Ersetzen erzeugt keine Zusatzaufnahme");
+            feed(store,state,"MANUAL_IMAGE_TRIGGERED","3","5","1","2","10","5010","12000","0");
+            feed(store,state,"MANUAL_IMAGE_TRIGGERED","3","5","1","2","10","5010","12000","1");
+            check(store.export(runs.get(0).key,false).split("\n").length==4,"Manuelles Replay dedupliziert");
+            check(store.export(runs.get(0).key,false).contains("MEASURED_LIVE"),"Gemessene Daten bleiben erhalten");
+        }
+        try (CaptureStore reopened = new CaptureStore(context,name)) {
+            check(reopened.runs().size()==1,"Aufnahmen nach Datenbank-Neustart erhalten");
+        }
+    }
+    private static void feed(CaptureStore store,DeviceState state,String type,String... fields) throws Exception {
+        P2Codec.Frame frame=P2Codec.decode(P2Codec.encode(1,type,fields)); state.accept(frame,1000); store.accept("TEST_DEVICE",state,frame);
+    }
+    private void check(boolean condition,String name) { if (!condition) throw new AssertionError(name); assertions++; }
+    private static int count(String text,String part) { return text.split(java.util.regex.Pattern.quote(part),-1).length-1; }
+}

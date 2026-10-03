@@ -1,0 +1,188 @@
+package de.tomnaiser.panoramaandroid;
+
+import android.content.*;
+import android.database.Cursor;
+import android.database.sqlite.*;
+import java.io.IOException;
+import java.util.*;
+import org.json.*;
+
+/** Durable capture identities; XML and CSV are generated from the same ordered snapshot. */
+public final class CaptureStore extends SQLiteOpenHelper {
+    public static final class Run {
+        public final String key, title;
+        Run(String key, String title) { this.key = key; this.title = title; }
+        @Override public String toString() { return title; }
+    }
+    public CaptureStore(Context context) { super(context, "captures.db", null, 1); }
+    CaptureStore(Context context, String name) { super(context, name, null, 1); }
+    @Override public void onCreate(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE runs (id TEXT PRIMARY KEY,device TEXT,run_id TEXT,stamp TEXT,plan TEXT,segments TEXT,completed INTEGER DEFAULT 0)");
+        db.execSQL("CREATE TABLE captures (run TEXT,capture_key TEXT,payload TEXT,ordinal INTEGER,manual INTEGER,logged TEXT,PRIMARY KEY(run,capture_key))");
+        db.execSQL("CREATE INDEX capture_order ON captures(run,ordinal,manual)");
+    }
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) { throw new IllegalStateException("Unbekannte Datenbankversion"); }
+    private String group(String device, long runId) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT id FROM runs WHERE device=? AND run_id=? ORDER BY stamp DESC LIMIT 1",
+                new String[]{device, ""+runId})) { if (c.moveToFirst()) return c.getString(0); }
+        return newGroup(device, runId);
+    }
+    private String newGroup(String device, long runId) {
+        String id = UUID.randomUUID().toString();
+        ContentValues values = new ContentValues(); values.put("id", id); values.put("device", device);
+        values.put("run_id", ""+runId); values.put("stamp", java.time.Instant.now().toString());
+        values.put("segments", "[]"); getWritableDatabase().insertOrThrow("runs", null, values); return id;
+    }
+    public synchronized void accept(String device, DeviceState state, P2Codec.Frame frame) throws IOException {
+        String[] f = frame.fields;
+        if (!(frame.type.equals("PLAN") || frame.type.equals("RUN_SEGMENT") || frame.type.equals("STATUS")
+                || frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED"))) return;
+        try {
+            long runId = DeviceState.unsigned(frame.type.equals("STATUS") || frame.type.equals("PLAN") || frame.type.equals("RUN_SEGMENT") ? f[0] : f[1]);
+            String key = group(device, runId);
+            if (frame.type.equals("PLAN")) {
+                PanoramaPlan.parse(f);
+                ContentValues v = new ContentValues(); v.put("plan", String.join("|", f)); updateRun(key, v);
+            } else if (frame.type.equals("RUN_SEGMENT")) {
+                if (f.length != 4) return;
+                JSONArray segments = segments(key); int revision = Integer.parseInt(f[1]);
+                JSONObject segment = new JSONObject().put("revision", revision).put("start", DeviceState.unsigned(f[2])).put("count", DeviceState.unsigned(f[3]));
+                boolean found = false;
+                for (int i = 0; i < segments.length(); i++) if (segments.getJSONObject(i).getInt("revision") == revision) { segments.put(i, segment); found = true; break; }
+                if (!found) segments.put(segment);
+                ContentValues v = new ContentValues(); v.put("segments", segments.toString()); updateRun(key, v);
+            } else if (frame.type.equals("STATUS")) {
+                lastStatusCount = f[17];
+                long previous = completed(key);
+                if (state.completed < previous) {
+                    key = newGroup(device, runId);
+                    if (state.plan!=null) { ContentValues recipe = new ContentValues(); recipe.put("plan",String.join("|",state.plan.fields())); updateRun(key,recipe); }
+                }
+                ContentValues v = new ContentValues(); v.put("completed", state.completed); updateRun(key, v);
+                if (state.total > 0 && state.completed > 0 && state.completed != previous) reconstruct(key, state);
+            } else {
+                boolean manual = frame.type.equals("MANUAL_IMAGE_TRIGGERED");
+                if ((!manual && f.length != 12) || (manual && f.length != 8)) return;
+                DeviceState.unsigned(f[2]); DeviceState.unsigned(f[0]);
+                int positionIndex = manual ? 4 : 9;
+                Integer.parseInt(f[positionIndex]); Integer.parseInt(f[positionIndex + 1]);
+                String identity = manual ? "M-"+runId+"-"+f[0]+"-"+f[6] : "R-"+runId+"-"+f[2];
+                insert(key, identity, frame.type + "|" + String.join("|", f), DeviceState.unsigned(manual ? f[3] : f[2]), manual, true);
+            }
+        } catch (RuntimeException | JSONException ex) { throw new IOException("Aufnahmedaten: " + ex.getMessage(), ex); }
+    }
+    private void updateRun(String key, ContentValues values) { getWritableDatabase().update("runs", values, "id=?", new String[]{key}); }
+    private long completed(String key) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT completed FROM runs WHERE id=?", new String[]{key})) { return c.moveToFirst() ? c.getLong(0) : 0; }
+    }
+    private JSONArray segments(String key) throws JSONException {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT segments FROM runs WHERE id=?", new String[]{key})) { return c.moveToFirst() ? new JSONArray(c.getString(0)) : new JSONArray(); }
+    }
+    private void reconstruct(String key, DeviceState state) throws JSONException {
+        PanoramaPlan plan = null;
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT plan FROM runs WHERE id=?", new String[]{key})) {
+            if (c.moveToFirst() && !c.isNull(0)) plan = PanoramaPlan.parse(c.getString(0).split("\\|", -1));
+        }
+        if (plan == null) return;
+        JSONArray segments = segments(key);
+        List<long[]> ordered = new ArrayList<>();
+        for (int i = 0; i < segments.length(); i++) {
+            JSONObject segment = segments.getJSONObject(i);
+            int rev = segment.getInt("revision");
+            long count = rev == state.revision ? DeviceState.unsigned(lastStatusCount) : segment.getLong("count");
+            ordered.add(new long[]{rev, segment.getLong("start"), count});
+        }
+        ordered.sort(Comparator.comparingLong(a -> a[0]));
+        // Absence of segments is only reconstructible for the original, unrevised recipe.
+        if (ordered.isEmpty() && state.revision == 0) ordered.add(new long[]{0, 0, state.completed});
+        long capture = 0; int generated = 0;
+        Set<String> existing = new HashSet<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT capture_key FROM captures WHERE run=? AND manual=0", new String[]{key})) {
+            while (c.moveToNext()) existing.add(c.getString(0));
+        }
+        SQLiteDatabase db = getWritableDatabase(); db.beginTransaction();
+        try {
+            for (long[] segment : ordered) for (long offset = 0; offset < segment[2] && capture < state.completed; offset++) {
+                capture++; long index = segment[1] + offset;
+                if (index >= plan.total() || ++generated > 100000) break;
+                if (existing.contains("R-"+plan.runId+"-"+capture)) continue;
+                int[] t = plan.target((int)index);
+                String[] f = {"0", ""+plan.runId, ""+capture, ""+segment[0], ""+index, ""+t[2], ""+t[3],
+                    ""+t[0], ""+t[1], ""+t[0], ""+t[1], "1"};
+                insert(key, "R-"+plan.runId+"-"+capture, "IMAGE_COMPLETED|"+String.join("|", f), capture, false, false);
+            }
+            db.setTransactionSuccessful();
+        } finally { db.endTransaction(); }
+    }
+    private String lastStatusCount = "0";
+    private void insert(String run, String identity, String payload, long ordinal, boolean manual, boolean measured) {
+        ContentValues v = new ContentValues(); v.put("run", run); v.put("capture_key", identity);
+        v.put("payload", payload); v.put("ordinal", ordinal); v.put("manual", manual ? 1 : 0);
+        v.put("logged", java.time.Instant.now().toString());
+        if (measured) {
+            try (Cursor c = getReadableDatabase().rawQuery("SELECT payload FROM captures WHERE run=? AND capture_key=?", new String[]{run, identity})) {
+                if (c.moveToFirst() && !c.getString(0).endsWith("|1")) return;
+            }
+        }
+        getWritableDatabase().insertWithOnConflict("captures", null, v, measured ? SQLiteDatabase.CONFLICT_REPLACE : SQLiteDatabase.CONFLICT_IGNORE);
+    }
+    public synchronized List<Run> runs() {
+        List<Run> result = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT id,run_id,stamp,device,completed,(SELECT count(*) FROM captures WHERE run=runs.id AND manual=0) FROM runs WHERE id IN (SELECT run FROM captures) ORDER BY stamp DESC", null)) {
+            while (c.moveToNext()) result.add(new Run(c.getString(0), "Lauf " + c.getString(1) + " · " + c.getString(2) + " · " + c.getString(3) + " · Raster " + c.getLong(5) + "/" + c.getLong(4)));
+        }
+        return result;
+    }
+    synchronized List<RunPlotModel.Capture> plotCaptures(String device,long runId) {
+        List<RunPlotModel.Capture> result=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT capture_key,payload FROM captures WHERE run=(SELECT id FROM runs WHERE device=? AND run_id=? ORDER BY stamp DESC LIMIT 1) ORDER BY ordinal DESC,manual DESC,logged DESC LIMIT 512",new String[]{device,""+runId})) {
+            while(c.moveToNext()) result.add(RunPlotModel.Capture.parse(c.getString(0),c.getString(1)));
+        }
+        Collections.reverse(result); return result;
+    }
+    static final class PlotSnapshot {
+        final PanoramaPlan plan; final RunPlotModel model;
+        PlotSnapshot(PanoramaPlan plan,RunPlotModel model) { this.plan=plan; this.model=model; }
+    }
+    synchronized PlotSnapshot plotSnapshot(String key) {
+        PanoramaPlan plan=null; RunPlotModel model=new RunPlotModel();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT run_id,plan FROM runs WHERE id=?",new String[]{key})) {
+            if(!c.moveToFirst()) throw new IllegalArgumentException("Gespeicherter Lauf fehlt");
+            model.runId=Long.parseLong(c.getString(0));
+            if(!c.isNull(1)) plan=PanoramaPlan.parse(c.getString(1).split("\\|",-1));
+        }
+        List<RunPlotModel.Capture> result=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT capture_key,payload FROM captures WHERE run=? ORDER BY ordinal DESC,manual DESC,logged DESC LIMIT 512",new String[]{key})) {
+            while(c.moveToNext()) result.add(RunPlotModel.Capture.parse(c.getString(0),c.getString(1)));
+        }
+        Collections.reverse(result); model.captures=result; return new PlotSnapshot(plan,model);
+    }
+    public synchronized String export(String key, boolean xml) {
+        StringBuilder out = new StringBuilder(xml ? "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<papywizard version=\"c\"><header/><shoot>\n"
+            : "picture_id;camera_file_order;capture_key;run_id;event_sequence;capture_sequence;raster_capture_count;plan_revision;image_index;column;row;capture_type;position_source;device_time_ms;logged_utc;target_yaw_deg;target_pitch_deg;actual_yaw_deg;actual_pitch_deg\n");
+        int id = 0;
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT capture_key,payload,logged FROM captures WHERE run=? ORDER BY ordinal,manual,logged,capture_key", new String[]{key})) {
+            while (c.moveToNext()) {
+                String[] p = c.getString(1).split("\\|", -1); String[] f = Arrays.copyOfRange(p, 1, p.length);
+                boolean manual = p[0].equals("MANUAL_IMAGE_TRIGGERED"), reconstructed = f[manual ? 7 : 11].equals("1");
+                String yaw = degrees(f[manual ? 4 : 9]), pitch = tiltDegrees(f[manual ? 5 : 10]);
+                if (xml) out.append("<pict id=\"").append(id).append("\" bracket=\"1\"><time>").append(c.getString(2))
+                    .append("</time><position pitch=\"").append(pitch).append("\" yaw=\"").append(yaw)
+                    .append("\" roll=\"0\"/></pict>\n");
+                else {
+                    String[] fields = {""+id, ""+(id+1), c.getString(0), f[1], f[0], f[2], manual ? f[3] : f[2],
+                        manual ? "" : f[3], manual ? "" : f[4], manual ? "" : f[5], manual ? "" : f[6], manual ? "MANUAL" : "RASTER",
+                        reconstructed ? (manual ? "STORED_MANUAL_POSITION" : "RECONSTRUCTED_RASTER_TARGET") : "MEASURED_LIVE",
+                        manual ? f[6] : "", c.getString(2), manual ? "" : degrees(f[7]), manual ? "" : tiltDegrees(f[8]),
+                        reconstructed && !manual ? "" : yaw, reconstructed && !manual ? "" : pitch};
+                    out.append(String.join(";", fields)).append('\n');
+                }
+                id++;
+            }
+        }
+        if (xml) out.append("</shoot></papywizard>\n");
+        return out.toString();
+    }
+    private static String degrees(String text) { return String.format(Locale.ROOT, "%.3f", -Integer.parseInt(text) / 1000.0); }
+    private static String tiltDegrees(String text) { return String.format(Locale.ROOT,"%.3f",Integer.parseInt(text)/1000.0); }
+}
