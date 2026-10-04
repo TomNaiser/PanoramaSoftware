@@ -1,10 +1,12 @@
 # PanoramaControl für Android
 
-Stand: 3. Oktober 2026. App **0.6.2** ist auf dem Pixel 7 Pro installiert; Firmware **2.3.5** auf dem Nano R4. 52 Pixel-Instrumentierungsassertions bestehen. Die physische ↑-Richtung wurde vom Benutzer bestätigt; Nullsetzen, Speicherung nach Firmware-Neustart und Rücksetzen wurden am Gerät geprüft. Verbindung über RNBT-18E4/BlueSMiRF (Bluetooth Classic SPP). Die Firmware bleibt die maßgebliche Instanz für Bewegung, Kamera, Sicherheitsgrenzen und Fortschritt.
+Stand: 4. Oktober 2026. App **0.6.3** ist auf dem Pixel 7 Pro installiert, Firmware **2.3.7** auf dem Nano R4. **99 Pixel-Instrumentierungsprüfungen bestanden**. Direktes Anfahren, ↑-Richtung mit Halt und Pfeilnavigation ohne Auftragsverlust sind am Aufbau bestätigt. Der Sony-400-mm-Lauf endete mit **8/8 Aufnahmen**; Pfeiltippen während der Aufnahme beeinflusste den Lauf nicht. Die übernommenen 200‰ waren am Aufbau zu niedrig, mit 1000‰ gelang der Lauf. Firmware 2.3.7 stoppt beide Motorausgänge bei fehlender oder unvollständiger Encoderrückmeldung. Details: [Direktnavigation und Abnahme](NAVIGATION-2026-10-04.md). Verbindung über RNBT-18E4/BlueSMiRF (Bluetooth Classic SPP). Die Firmware bleibt die maßgebliche Instanz für Bewegung, Kamera, Sicherheitsgrenzen und Fortschritt.
 
 Die [UI-Abnahme von 0.6.1](UI-ABNAHME-2026-10-03.md) dokumentiert den Sony-400-mm-Lauf mit zwölf bestätigten Auslösungsereignissen, leeren Plan nach Neustart, erhaltenen Entwurf nach Reconnect und Entfernen mit einem Tastendruck. Der [Tilt-Nachtrag](TILT-REFERENZ-2026-10-03.md) beschreibt Richtungskorrektur, Nullpunkt und aktuellen Prüfstand. Nachfolgende ältere Testblöcke beschreiben ihren jeweiligen damaligen Stand.
 
 ## Funktionen
+
+Neu in **0.6.3 / Firmware 2.3.6**: Punkt im Diagramm antippen, dann **▶ Anfahren** direkt neben dem Punkt drücken; kein zusätzlicher Bestätigungsdialog. **×** verwirft die Auswahl. Die Pfeilleiste bleibt unten auf **Plan** und **Manuell** sichtbar, auch beim Scrollen. Pfeile löschen oder stoppen keinen Auftrag. In PAUSED bleibt der Lauf erhalten; 2.3.6 erlaubt zusätzlich Fahrten in PLAN_READY, STOPPED und COMPLETED. Während der Aufnahme und aktiver Timelapse sind die Pfeile gesperrt. Details und aktueller Teststand: [Direktnavigation](NAVIGATION-2026-10-04.md).
 
 - **Gerät:** gekoppelte Geräte, getrennte Bluetooth-/Protokollzustände, Zeitlimits und begrenzter Reconnect, numerische Grenzen und Live-Status.
 - **Manuell:** Pfeilfahrt mit Schrittweite, bestätigte Ziele getrennt von Istpositionen, Kamera-Test mit Pulsdauer und Bewegungsdiagnose.

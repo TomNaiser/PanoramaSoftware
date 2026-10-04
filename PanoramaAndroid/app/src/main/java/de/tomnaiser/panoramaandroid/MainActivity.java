@@ -36,6 +36,7 @@ public final class MainActivity extends Activity {
     private Spinner finePicker;
     private Button tiltRangeButton;
     private Button alignmentReset;
+    private LinearLayout navigationBar;
     private final List<Button> tabs=new ArrayList<>();
     private TextView endpointSummary, alignmentHint, runProgress, activeProfile;
     private TextView tiltReference;
@@ -171,14 +172,9 @@ public final class MainActivity extends Activity {
         manual.addView(text("Pfeile fahren zum nächsten Ziel. Loslassen stoppt keine Fahrt; dafür Not-Stop verwenden.",14));
         TextView manualHint=text("",14); manualHint.setTag("alignmentHint"); manual.addView(manualHint);
         button(manual,"Gestoppten Auftrag zurücksetzen",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
-        input(manual,"step","Schrittweite (°)","1");
-        arrowButton(manual,"↑","Tilt erhöhen",() -> service.move(0,stepSize()));
-        LinearLayout arrows=new LinearLayout(this); manual.addView(arrows);
-        arrowButton(arrows,"←","Pan nach links",() -> service.move(stepSize(),0));
-        arrowButton(arrows,"→","Pan nach rechts",() -> service.move(-stepSize(),0));
-        arrowButton(manual,"↓","Tilt verringern",() -> service.move(0,-stepSize()));
+        input(manual,"step","Eigene Schrittweite (°) · unten auswählen","1");
         input(manual,"pulse","Kamera-Puls (ms)","30");
-        button(manual,"Kamera einmal auslösen",() -> service.trigger(integer("pulse")),() -> positionReady() && service.state.positionSafe());
+        button(manual,"Kamera einmal auslösen",() -> service.trigger(integer("pulse")),() -> service!=null && service.manualAllowed() && !service.manualMoving && service.state.positionSafe());
         button(manual,"Bewegungsdiagnose",() -> service.command("GET_DIAGNOSTICS"),this::ready);
         button(pages[2],"Plan entfernen",this::removePlan,() -> service==null || !service.hasConnection() || (ready() && !service.manualMoving && !service.manualTrigger && (service.state.state.equals("IDLE") || PlanAbort.allowed(service.state.state))));
         LinearLayout camera=card(pages[2],"1 · Kamera wählen");
@@ -208,25 +204,13 @@ public final class MainActivity extends Activity {
         tiltRangeButton.setTextSize(12); tiltRangeButton.setLayoutParams(new LinearLayout.LayoutParams(dp(130),dp(landscape?48:56)));
         preview=new PlanPreview(this); graph.addView(preview,new LinearLayout.LayoutParams(-1,Math.max(dp(210),preview.alignmentHeight())));
         preview.setProposalListener(this::updateProposal);
+        preview.setDriveAction(() -> safely(this::driveSelection));
         preview.setListener((start,pan,tilt) -> {
             String prefix=start?"start":"end";
             inputs.get(prefix+"Pan").setText(""+pan); inputs.get(prefix+"Tilt").setText(""+tilt);
             refreshEndpoints(); schedulePlot();
         });
-        LinearLayout arrowsTop=new LinearLayout(this); steering.addView(arrowsTop);
-        finePicker=new Spinner(this); finePicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"0,1°","0,5°","1°"}));
-        finePicker.setSelection(preferences.getInt("fineStep",0)); arrowsTop.addView(finePicker,new LinearLayout.LayoutParams(0,dp(56),1));
-        arrowButton(arrowsTop,"↑","Tilt erhöhen",() -> fineMove(0,fineStep()));
-        arrowButton(arrowsTop,"↓","Tilt verringern",() -> fineMove(0,-fineStep()));
-        LinearLayout arrowsPan=landscape?arrowsTop:new LinearLayout(this); if(!landscape) steering.addView(arrowsPan);
-        arrowButton(arrowsPan,"←","Pan nach links",() -> fineMove(fineStep(),0));
-        arrowButton(arrowsPan,"→","Pan nach rechts",() -> fineMove(-fineStep(),0));
-        LinearLayout remember=landscape?arrowsTop:new LinearLayout(this);
-        LinearLayout driveActions=remember;
-        if(!landscape) { driveActions=new LinearLayout(this); steering.addView(driveActions); }
-        primary(button(driveActions,landscape?"Anfahren":"Punkt anfahren",this::driveSelection,() -> preview.editMode()==3 && preview.selection.pending && positionReady()));
-        if(!landscape) button(driveActions,"Auswahl verwerfen",preview::discardSelection,() -> preview.selection.pending);
-        if(!landscape) steering.addView(remember);
+        LinearLayout remember=new LinearLayout(this); steering.addView(remember);
         button(remember,"Start merken",() -> takePosition("start"),() -> positionReady() && service.state.positionSafe());
         button(remember,"Ende merken",() -> takePosition("end"),() -> positionReady() && service.state.positionSafe());
         endpointSummary=text("",14); plan.addView(endpointSummary);
@@ -234,7 +218,6 @@ public final class MainActivity extends Activity {
         button(revisit,"Start anfahren",() -> driveEndpoint("start"),() -> positionReady() && endpointSet("start"));
         button(revisit,"Ende anfahren",() -> driveEndpoint("end"),() -> positionReady() && endpointSet("end"));
         if(landscape) {
-            finePicker.getLayoutParams().height=dp(48);
             for(int rowIndex=0;rowIndex<steering.getChildCount();rowIndex++) {
                 View row=steering.getChildAt(rowIndex);
                 if(row instanceof LinearLayout) for(int child=0;child<((LinearLayout)row).getChildCount();child++) {
@@ -320,6 +303,16 @@ public final class MainActivity extends Activity {
         input(tiltSetup,"tiltMax","Tilt-Obergrenze (°)","50");
         button(tiltSetup,"Vermessene Tilt-Grenzen speichern",this::setTiltLimits,this::tiltCalibrationReady);
         tiltSetup.addView(text("Grenzen erst nach mechanischer Vermessung mit montiertem Objektiv und Steckern ändern.",14));
+        navigationBar=new LinearLayout(this); navigationBar.setTag("navigationBar");
+        navigationBar.setPadding(0,dp(4),0,dp(4)); root.addView(navigationBar);
+        finePicker=new Spinner(this); finePicker.setContentDescription("Schrittweite für Pfeile");
+        finePicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"0,1°","0,5°","1°","Eigene"}));
+        finePicker.setSelection(Math.max(0,Math.min(3,preferences.getInt("fineStep",0))));
+        navigationBar.addView(finePicker,new LinearLayout.LayoutParams(0,dp(56),1.3f));
+        arrowButton(navigationBar,"←","Pan nach links",() -> fineMove(fineStep(),0));
+        arrowButton(navigationBar,"→","Pan nach rechts",() -> fineMove(-fineStep(),0));
+        arrowButton(navigationBar,"↑","Tilt erhöhen",() -> fineMove(0,fineStep()));
+        arrowButton(navigationBar,"↓","Tilt verringern",() -> fineMove(0,-fineStep()));
         for(Map.Entry<String,EditText> entry:inputs.entrySet()) {
             String key=entry.getKey();
             if(key.equals("step") || key.equals("pulse") || key.equals("interval") || key.equals("tlPulse") || key.startsWith("tilt")) continue;
@@ -370,7 +363,7 @@ public final class MainActivity extends Activity {
         return "Punkt wählen · Start S blau / Ende E rot\nZum Anfahren mit dem Gerät verbinden";
     }
     private boolean positionReady() { return manualReady() && !service.manualMoving && !service.manualTrigger; }
-    private boolean canStartLoadedPlan() { return ready() && service.state.positionSafe() && service.state.state.equals("PLAN_READY") && service.state.plan!=null; }
+    private boolean canStartLoadedPlan() { return ready() && !service.manualMoving && !service.manualTrigger && service.state.positionSafe() && service.state.state.equals("PLAN_READY") && service.state.plan!=null; }
     private boolean canStartLocalPlan() { return canStartLoadedPlan() && !preview.selection.pending && pendingPlan!=null && pendingPlan.sameRecipe(service.state.plan); }
     private void startLoadedPlan() {
         if(!canStartLoadedPlan()) throw new IllegalArgumentException("Zuerst einen Plan übertragen und dessen Bestätigung abwarten");
@@ -400,7 +393,7 @@ public final class MainActivity extends Activity {
     private boolean endpointSet(String prefix) {
         try { number(prefix+"Pan"); number(prefix+"Tilt"); return true; } catch(RuntimeException ex) { return false; }
     }
-    private double fineStep() { return new double[]{.1,.5,1}[finePicker.getSelectedItemPosition()]; }
+    private double fineStep() { int selected=finePicker.getSelectedItemPosition(); return selected==3?stepSize():new double[]{.1,.5,1}[selected]; }
     private void fineMove(double pan,double tilt) { preview.discardSelection(); service.move(pan,tilt); }
     private void driveSelection() {
         if(!preview.selection.pending || preview.editMode()!=3) throw new IllegalArgumentException("Zuerst einen Fahrpunkt wählen");
@@ -409,10 +402,7 @@ public final class MainActivity extends Activity {
     private void driveEndpoint(String prefix) { driveUiPoint(number(prefix+"Pan"),number(prefix+"Tilt")); }
     private void driveUiPoint(double pan,double tilt) {
         if(!positionReady()) throw new IllegalArgumentException("Zuerst aktuelle Zielankunft abwarten");
-        double delta=tilt-service.state.tilt/1000.0;
-        Runnable drive=() -> { service.moveToUi(pan,tilt); preview.discardSelection(); };
-        if(Math.abs(delta)>5) confirm("Große Tilt-Änderung anfahren?",String.format(Locale.GERMANY,"Ziel Pan %.3f° · Tilt %.3f°\nTilt ändert sich um %+.3f°. Gewählten Bildausschnitt prüfen.",pan,tilt,delta),drive);
-        else drive.run();
+        service.moveToUi(pan,tilt); preview.discardSelection();
     }
     private void refreshEndpoints() {
         try {
@@ -441,9 +431,10 @@ public final class MainActivity extends Activity {
         view.setText(endpoint && !restoreEndpoints?"":preferences.getString(key,fallback)); inputs.put(key,view); parent.addView(view); return view;
     }
     private boolean ready() { return service!=null && service.fresh() && !service.busy && !service.abortingPlan; }
-    private boolean manualReady() { return service!=null && service.manualAllowed() && service.state.confirmed && !service.manualMoving; }
+    private boolean manualReady() { return service!=null && service.navigationAllowed() && selectedPage!=3; }
     private void selectPage(int index) {
         selectedPage=Math.max(0,Math.min(4,index));
+        navigationBar.setVisibility(selectedPage==1 || selectedPage==2?View.VISIBLE:View.GONE);
         for (int i=0;i<pages.length;i++) ((View)pages[i].getParent()).setVisibility(i==selectedPage ? View.VISIBLE : View.GONE);
         for(int i=0;i<tabs.size();i++) { Button tab=tabs.get(i); tab.setSelected(i==selectedPage); tab.setTextColor(i==selectedPage?Color.WHITE:MUTED); tab.setBackgroundTintList(ColorStateList.valueOf(i==selectedPage?ACCENT:Color.rgb(226,234,239))); }
         if (selectedPage==4 && service!=null) refreshRuns();
@@ -471,7 +462,6 @@ public final class MainActivity extends Activity {
         message.setText(service==null ? "Bereit" : service.message);
         boolean loadedForAlignment=service!=null && service.fresh() && service.state.state.equals("PLAN_READY");
         if(alignmentReset!=null) alignmentReset.setVisibility(service!=null && service.fresh() && PlanAbort.allowed(service.state.state)?View.VISIBLE:View.GONE);
-        if(selectedPage==2 && loadedForAlignment) message.setText("Geräteauftrag geladen · zum Ausrichten zurücksetzen");
         if(planDeviceStatus!=null) planDeviceStatus.setText(service==null || !service.fresh()?"Zum Übertragen mit dem Gerät verbinden":loadedForAlignment?(canStartLocalPlan()?"✓ Plan bestätigt · Aufnahme jetzt starten":"Plan auf dem Handy geändert oder Auswahl offen. Auftrag zurücksetzen und aktuellen Plan übertragen."):service.state.state.equals("IDLE")?"Erst übertragen, Bestätigung abwarten, dann Aufnahme starten.":"Gerätezustand: "+service.state.state+" · Auftrag vor dem neuen Plan zurücksetzen");
         if(alignmentHint!=null) alignmentHint.setText(alignmentHelp());
         if(activeProfile!=null && inputs.containsKey("profileName")) {
@@ -502,7 +492,7 @@ public final class MainActivity extends Activity {
             }
         }
         if(plotReady) plotSelection.setText(proposalText());
-        if(preview!=null) preview.setLive(service==null?null:service.state,service==null?null:service.plot,service!=null && service.fresh());
+        if(preview!=null) { preview.setLive(service==null?null:service.state,service==null?null:service.plot,service!=null && service.fresh()); preview.setDriveReady(positionReady()); }
         if(preview!=null && service!=null && service.state.limitsKnown && !planRangeInitialized) { planRangeInitialized=true; applyTiltRange(); }
         if(runPreview!=null) {
             runTitle.setText(savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId:"Aktueller Auftrag");
@@ -523,9 +513,9 @@ public final class MainActivity extends Activity {
         if(!service.state.confirmed) return "Fahrt gesperrt: Gerätegrenzen sind noch nicht bestätigt.";
         if(!service.state.positionSafe()) return "Istposition außerhalb der Grenze. Nur in Richtung des erlaubten Bereichs zurückfahren.";
         if(service.abortingPlan) return "Auftrag wird gestoppt und zurückgesetzt … bitte Bestätigung abwarten.";
-        if(!service.state.manual(SystemClock.elapsedRealtime())) return "Zum Ausrichten zuerst den Geräteauftrag zurücksetzen. Start und Ende bleiben erhalten.";
+        if(!service.state.navigation(SystemClock.elapsedRealtime())) return service.state.state.equals("RUNNING") || service.state.state.equals("PAUSE_PENDING")?"Aufnahme läuft · Pfeile gesperrt. Zum Ausrichten erst pausieren oder stoppen.":service.state.state.equals("TIMELAPSE")?"Timelapse läuft · Pfeile gesperrt.":"Fahrt hier nicht freigegeben · geladene/beendete Aufträge benötigen Firmware 2.3.6.";
         if(service.manualMoving) return "Kamera fährt … Zielankunft abwarten, dann Start oder Ende merken.";
-        return "Punkt antippen → anfahren → Kameraausschnitt prüfen → Start oder Ende merken. ↑ hebt das Objektiv.";
+        return "Punkt antippen → Anfahren direkt am Punkt → Kamera prüfen → Start oder Ende merken. Pfeile unten fahren direkt; der Auftrag bleibt erhalten. ↑ hebt das Objektiv.";
     }
     private String friendlyState(String state) {
         switch(state) { case "IDLE": return "Bereit"; case "PLAN_READY": return "Plan geladen"; case "RUNNING": return "Aufnahme läuft"; case "PAUSE_PENDING": return "Pause wird vorbereitet"; case "PAUSED": return "Pausiert"; case "STOPPED": return "Gestoppt"; case "COMPLETED": return "Abgeschlossen"; case "FAULT": return "Gerätefehler"; default: return state; }

@@ -202,6 +202,7 @@ public final class PanoramaService extends Service {
     }
     public boolean fresh() { return connected && !uncertain && state.fresh(SystemClock.elapsedRealtime()); }
     public boolean manualAllowed() { return fresh() && state.limitsKnown && state.confirmed && !busy && !abortingPlan && !debugPending && !manualPreparing && !manualTrigger && state.manual(SystemClock.elapsedRealtime()); }
+    public boolean navigationAllowed() { return fresh() && state.limitsKnown && state.confirmed && !busy && !abortingPlan && !debugPending && !manualPreparing && !manualTrigger && state.navigation(SystemClock.elapsedRealtime()); }
     public boolean hasConnection() { return device != null; }
     public void disconnect() {
         planAbort=null; abortingPlan=false; discardDraftAfterAbort=false;
@@ -316,7 +317,7 @@ public final class PanoramaService extends Service {
     }
     public void move(double panDelta, double tiltDelta) {
         requireReady();
-        if (!manualAllowed()) throw new IllegalArgumentException("Manuelle Fahrt nur bei IDLE oder PAUSED");
+        if (!navigationAllowed()) throw new IllegalArgumentException("Fahrt während der Aufnahme gesperrt; geladene/beendete Aufträge benötigen Firmware 2.3.6");
         int dx = DeviceState.toDevice(panDelta), dy = DeviceState.toTiltDevice(tiltDelta);
         int x = ManualTargets.step(targetKnown && state.positionSafe() ? targetPan : state.pan, state.pan, dx);
         int y = ManualTargets.step(targetKnown && state.positionSafe() ? targetTilt : state.tilt, state.tilt, dy);
@@ -332,13 +333,13 @@ public final class PanoramaService extends Service {
     }
     private void prepareMove(int x,int y) {
         requireReady();
-        if(!manualAllowed()) throw new IllegalArgumentException("Manuelle Fahrt nur bei IDLE oder PAUSED");
+        if(!navigationAllowed()) throw new IllegalArgumentException("Fahrt in diesem Gerätezustand nicht freigegeben");
         state.validateManualTarget(x, y);
         int id = generation;
         manualPreparing = true; preparationAcknowledged = false; manualBaseline = -1;
         message = "Fahrt wird vorbereitet …";
         pendingManual = () -> {
-            if (!manualAllowed()) { message = "Fahrt abgebrochen: aktuelle sichere Position fehlt"; return; }
+            if (!navigationAllowed()) { message = "Fahrt nicht gestartet: aktuelle Freigabe fehlt"; return; }
             state.validateManualTarget(x,y);
             CompletableFuture<V2Client.Result> move = command("MANUAL_MOVE", ""+x, ""+y);
             int action = actionGeneration;
@@ -391,7 +392,7 @@ public final class PanoramaService extends Service {
         String s = state.state;
         boolean valid;
         switch (type) {
-            case "START": valid = s.equals("PLAN_READY") && state.plan != null; break;
+            case "START": valid = s.equals("PLAN_READY") && state.plan != null && !manualMoving && !manualTrigger; break;
             case "PAUSE": valid = s.equals("RUNNING"); break;
             case "RESUME": valid = s.equals("PAUSED") && !manualMoving && !manualTrigger; break;
             case "STOP": valid = !s.equals("IDLE") && !s.startsWith("TIMELAPSE"); break;

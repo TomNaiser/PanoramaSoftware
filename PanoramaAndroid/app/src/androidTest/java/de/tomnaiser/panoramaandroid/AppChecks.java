@@ -52,6 +52,7 @@ public final class AppChecks extends Instrumentation {
             mainCall(() -> visible.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
             draftChecks(activity,true);
             graphicalChecks(activity);
+            navigationChecks(activity);
             activity=landscapeChecks(activity);
             ActivityMonitor recreated=addMonitor(MainActivity.class.getName(),null,false);
             try {
@@ -164,9 +165,10 @@ public final class AppChecks extends Instrumentation {
         android.widget.Spinner fine=(android.widget.Spinner)fineField.get(rotated);
         for(int attempt=0;attempt<30 && after.getWidth()==0;attempt++) Thread.sleep(100);
         mainCall(() -> {
-            int[] plotPosition=new int[2],controlPosition=new int[2];
-            after.getLocationOnScreen(plotPosition); fine.getLocationOnScreen(controlPosition);
-            check(controlPosition[1]>=plotPosition[1]+after.getHeight(),"Pfeilsteuerung im Querformat unter Grafik");
+            int[] windowPosition=new int[2],controlPosition=new int[2];
+            rotated.getWindow().getDecorView().getLocationOnScreen(windowPosition); fine.getLocationOnScreen(controlPosition);
+            android.graphics.Rect visible=new android.graphics.Rect();
+            check(fine.getLocalVisibleRect(visible) && fine.getHeight()>0 && controlPosition[1]>=windowPosition[1] && controlPosition[1]+fine.getHeight()<=windowPosition[1]+rotated.getWindow().getDecorView().getHeight(),"Pfeilsteuerung im Querformat sichtbar am unteren Bildschirmrand");
             check(after.getWidth()>=rotated.getWindow().getDecorView().getWidth()*.85,"Pan-Grafik nutzt nahezu gesamte Displaybreite");
             check(after.getWidth()>after.getHeight() && after.getHeight()>0,"Querformatgrafik nutzt breite Ansicht");
             check(after.getHeight()>=after.alignmentHeight(),"Tilt-Zeichenfläche mindestens 25 mm hoch, unabhängig von Scrollhöhe");
@@ -270,6 +272,70 @@ public final class AppChecks extends Instrumentation {
             finally { inputs.get("startPan").setText(oldPan); inputs.get("startTilt").setText(oldTilt); view.setEditMode(0); view.fit(); }
         });
         if(failure.get()!=null) throw new AssertionError(failure.get());
+    }
+    private void navigationChecks(android.app.Activity activity) throws Exception {
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("preview"); field.setAccessible(true);
+        java.lang.reflect.Field sf=MainActivity.class.getDeclaredField("service"); sf.setAccessible(true);
+        java.lang.reflect.Method select=MainActivity.class.getDeclaredMethod("selectPage",int.class); select.setAccessible(true);
+        java.lang.reflect.Method render=MainActivity.class.getDeclaredMethod("render"); render.setAccessible(true);
+        PlanPreview preview=(PlanPreview)field.get(activity);
+        mainCall(() -> {
+            try {
+                PanoramaService service=(PanoramaService)sf.get(activity);
+                check(!service.hasConnection(),"UI-Navigationstest ohne Hardwareverbindung");
+                DeviceState original=service.state;
+                DeviceState simulated=new DeviceState(); simulated.compatible=simulated.limitsKnown=simulated.confirmed=true;
+                simulated.inactiveNavigation=true; simulated.panMin=-180000; simulated.panMax=180000;
+                simulated.tiltMin=-45000; simulated.tiltMax=50000; simulated.runId=42; simulated.completed=7;
+                service.state=simulated; service.connected=true;
+                try {
+                    android.widget.LinearLayout bar=activity.findViewById(android.R.id.content).findViewWithTag("navigationBar");
+                    for(int page=0;page<5;page++) {
+                        simulated.state="IDLE"; simulated.lastStatusMs=android.os.SystemClock.elapsedRealtime();
+                        select.invoke(activity,page);
+                        check((bar.getVisibility()==android.view.View.VISIBLE)==(page==1 || page==2),"Pfeilleiste nur Plan/Manuell: Seite "+page);
+                    }
+                    select.invoke(activity,2);
+                    for(String state:new String[]{"IDLE","PAUSED","PLAN_READY","STOPPED","COMPLETED","RUNNING","PAUSE_PENDING","TIMELAPSE"}) {
+                        simulated.state=state; simulated.lastStatusMs=android.os.SystemClock.elapsedRealtime(); render.invoke(activity);
+                        boolean allowed=!(state.equals("RUNNING") || state.equals("PAUSE_PENDING") || state.equals("TIMELAPSE"));
+                        for(int i=1;i<bar.getChildCount();i++) check(bar.getChildAt(i).isEnabled()==allowed,"Pfeilfreigabe bei "+state);
+                        if(!allowed) {
+                            try { service.move(0,1); throw new AssertionError("Aufnahme muss Pfeilbefehl ablehnen"); }
+                            catch(IllegalArgumentException expected) { check(simulated.state.equals(state) && simulated.runId==42 && simulated.completed==7,"Pfeilversuch verändert keinen Lauf: "+state); }
+                        }
+                    }
+                    simulated.state="IDLE"; simulated.lastStatusMs=android.os.SystemClock.elapsedRealtime(); render.invoke(activity);
+                    preview.setEditMode(3); preview.alignmentRange(25);
+                    float d=activity.getResources().getDisplayMetrics().density;
+                    float x=55*d+(preview.getWidth()-69*d)*.7f,y=28*d+(preview.getHeight()-76*d)*.3f;
+                    tap(preview,x,y);
+                    android.view.View actions=preview.findViewWithTag("selectionActions");
+                    android.widget.Button drive=preview.findViewWithTag("driveSelection");
+                    check(preview.selection.pending && actions.getVisibility()==android.view.View.VISIBLE,"Tippen zeigt Anfahren direkt am Fahrpunkt");
+                    check(Math.abs(preview.selection.tilt)>5,"Direkt-Anfahren auch bei grossem Tiltziel pruefen");
+                    int[] drives={0}; preview.setDriveAction(() -> drives[0]++); preview.setDriveReady(true); drive.performClick();
+                    check(drives[0]==1,"Ein zweiter Tipp startet genau eine Aktion ohne weiteren Dialog");
+                    check(simulated.runId==42 && simulated.completed==7,"Punktwahl und Aktion loeschen keinen Lauf");
+                    ((android.widget.Button)preview.findViewWithTag("discardSelection")).performClick();
+                    check(!preview.selection.pending && actions.getVisibility()==android.view.View.GONE,"Verwerfen schliesst Fahrpunktaktionen");
+                    long time=android.os.SystemClock.uptimeMillis();
+                    android.view.MotionEvent down=android.view.MotionEvent.obtain(time,time,0,x,y,0);
+                    android.view.MotionEvent move=android.view.MotionEvent.obtain(time,time+30,2,x+80*d,y,0);
+                    android.view.MotionEvent up=android.view.MotionEvent.obtain(time,time+60,1,x+80*d,y,0);
+                    preview.dispatchTouchEvent(down); preview.dispatchTouchEvent(move); preview.dispatchTouchEvent(up);
+                    down.recycle(); move.recycle(); up.recycle();
+                    check(!preview.selection.pending && drives[0]==1,"Wischen setzt kein Fahrziel und startet keine Fahrt");
+                } finally {
+                    service.state=original; service.connected=false; preview.setDriveAction(() -> { }); preview.setEditMode(0); preview.fit(); render.invoke(activity);
+                }
+            } catch(Exception ex) { throw new RuntimeException(ex); }
+        });
+    }
+    private static void tap(PlanPreview preview,float x,float y) {
+        long time=android.os.SystemClock.uptimeMillis();
+        android.view.MotionEvent down=android.view.MotionEvent.obtain(time,time,0,x,y,0),up=android.view.MotionEvent.obtain(time,time+20,1,x,y,0);
+        preview.dispatchTouchEvent(down); preview.dispatchTouchEvent(up); down.recycle(); up.recycle();
     }
     private void storageChecks(Context context,String name) throws Exception {
         DeviceState state = new DeviceState();

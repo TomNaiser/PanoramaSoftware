@@ -3,10 +3,11 @@ import android.content.Context;
 import android.graphics.*;
 import android.os.Bundle;
 import android.view.*;
+import android.widget.*;
 import java.util.Locale;
 
 /** Shared projection for recipe, telemetry and touch; never sends device commands. */
-final class PlanPreview extends View {
+final class PlanPreview extends FrameLayout {
     interface EndpointListener { void changed(boolean start,double pan,double tilt); }
     private PanoramaPlan plan;
     private int[][] points=new int[0][];
@@ -23,18 +24,49 @@ final class PlanPreview extends View {
     final EndpointSelection selection=new EndpointSelection();
     private float lastX,lastY;
     private boolean multiTouch;
+    private float downX,downY;
+    private boolean dragged;
+    private final int touchSlop;
+    private final LinearLayout selectionActions;
+    private final TextView selectionLabel;
+    private final Button driveButton;
+    private Runnable driveAction=() -> { };
     private final ScaleGestureDetector scale;
     PlanPreview(Context context) {
-        super(context); setContentDescription("Pan-Tilt-Diagramm in Grad");
+        super(context); setWillNotDraw(false); setContentDescription("Pan-Tilt-Diagramm in Grad");
+        touchSlop=ViewConfiguration.get(context).getScaledTouchSlop();
+        selectionActions=new LinearLayout(context); selectionActions.setOrientation(LinearLayout.VERTICAL);
+        selectionActions.setTag("selectionActions"); selectionActions.setPadding(dp(6),dp(4),dp(6),dp(4));
+        android.graphics.drawable.GradientDrawable background=new android.graphics.drawable.GradientDrawable();
+        background.setColor(Color.WHITE); background.setCornerRadius(dp(10)); background.setStroke(dp(1),Color.rgb(18,105,116));
+        selectionActions.setBackground(background); selectionActions.setElevation(dp(5));
+        selectionLabel=new TextView(context); selectionLabel.setTextColor(Color.rgb(25,43,59)); selectionLabel.setTextSize(12);
+        selectionLabel.setPadding(dp(4),0,dp(4),0); selectionActions.addView(selectionLabel);
+        LinearLayout actions=new LinearLayout(context); selectionActions.addView(actions);
+        driveButton=new Button(context); driveButton.setText("▶ Anfahren"); driveButton.setTag("driveSelection");
+        driveButton.setAllCaps(false); driveButton.setTextSize(14); driveButton.setPadding(dp(6),0,dp(6),0);
+        driveButton.setMinWidth(0); driveButton.setMinimumWidth(0);
+        driveButton.setBackgroundTintList(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{Color.rgb(218,227,231),Color.rgb(18,105,116)}));
+        driveButton.setTextColor(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{Color.rgb(83,103,119),Color.WHITE}));
+        driveButton.setOnClickListener(v -> { if(selection.pending && editMode==3) driveAction.run(); });
+        actions.addView(driveButton,new LinearLayout.LayoutParams(0,dp(48),1));
+        Button dismiss=new Button(context); dismiss.setText("×"); dismiss.setTextSize(24);
+        dismiss.setContentDescription("Fahrpunkt verwerfen"); dismiss.setTag("discardSelection"); dismiss.setPadding(0,0,0,0);
+        dismiss.setMinWidth(0); dismiss.setMinimumWidth(0); dismiss.setOnClickListener(v -> discardSelection());
+        actions.addView(dismiss,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        addView(selectionActions,new FrameLayout.LayoutParams(dp(210),-2,Gravity.TOP|Gravity.LEFT));
+        selectionActions.setVisibility(GONE);
         scale=new ScaleGestureDetector(context,new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override public boolean onScale(ScaleGestureDetector d) { zoom(1/d.getScaleFactor()); return true; }
         });
     }
     void setListener(EndpointListener value) { listener=value; }
     void setProposalListener(Runnable value) { proposalChanged=value; }
+    void setDriveAction(Runnable value) { driveAction=value; }
+    void setDriveReady(boolean ready) { driveButton.setEnabled(ready); }
     void setEditMode(int mode) { editMode=mode; discardSelection(); }
     int editMode() { return editMode; }
-    void discardSelection() { selection.clear(); proposalChanged.run(); invalidate(); }
+    void discardSelection() { selection.clear(); updateSelectionActions(); proposalChanged.run(); invalidate(); }
     void commitSelection() {
         if(!selection.pending || editMode==0 || editMode==3) return;
         double x=selection.pan,y=selection.tilt;
@@ -51,7 +83,7 @@ final class PlanPreview extends View {
     private double baseTilt() { return editMode==3 && run!=null && run.positionKnown?run.tilt/1000.0:editMode==1?sy:ey; }
     void setEndpoints(double a,double b,double c,double d) {
         if(sx!=a || sy!=b || ex!=c || ey!=d) selection.clear();
-        sx=a; sy=b; ex=c; ey=d; startKnown=endKnown=true; invalidate();
+        sx=a; sy=b; ex=c; ey=d; startKnown=endKnown=true; updateSelectionActions(); invalidate();
     }
     void setEndpointAvailability(boolean start,boolean end) { startKnown=start; endKnown=end; invalidate(); }
     private void propose(double pan,double tilt) {
@@ -60,7 +92,7 @@ final class PlanPreview extends View {
             state!=null && state.limitsKnown?-state.panMin/1000.0:180,
             state!=null && state.limitsKnown?state.tiltMin/1000.0:-90,
             state!=null && state.limitsKnown?state.tiltMax/1000.0:90);
-        proposalChanged.run(); invalidate();
+        updateSelectionActions(); proposalChanged.run(); invalidate();
     }
     void setPlan(PanoramaPlan value) {
         if(plan==value) return;
@@ -69,7 +101,7 @@ final class PlanPreview extends View {
         invalidate();
     }
     void setLive(DeviceState value,RunPlotModel model,boolean current) { state=value; run=model; fresh=current; invalidate(); }
-    void zoom(double factor) { viewport.zoom(factor); invalidate(); }
+    void zoom(double factor) { viewport.zoom(factor); updateSelectionActions(); invalidate(); }
     int alignmentHeight() {
         android.util.DisplayMetrics metrics=getResources().getDisplayMetrics();
         float dpi=Float.isFinite(metrics.ydpi) && metrics.ydpi>0?metrics.ydpi:metrics.densityDpi;
@@ -113,6 +145,31 @@ final class PlanPreview extends View {
         if(v!=null && v.length==5) { viewport.left=v[0]; viewport.right=v[1]; viewport.bottom=v[2]; viewport.top=v[3]; editMode=(int)v[4]; }
     }
     private float density() { return getResources().getDisplayMetrics().density; }
+    private int dp(int value) { return Math.round(value*density()); }
+    private void updateSelectionActions() {
+        boolean visible=selection.pending && editMode==3 && !multiTouch;
+        selectionActions.setVisibility(visible?VISIBLE:GONE);
+        if(!visible) return;
+        selectionLabel.setText(String.format(Locale.GERMANY,"Pan %.2f° · Tilt %.2f°",selection.pan,selection.tilt));
+        if(getWidth()==0) return;
+        int width=Math.min(dp(210),getWidth()-dp(8));
+        selectionActions.measure(MeasureSpec.makeMeasureSpec(width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
+        int height=selectionActions.getMeasuredHeight();
+        float pointX=px(selection.pan),pointY=py(selection.tilt);
+        Rect visibleArea=new Rect();
+        if(!getLocalVisibleRect(visibleArea)) visibleArea.set(0,0,getWidth(),getHeight());
+        int left=Math.round(pointX+dp(14));
+        if(left+width>getWidth()-dp(4)) left=Math.round(pointX-dp(14)-width);
+        left=Math.max(dp(4),Math.min(left,getWidth()-width-dp(4)));
+        int top=Math.round(pointY+dp(14));
+        if(top+height>visibleArea.bottom-dp(4)) top=Math.round(pointY-dp(14)-height);
+        top=Math.max(visibleArea.top+dp(4),Math.min(top,visibleArea.bottom-height-dp(4)));
+        FrameLayout.LayoutParams params=(FrameLayout.LayoutParams)selectionActions.getLayoutParams();
+        if(params.width!=width || params.leftMargin!=left || params.topMargin!=top) {
+            params.width=width; params.leftMargin=left; params.topMargin=top; selectionActions.setLayoutParams(params);
+        }
+    }
+    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) { super.onSizeChanged(w,h,oldw,oldh); updateSelectionActions(); }
     private float l() { return 55*density(); }
     private float t() { return 28*density(); }
     private float w() { return Math.max(1,getWidth()-l()-14*density()); }
@@ -164,25 +221,30 @@ final class PlanPreview extends View {
         }
         c.restore();
     }
+    @Override public boolean onInterceptTouchEvent(MotionEvent e) {
+        if(e.getPointerCount()>1) { multiTouch=true; updateSelectionActions(); getParent().requestDisallowInterceptTouchEvent(true); return true; }
+        return super.onInterceptTouchEvent(e);
+    }
     @Override public boolean onTouchEvent(MotionEvent e) {
         float x=e.getX(),y=e.getY(); int action=e.getActionMasked();
         if(action==MotionEvent.ACTION_DOWN) {
             if(x<l() || x>l()+w() || y<t() || y>t()+h()) return false;
-            getParent().requestDisallowInterceptTouchEvent(editMode==0); lastX=x; lastY=y; multiTouch=false;
+            getParent().requestDisallowInterceptTouchEvent(editMode==0); lastX=downX=x; lastY=downY=y; multiTouch=dragged=false;
         }
-        if(e.getPointerCount()>1) { multiTouch=true; getParent().requestDisallowInterceptTouchEvent(true); }
+        if(e.getPointerCount()>1) { multiTouch=true; updateSelectionActions(); getParent().requestDisallowInterceptTouchEvent(true); }
+        if(Math.hypot(x-downX,y-downY)>touchSlop) dragged=true;
         scale.onTouchEvent(e);
         if(!multiTouch && (action==MotionEvent.ACTION_MOVE || action==MotionEvent.ACTION_UP)) {
             if(listener!=null && editMode!=0) {
-                if(action==MotionEvent.ACTION_UP) {
+                if(action==MotionEvent.ACTION_UP && !dragged && x>=l() && x<=l()+w() && y>=t() && y<=t()+h()) {
                     double pan=viewport.pan(Math.max(0,Math.min(1,(x-l())/w()))),tilt=viewport.tilt(Math.max(0,Math.min(1,(y-t())/h())));
                     propose(pan,tilt);
                 }
-            } else if(action==MotionEvent.ACTION_MOVE) { viewport.shift((x-lastX)/w()*(viewport.right-viewport.left),(y-lastY)/h()*(viewport.top-viewport.bottom)); invalidate(); }
+            } else if(action==MotionEvent.ACTION_MOVE) { viewport.shift((x-lastX)/w()*(viewport.right-viewport.left),(y-lastY)/h()*(viewport.top-viewport.bottom)); updateSelectionActions(); invalidate(); }
             lastX=x; lastY=y;
         }
         if(action==MotionEvent.ACTION_CANCEL) discardSelection();
-        if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL) { getParent().requestDisallowInterceptTouchEvent(false); if(action==MotionEvent.ACTION_UP) performClick(); }
+        if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL) { multiTouch=false; updateSelectionActions(); getParent().requestDisallowInterceptTouchEvent(false); if(action==MotionEvent.ACTION_UP) performClick(); }
         return true;
     }
     @Override public boolean performClick() { super.performClick(); return true; }

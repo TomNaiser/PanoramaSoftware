@@ -8,6 +8,7 @@ public final class DeviceState {
     public int panMin, panMax, tiltMin, tiltMax;
     public boolean limitsKnown, confirmed, compatible;
     public boolean tiltCalibrationKnown;
+    public boolean inactiveNavigation;
     public int tiltZeroOffset, tiltAbsoluteMin, tiltAbsoluteMax;
     public PanoramaPlan plan;
 
@@ -30,6 +31,10 @@ public final class DeviceState {
                 int zero=Integer.parseInt(f[0]), absoluteMinimum=Integer.parseInt(f[1]), absoluteMaximum=Integer.parseInt(f[2]);
                 if(absoluteMinimum>=absoluteMaximum) throw new IllegalArgumentException("Tilt-Referenz ungültig");
                 tiltZeroOffset=zero; tiltAbsoluteMin=absoluteMinimum; tiltAbsoluteMax=absoluteMaximum; tiltCalibrationKnown=true; break;
+            case "NAVIGATION_CAPABILITIES":
+                if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException("Navigationsfreigabe ungültig");
+                inactiveNavigation=f[0].equals("1"); break;
             case "PLAN": plan = PanoramaPlan.parse(f); break;
             case "STATUS":
                 if (f.length < 18) throw new IllegalArgumentException("Status unvollständig");
@@ -46,6 +51,10 @@ public final class DeviceState {
     }
     public boolean fresh(long now) { return compatible && lastStatusMs > 0 && now - lastStatusMs < 2500; }
     public boolean manual(long now) { return fresh(now) && (state.equals("IDLE") || state.equals("PAUSED")); }
+    public boolean navigation(long now) {
+        return manual(now) || fresh(now) && inactiveNavigation &&
+            (state.equals("PLAN_READY") || state.equals("STOPPED") || state.equals("COMPLETED"));
+    }
     public boolean positionSafe() {
         return limitsKnown && confirmed && pan >= panMin && pan <= panMax && tilt >= tiltMin && tilt <= tiltMax;
     }
