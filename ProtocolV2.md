@@ -1,13 +1,13 @@
 # Bluetooth-COM-Protokoll V2
 
-**Status:** Implementierte Schnittstellenspezifikation, Stand 27. September 2026  
+**Status:** Implementierte Schnittstellenspezifikation, ergänzt 5. Oktober 2026
 **Transport:** klassischer serieller Bluetooth-COM-Port, 57.600 Baud, 8N1  
 **Ziel:** dieselbe Schnittstelle für PanoramaControl und spätere Mobilclients
 
 | Komponente | Version / Stand |
 |---|---|
 | PanoramaControl | 27.2 / 3. August 2026 |
-| PanoDuinoControl | 2.2.0 / 27. September 2026 |
+| PanoDuinoControl | 2.4.0 / 5. Oktober 2026 (hardwarefrei gebaut) |
 | Drahtprotokoll | 2 |
 
 ## 1. Grundregeln
@@ -37,6 +37,7 @@ Android ab 0.6.2 verwendet für Tilt dasselbe Vorzeichen wie der Encoder: positi
 | `DEVICE_SESSION` | `bootId` (uint32; ab Firmware 2.3.4, 0 = keine dauerhaft gespeicherte Kennung) |
 | `TILT_CALIBRATION` | `zeroOffsetMdeg`, `absoluteTiltMinMdeg`, `absoluteTiltMaxMdeg`; ab 2.3.5 nach CAPABILITIES; absolute Grenzzahlen bereits auf den aktuellen Nullpunkt bezogen |
 | `NAVIGATION_CAPABILITIES` | `inactiveNavigation` (0/1); ab 2.3.6 nach TILT_CALIBRATION. 1 erlaubt MANUAL_MOVE auch in PLAN_READY, STOPPED und COMPLETED ohne Änderung des Auftrags |
+| `MOTION_CAPABILITIES` | `profiledMotion` (0/1); ab 2.4.0. 1 kennzeichnet Profilregelung, zeitbezogene Ruhebestätigung und MANUAL_MOVE mit optionalem Tempo |
 | `PLAN` | dieselben 16 Felder wie `LOAD_PLAN`; wird nur bei vorhandenem Lauf gesendet |
 | `STATUS` | `runId`, `state`, `phase`, `completed`, `total`, `column`, `row`, `targetPan`, `targetTilt`, `actualPan`, `actualTilt`, `pauseRequested`, `eventSequence`, `lastError`, `nextImageIndex`, `planRevision`, `segmentCount`, `currentSegmentCaptureCount`, optional `timelapseIntervalMs`, optional `timelapsePulseMs` |
 | `STATE_CHANGED` | `eventSequence`, `state` |
@@ -44,6 +45,7 @@ Android ab 0.6.2 verwendet für Tilt dasselbe Vorzeichen wie der Encoder: positi
 | `IMAGE_COMPLETED` | `eventSequence`, `runId`, `captureSequence`, `planRevision`, `imageIndex`, `column`, `row`, `targetPan`, `targetTilt`, `actualPan`, `actualTilt`, `reconstructed` |
 | `MANUAL_IMAGE_TRIGGERED` | `eventSequence`, `runId`, `manualCaptureSequence`, `rasterCaptureCount`, `actualPan`, `actualTilt`, `deviceTimeMs`, `replayed` |
 | `DIAGNOSTICS` | `runId`, `state`, `phase`, `nextImageIndex`, `sampleSequence`, `stableSamples`, `requiredStableSamples`, `targetPan`, `targetTilt`, `actualPan`, `actualTilt`, `panError`, `tiltError`, `panWithinTolerance`, `tiltWithinTolerance`, `phaseElapsedMs`, `movementElapsedMs`, `settleTimeMs`, `movementTimeoutMs`, `currentFreeRamBytes`, `minimumFreeRamBytes` |
+| `MOTION_DIAGNOSTICS` | `referencePanMdeg`, `referenceTiltMdeg`, `actualPanVelocityMdegPerSecond`, `actualTiltVelocityMdegPerSecond`, `referencePanVelocityMdegPerSecond`, `referenceTiltVelocityMdegPerSecond`, `panSignedPwm`, `tiltSignedPwm`, `panMotionPhase`, `tiltMotionPhase`; ab 2.4.0 nach DIAGNOSTICS. Ab 2.4.14 optional hinten `panDriveStage`, `tiltDriveStage`: 0 inaktiv, 1 Anlauf, 2 kontinuierliche Fahrt, 3 Leistung aus/Beruhigung, 4 ruhendes Ziel. Die ersten zehn Felder bleiben an gleicher Stelle. Bei Phasenfahrt ist die Referenzkurve nominell; die Phase bestimmt die Motorausgabe. |
 | `DEBUG_EVENT` | `logSequence`, `deviceTimeMs`, `eventCode`, `runId`, `imageIndex`, `state`, `phase`, `targetPan`, `targetTilt`, `actualPan`, `actualTilt`, `panError`, `tiltError`, `stableSamples` |
 | `DEBUG_LOG_END` | `newestSequence`, `sentRecords`, `droppedRecords` |
 
@@ -77,12 +79,26 @@ Android ab 0.6.2 verwendet für Tilt dasselbe Vorzeichen wie der Encoder: positi
 | `REWIND_COLUMNS` | `runId`, `columns` | `REWOUND` oder `REWIND_PENDING` |
 | `FORWARD_COLUMNS` | `runId`, `columns` | `FORWARDED` oder `FORWARD_PENDING` |
 | `UPDATE_TIMING` | `runId`, `settleTimeMs`, `triggerPulseMs`, `exposureWaitMs` | `TIMING_UPDATED` oder `TIMING_QUEUED`; übernommene Zeiten erscheinen in `PLAN` |
-| `MANUAL_MOVE` | `panMdeg`, `tiltMdeg` | `MOVING` |
+| `MANUAL_MOVE` | `panMdeg`, `tiltMdeg`; ab MOTION_CAPABILITIES=1 optional zusätzlich `panTempoPermille`, `tiltTempoPermille` | `MOVING` |
 | `TRIGGER_ONCE` | `pulseMs` | `TRIGGERED` |
 | `START_TIMELAPSE` | `runId`, `intervalMs`, `pulseMs` | `TIMELAPSE_STARTED` |
 | `STOP_TIMELAPSE` | `runId` | `TIMELAPSE_STOPPED` |
 
 `STOP` setzt beide Motor-PWM-Ausgänge sofort auf null, deaktiviert alle Kameraausgänge und führt keine Parkfahrt aus. Die erforderliche Benutzerbestätigung ist Aufgabe des UI-Clients. `ESTOP` benötigt keine Steuerungs-Lease.
+
+### Profilregelung ab Firmware 2.4.0
+
+Bei `MOTION_CAPABILITIES|1` gelten für `MANUAL_MOVE` genau zwei oder vier Felder. Tempowerte müssen zwischen 1 und 1000 liegen; zwei Felder verwenden 500‰ je Achse. Das Tempo begrenzt die Profilgeschwindigkeit und skaliert nicht mehr den PWM-Ausgang. Dasselbe gilt für `panSpeedPermille` / `tiltSpeedPermille` im Aufnahmeplan. Beschleunigung, Ruck, Leistungsgrenzen und Reglerwerte sind vorläufige Firmwarestandards. Alte Firmware erhält weiterhin zwei Zielfelder.
+
+Nach regulärer manueller Ankunft und nach Laufabschluss bleibt die Halteüberwachung aktiv. Ein ausdrücklicher STOP deaktiviert sie auch in IDLE oder COMPLETED; die vorhandene Laufkennung bleibt zu prüfen. Eine Teilrückfahrt mit Endposition außerhalb der Grenzen deaktiviert das Halten und erlaubt weitere Rückschritte. MANUAL_MOVE während RUNNING wird ohne Auftragsabbruch abgelehnt.
+
+`stableSamples` / `requiredStableSamples` sind bei Profilregelung kompatible Fortschrittsfelder für die zeitliche Ruhebestätigung, keine Anzahl unverarbeiteter Sensorsamples. Die erforderliche Bestätigung beträgt derzeit 250 ms; `requiredStableSamples=13`, Fortschritt auf 0..13 normiert. Ein fertiges Profil, Fehler-, Geschwindigkeits- und Spannenfenster müssen gleichzeitig erfüllt sein. Settling beginnt mit dem gemeinsamen Ruhekandidaten beider Achsen; Freigabe nach `max(250 ms, settleTimeMs)` kontinuierlicher Ruhe. Der Bewegungstimer läuft bei erneuter Beruhigung weiter.
+
+Die Motion-Phasen sind 0=AUS, 1=FAHREN, 2=UMKEHR, 3=HALTEN; HALTEN umfasst auch begrenzte Driftkorrekturen. Geschwindigkeiten stehen in Milligrad pro Sekunde, PWM auf der bestehenden vorzeichenbehafteten 8-Bit-Skala. GET_DIAGNOSTICS erzeugt beide Diagnosemeldungen. Unbekannte optionale Meldungen dürfen ältere Clients ignorieren.
+
+Ruheverlust während Trigger oder Belichtungswartezeit erzeugt `EXPOSURE_UNSTABLE`; das Bild wird nicht als abgeschlossen gezählt. Ausbleibender Abtriebsfortschritt, überschrittenes Umkehrbudget, fehlende Sensorantworten, zu lange Regelzykluslücken oder TX-Pufferüberlauf schalten Bewegung und Kamera ab. Reconnect und erneute Freigabe starten kein vorheriges Ziel automatisch.
+
+GET_DEBUG_LOG / GET_SUPPORT_BUNDLE übertragen den Ereignisring als Snapshot schrittweise und enden mit DEBUG_LOG_END. Der Client wartet auf diese Endmeldung, nicht nur auf ACK. UART-Ausgaben werden gepuffert; der synchrone Nano-R4-UART sendet höchstens acht Bytes pro Transportdurchlauf. Prüfstand und vorläufige Parameter: [Implementierungsbericht](PanoramaAndroid/POSITIONSREGELUNG-IMPLEMENTIERUNG-2026-10-05.md).
 
 ### Autonome Timelapse
 
@@ -94,7 +110,7 @@ Ab Firmware 2.3.2 entfernt `CLEAR_RUN` nach gestoppter Timelapse auch deren Zust
 
 ## 5. Panoramaauftrag
 
-SET_TILT_ZERO/RESET_TILT_ZERO sind nur in IDLE ohne manuelle Fahrt, Trigger, Timelapse oder aktive Motorfreigabe zulässig. Die Istposition muss innerhalb der bestätigten Grenzen liegen. Sie erzeugen keine Fahrt und erweitern den physischen Fahrbereich nicht. Der Nano R4 speichert den geprüften Nullpunktdatensatz in EEPROM ab Adresse 16 (Tilt-Grenzen 0..15, Nullpunkt 16..27, Neustartkennung ab 32 und 48). Bei Speicherfehler wird die alte Referenz im Hardwareadapter wiederhergestellt. Ein identischer Retry setzt den Nullpunkt nicht erneut.
+SET_TILT_ZERO/RESET_TILT_ZERO sind nur in IDLE ohne manuelle Fahrt, Trigger oder Timelapse zulässig. Bei Firmware vor 2.4.0 muss die Motorfreigabe aus sein; ab 2.4.0 ist zusätzlich bestätigtes ruhiges Halten erlaubt, das vor der Änderung deaktiviert wird. Die Istposition muss innerhalb der bestätigten Grenzen liegen. Sie erzeugen keine Fahrt und erweitern den physischen Fahrbereich nicht. Der Nano R4 speichert den geprüften Nullpunktdatensatz in EEPROM ab Adresse 16 (Tilt-Grenzen 0..15, Nullpunkt 16..27, Neustartkennung ab 32 und 48). Bei Speicherfehler wird die alte Referenz im Hardwareadapter wiederhergestellt. Ein identischer Retry setzt den Nullpunkt nicht erneut.
 
 Die Android-App leert den lokalen Plan nach bestätigter Nullpunktänderung und fragt das Supportbundle erneut ab, damit auch nach einer wiederholten ACK-Antwort die aktuelle Referenz und Grenzen vorliegen. Ein Vergleich der gespeicherten Referenz je Gerät erkennt Änderungen auch beim späteren Reconnect. Gespeicherte Aufnahmen bleiben in ihrer damaligen Referenz erhalten.
 
@@ -150,7 +166,9 @@ Ab Firmware 2.3.7 werden beide Encoderabfragen vor Befehlsverarbeitung und Motor
 
 ### 6.1 Verbindliche Reihenfolge vor jeder Aufnahme
 
-Der Kameraausgang darf nur über diese Kette erreicht werden:
+Ab Firmware 2.4.0 gilt die Profilregelung aus Abschnitt 4: frische Encoderwerte, abgeschlossenes Profil, Ruhefenster beider Achsen und gemeinsame kontinuierliche Bestätigungs-/Settlingzeit. Eine unveränderte Achse behält ihren Haltezustand. Der Bewegungs-Timeout bleibt 120.000 ms ab Fahrbeginn; engere Ruhefenster sind vorläufig und am Aufbau zu prüfen.
+
+Die folgende Kette dokumentiert Firmware 2.3.7 und früher:
 
 1. `SELECT_TARGET` setzt das neue Pan-/Tilt-Ziel und setzt die Ankunftsbestätigung ausdrücklich zurück.
 2. Erst nachdem beide Encoder für dieses Ziel frische Werte geliefert haben, werden Ankunftssamples gezählt.
@@ -159,11 +177,11 @@ Der Kameraausgang darf nur über diese Kette erreicht werden:
 5. Während der gesamten Beruhigungszeit wird die Zielposition weiter geprüft. Drift oder Nachschwingen führt zurück zu `MOVING`.
 6. Erst wenn die komplette Beruhigungszeit stabil abgelaufen ist, beginnt `TRIGGER_ACTIVE`.
 
-Der Bewegungs-Timeout beträgt derzeit 120.000 ms ab dem Setzen des Ziels. Ein Rücksprung von `SETTLING` nach `MOVING` startet ihn nicht neu. Die historischen Reglergrenzen von maximal 1,5 Grad aktuellem Achsfehler und einer Fehlerverlaufsgrenze von 10 Grad² bleiben bis zur Messung am realen Aufbau unverändert. „Ziel erreicht“ bedeutet daher „nachweislich stabil innerhalb dieser Toleranzen“; engere Werte müssen zusammen mit PID, PWM-Abschaltschwellen und realer Mechanik getestet werden.
+Im historischen Regler betrug der aktuelle Fehler höchstens 1,5 Grad und die Fehlerverlaufsgrenze 10 Grad². Diese Bedingungen werden im neuen MotionController durch Profilabschluss und zeitbezogene Ruhefenster ersetzt; die alten MSE-/PWM-Abschaltschwellen sind dort nicht aktiv.
 
 ### 6.2 Debugverhalten ohne Timingverfälschung
 
-`GET_DIAGNOSTICS` liefert genau einen CRC-geschützten Snapshot und startet keinen kontinuierlichen Datenstrom. PanoramaControl fragt ihn nach dem Handshake einmal ab und zeigt eine kompakte Zeile im vorhandenen Kommentarbereich an. Weitere Clients dürfen ihn bei Bedarf abfragen. Der optionale USB-CSV-Strom des Arduino-Mega-Debugbuilds ist standardmäßig deaktiviert, weil permanentes Formatieren und Senden mit 57.600 Baud die Regelzykluszeit selbst verändern würde.
+`GET_DIAGNOSTICS` liefert einen CRC-geschützten Snapshot und startet keinen kontinuierlichen Datenstrom; ab 2.4.0 folgt die optionale Meldung MOTION_DIAGNOSTICS. PanoramaControl fragt ihn nach dem Handshake einmal ab und zeigt eine kompakte Zeile im vorhandenen Kommentarbereich an. Weitere Clients dürfen ihn bei Bedarf abfragen. Der frühere Arduino-Mega-Debugbuild hatte einen standardmäßig deaktivierten USB-CSV-Strom; der neue R4-Sketch verwendet die begrenzte Protokollausgabe.
 
 `currentFreeRamBytes` ist der beim Aufbau des Diagnoseframes aktuell freie Abstand zwischen Heapende und Stack. `minimumFreeRamBytes` ist der konservative Tiefstwert seit Ende der Firmwareinitialisierung. Dafür markiert die Firmware den damals freien SRAM einmal mit `0xA5` und zählt bei jeder Diagnoseabfrage den noch unberührten Bereich; ein Sicherheitsabstand von 16 Byte wird nicht mitgezählt. Ein Reset beginnt eine neue Messung. Firmware 2.1.0/2.1.1 sendet nur die ersten 19 Felder; PanoramaControl 27.2 akzeptiert beide Varianten.
 
@@ -222,3 +240,15 @@ Implementiert sind mindestens: `BAD_FIELD_COUNT`, `VALUE_OUT_OF_RANGE`, `INVALID
 ## 10. Sicherheitsfreigabe
 
 Die in `SafetyConfiguration.h` eingetragenen Tiltwerte sind Platzhalter und ausdrücklich **nicht freigegeben**. Vor einer realen Fahrt müssen obere und untere Kollisionsgrenze mit montiertem Objektiv und Stecker, Nachlaufweg und Sicherheitsabstand vermessen werden. Erst danach dürfen die Werte ersetzt und `SAFETY_LIMITS_CONFIRMED` auf 1 gesetzt werden.
+
+## 11. Begrenzte Antriebsmessung (nur Nano-R4-USB-Testbuild)
+
+Die normale Bluetooth-Firmware unterstützt keine unregulierten Messfahrten. Der explizite USB-Testbuild veröffentlicht ab 2.4.10 `BENCH_CAPABILITIES|3|40|3000|5000|20|192|5000|500|500`: Messschema, maximale absolute PWM, Zeitgrenze ms, Weggrenze mdeg, Abtastperiode ms, Pufferkapazität, Limitreserve mdeg, Zeitgrenze ms für absolute PWM über 30, erforderlicher Anlauffortschritt mdeg. Die Werte sind feste Grenzen, keine Motorskalierung.
+
+- `BENCH_PULSE|axis|signedPwm|durationMs|travelMdeg` fährt genau eine Achse (0 Pan, 1 Tilt), ohne Positionsreglertorque. Nur IDLE ohne Auftrag, Kameraaktion oder aktive Motorfreigabe; frische ruhende Encoderhistorie und bestätigte Limits erforderlich. Maximal ±40/255, 3 s, 5°; bei absoluter PWM über 30 höchstens 500 ms. Der Pulsendpunkt muss 5° Abstand zu den Limits lassen. Leistungsabschaltung begrenzt den angetriebenen Weg; mechanische Weiterbewegung wird zusätzlich aufgezeichnet.
+- `BENCH_CRUISE|axis|signedRunningPwm|durationMs|travelMdeg` verwendet dieselben Freigaben, Weg- und Limitgrenzen. Zuerst wird mit höchstens ±40 angefahren, bis 0,5° Ausgangsfortschritt in Fahrtrichtung erreicht sind; dann folgt ohne Zwischenstop eine begrenzte Rampe auf die gewünschte laufende PWM (±1 bis ±30). Gesamtzeit 600–3000 ms, angetriebener Gesamtweg 1000–5000 mdeg, einschließlich Anlauf. Kein Anlauffortschritt nach 500 ms führt zu `START_TIMEOUT`; Gegenbewegung von 500 mdeg zu `WRONG_DIRECTION`. Die Ausgangsleistung liegt spätestens nach 500 ms bei höchstens ±30, auch während der Abwärtsrampe. Keine automatische Wiederholung eines fehlgeschlagenen Anlaufs.
+- `GET_BENCH_STATUS` liefert `BENCH_STATUS|count|active|recording|reason`. Zeit-/Weggrenze, Sensorverlust, Taktlücke, Stop, USB-Verlust und Hostheartbeatverlust nehmen Leistung weg. Nach Abschalten werden 500 ms Encoderbewegung weiter gepuffert. Währenddessen sind normale Fahr-, Kamera-, Plan- und Referenzänderungen gesperrt; Stop und Diagnose bleiben möglich.
+- `GET_BENCH_TRACE|startIndex` liefert nach Aufzeichnungsende bis zu acht Frames `BENCH_SAMPLE|index|elapsedMs|panMdeg|tiltMdeg|requestedPwm|stage`. Stage: 0 konstanter Puls, 1 Anlauf, 2 Weiterfahrt, 3 stromlose Nachbeobachtung. Gerätezeit statt späterer Übertragungszeit verwenden. PWM ist die interne Anforderung, keine Messung der Motorspannung. Messschema 2 hatte noch kein Stagefeld.
+- `GET_BENCH_OUTPUT` liefert `BENCH_OUTPUT|panAppliedPwm|tiltAppliedPwm|tiltPositivePin|tiltNegativePin|tiltPeriodCounts|tiltDutyCounts|tiltTimerCounter|tiltPeripheralMux`. Dies prüft Treiberargument, Richtungspinpegel, PWM-Pinzuordnung und Timeraktivität. Der Dutywert stammt aus dem Treiber, er beweist weder Spannung noch Strom am Motor.
+
+Jeder Befehl erhält ACK/NACK. Ein wiederholter Pulsbefehl mit gleicher Sequenz startet keinen weiteren Puls. Nicht unterstützte Adapter antworten `BENCH_UNSUPPORTED`. Der Messzugang gehört nicht zur Android-Bedienoberfläche.

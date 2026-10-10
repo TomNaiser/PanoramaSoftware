@@ -189,7 +189,8 @@ public final class PanoramaService extends Service {
     private void readDiagnostics(String[] f) {
         if (f.length < 21) throw new IllegalArgumentException("Diagnose unvollständig");
         int stable = Integer.parseInt(f[5]), required = Integer.parseInt(f[6]);
-        diagnostics = "Pan-Fehler: " + f[11] + " m° · Tilt-Fehler: " + f[12] + " m°\nStabile Samples: "
+        diagnostics = "Pan-Fehler: " + f[11] + " m° · Tilt-Fehler: " + f[12] + " m°\n" +
+            (state.profiledMotion?"Ruhebestätigung: ":"Stabile Samples: ")
             + stable + "/" + required + " · RAM: " + f[19] + " / Minimum " + f[20];
     }
     void acceptManualEvent(String[] fields) {
@@ -326,6 +327,10 @@ public final class PanoramaService extends Service {
         if(x==state.pan && y==state.tilt) throw new IllegalArgumentException("Grenze erreicht · in Gegenrichtung zurückfahren");
         prepareMove(x,y);
     }
+    public void setManualTempo(int tempo) {
+        if(tempo<1 || tempo>1000) throw new IllegalArgumentException("Fahrtempo muss 1–1000 ‰ betragen");
+        getSharedPreferences("settings",MODE_PRIVATE).edit().putString("manualSpeed",""+tempo).apply();
+    }
     public void moveToUi(double pan,double tilt) {
         requireReady();
         if(manualMoving) throw new IllegalArgumentException("Vor der nächsten grafischen Fahrt Zielankunft abwarten");
@@ -341,7 +346,8 @@ public final class PanoramaService extends Service {
         pendingManual = () -> {
             if (!navigationAllowed()) { message = "Fahrt nicht gestartet: aktuelle Freigabe fehlt"; return; }
             state.validateManualTarget(x,y);
-            CompletableFuture<V2Client.Result> move = command("MANUAL_MOVE", ""+x, ""+y);
+            int tempo=Integer.parseInt(getSharedPreferences("settings",MODE_PRIVATE).getString("manualSpeed","500"));
+            CompletableFuture<V2Client.Result> move = command("MANUAL_MOVE", ManualMotionOptions.fields(state,x,y,tempo));
             int action = actionGeneration;
             move.whenComplete((reply,error) -> {
                 if (id == generation && action == actionGeneration && error == null && reply.accepted) {

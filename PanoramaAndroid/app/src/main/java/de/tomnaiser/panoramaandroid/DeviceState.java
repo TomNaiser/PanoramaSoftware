@@ -9,6 +9,7 @@ public final class DeviceState {
     public boolean limitsKnown, confirmed, compatible;
     public boolean tiltCalibrationKnown;
     public boolean inactiveNavigation;
+    public boolean profiledMotion;
     public int tiltZeroOffset, tiltAbsoluteMin, tiltAbsoluteMax;
     public PanoramaPlan plan;
 
@@ -36,6 +37,10 @@ public final class DeviceState {
                     throw new IllegalArgumentException("Navigationsfreigabe ungültig");
                 inactiveNavigation=f[0].equals("1"); break;
             case "PLAN": plan = PanoramaPlan.parse(f); break;
+            case "MOTION_CAPABILITIES":
+                if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException("Bewegungsprofil-Freigabe ungültig");
+                profiledMotion=f[0].equals("1"); break;
             case "STATUS":
                 if (f.length < 18) throw new IllegalArgumentException("Status unvollständig");
                 long id = unsigned(f[0]), count = unsigned(f[3]), maximum = unsigned(f[4]);

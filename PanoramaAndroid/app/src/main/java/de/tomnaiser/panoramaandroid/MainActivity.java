@@ -174,6 +174,7 @@ public final class MainActivity extends Activity {
         button(manual,"Gestoppten Auftrag zurücksetzen",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         input(manual,"step","Eigene Schrittweite (°) · unten auswählen","1");
         input(manual,"pulse","Kamera-Puls (ms)","30");
+        input(manual,"manualSpeed","Manuelles Fahrtempo (‰, 1–1000)","500");
         button(manual,"Kamera einmal auslösen",() -> service.trigger(integer("pulse")),() -> service!=null && service.manualAllowed() && !service.manualMoving && service.state.positionSafe());
         button(manual,"Bewegungsdiagnose",() -> service.command("GET_DIAGNOSTICS"),this::ready);
         button(pages[2],"Plan entfernen",this::removePlan,() -> service==null || !service.hasConnection() || (ready() && !service.manualMoving && !service.manualTrigger && (service.state.state.equals("IDLE") || PlanAbort.allowed(service.state.state))));
@@ -248,7 +249,7 @@ public final class MainActivity extends Activity {
         button(settings,"Grafische Planänderung übernehmen",preview::commitSelection,() -> preview.selection.pending && (preview.editMode()==1 || preview.editMode()==2));
         button(settings,"Zurück zum Ausrichten",() -> preview.setEditMode(3),() -> true);
         input(settings,"settle","Beruhigungszeit (ms)","700"); input(settings,"planPulse","Triggerdauer (ms)","30"); input(settings,"exposure","Belichtungswartezeit (ms)","500");
-        input(settings,"speed","Geschwindigkeit (‰, 1–1000)","500");
+        input(settings,"speed","Fahrtempo im Aufnahmelauf (‰, 1–1000)","500");
         stopOnLoss=new CheckBox(this); stopOnLoss.setText("Bei Verbindungsverlust nach 5 s stoppen");
         stopOnLoss.setChecked(preferences.getBoolean("stopOnLoss",false)); settings.addView(stopOnLoss);
         settings.addView(text("Ohne Häkchen führt der Arduino den Auftrag auch bei getrennter Handy-Verbindung weiter aus.",14));
@@ -394,7 +395,7 @@ public final class MainActivity extends Activity {
         try { number(prefix+"Pan"); number(prefix+"Tilt"); return true; } catch(RuntimeException ex) { return false; }
     }
     private double fineStep() { int selected=finePicker.getSelectedItemPosition(); return selected==3?stepSize():new double[]{.1,.5,1}[selected]; }
-    private void fineMove(double pan,double tilt) { preview.discardSelection(); service.move(pan,tilt); }
+    private void fineMove(double pan,double tilt) { service.setManualTempo(integer("manualSpeed")); preview.discardSelection(); service.move(pan,tilt); }
     private void driveSelection() {
         if(!preview.selection.pending || preview.editMode()!=3) throw new IllegalArgumentException("Zuerst einen Fahrpunkt wählen");
         driveUiPoint(preview.selection.pan,preview.selection.tilt);
@@ -402,7 +403,7 @@ public final class MainActivity extends Activity {
     private void driveEndpoint(String prefix) { driveUiPoint(number(prefix+"Pan"),number(prefix+"Tilt")); }
     private void driveUiPoint(double pan,double tilt) {
         if(!positionReady()) throw new IllegalArgumentException("Zuerst aktuelle Zielankunft abwarten");
-        service.moveToUi(pan,tilt); preview.discardSelection();
+        service.setManualTempo(integer("manualSpeed")); service.moveToUi(pan,tilt); preview.discardSelection();
     }
     private void refreshEndpoints() {
         try {
@@ -454,6 +455,8 @@ public final class MainActivity extends Activity {
     }
     private void render() {
         if (connection==null) return;
+        EditText manualTempo=inputs.get("manualSpeed");
+        if(manualTempo!=null) manualTempo.setEnabled(service==null || !service.connected || service.state.profiledMotion);
         if(service!=null && observedDraftRevision>=0 && observedDraftRevision!=service.draftRevision) {
             observedDraftRevision=service.draftRevision; clearLocalPlan();
         }
