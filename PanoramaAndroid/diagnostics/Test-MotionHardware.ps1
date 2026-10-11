@@ -12,6 +12,7 @@ param(
     [ValidateRange(2,30)][int]$DurationSeconds = 5,
     [ValidateRange(0,10)][int]$StartDelaySeconds = 0,
     [ValidateRange(1,10)][int]$MaximumStepDegrees = 2,
+    [ValidateRange(20,1000)][int]$DiagnosticIntervalMs = 150,
     [string]$LogPath = (Join-Path $PSScriptRoot 'motion-hardware.jsonl')
 )
 
@@ -127,9 +128,9 @@ try {
     if (!$state.status -or !$state.capabilities -or !$state.firmware) { throw 'Firmware, Grenzen oder Status fehlen.' }
     if ($Action -eq 'Stop') { $null = Wait-Response (Send-Frame 'ESTOP' @($state.status[0],'PC_TEST_STOP')) }
     if ($Action -in @('Pulse','Cruise')) {
-        if($state.firmware[0] -notin @('2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15') -or $state.firmware[3] -ne 'ARDUINO_NANO_R4_USB_TEST' -or
+        if($state.firmware[0] -notin @('2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15','2.4.16','2.4.17','2.4.18','2.4.19','2.4.20','2.4.21','2.4.22','2.4.23','2.4.24','2.4.25','2.4.26','2.4.27') -or $state.firmware[3] -ne 'ARDUINO_NANO_R4_USB_TEST' -or
            !$state.benchCapabilities -or ($state.benchCapabilities -join '|') -ne '3|40|3000|5000|20|192|5000|500|500') {
-            throw 'Nur die eindeutig bestaetigten USB-Messbuilds 2.4.10 bis 2.4.15 erlauben Messpulse.'
+            throw 'Nur die eindeutig bestaetigten USB-Messbuilds 2.4.10 bis 2.4.27 erlauben Messpulse.'
         }
         if($Action -eq 'Cruise' -and ([math]::Abs($SignedPwm) -gt 30 -or $PulseMs -lt 600 -or $PulseTravelMdeg -lt 1000)) { throw 'Ungueltige Messung mit Anlaufphase.' }
         if($Action -eq 'Pulse' -and [math]::Abs($SignedPwm) -gt 30 -and $PulseMs -gt 500) { throw 'Losbrech-Messpuls ueber PWM 30 darf maximal 500 ms dauern.' }
@@ -188,7 +189,7 @@ try {
         return
     }
     if ($Action -eq 'Move') {
-        if ($state.firmware[0] -notin @('2.4.0','2.4.1','2.4.2','2.4.3','2.4.4','2.4.5','2.4.6','2.4.7','2.4.8','2.4.9','2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15')) { throw 'Unerwartete Firmware; Testfahrt nicht freigegeben.' }
+        if ($state.firmware[0] -notin @('2.4.0','2.4.1','2.4.2','2.4.3','2.4.4','2.4.5','2.4.6','2.4.7','2.4.8','2.4.9','2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15','2.4.16','2.4.17','2.4.18','2.4.19','2.4.20','2.4.21','2.4.22','2.4.23','2.4.24','2.4.25','2.4.26','2.4.27')) { throw 'Unerwartete Firmware; Testfahrt nicht freigegeben.' }
         if ($state.status[1] -notin @('IDLE','PLAN_READY','STOPPED','COMPLETED','PAUSED') -or $state.capabilities[4] -ne '1') { throw 'Keine Freigabe fuer manuelle Testfahrt.' }
         if ($timer.ElapsedMilliseconds - $state.latestStatus -gt 1000) { throw 'Istposition nicht aktuell.' }
         if ([math]::Abs($PanDeltaMdeg) -gt $MaximumStepDegrees*1000 -or [math]::Abs($TiltDeltaMdeg) -gt $MaximumStepDegrees*1000 -or (!$PanDeltaMdeg -and !$TiltDeltaMdeg)) { throw "Test verlangt einen relativen Schritt von maximal $MaximumStepDegrees Grad." }
@@ -215,7 +216,7 @@ try {
         if ($timer.ElapsedMilliseconds - $state.latestStatus -gt 2000) { throw 'Aktueller Geraetestatus ausgeblieben.' }
         if ($timer.ElapsedMilliseconds -ge $nextDiagnostics) {
             $null = Wait-Response (Send-Frame 'GET_DIAGNOSTICS')
-            $nextDiagnostics = $timer.ElapsedMilliseconds + 150
+            $nextDiagnostics = $timer.ElapsedMilliseconds + $DiagnosticIntervalMs
         }
         Start-Sleep -Milliseconds 10
     }
