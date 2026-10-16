@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$Port = 'COM4',
     [ValidateSet('Monitor','Move','Jog','Stop','ClearTestStop','Pulse','Cruise','CaptureSteps')][string]$Action = 'Monitor',
     [ValidateSet(-1,1)][int]$JogDirection = -1,
@@ -18,14 +18,16 @@
     [ValidateRange(1,1000)][int]$Tempo = 200,
     [ValidateRange(1,1000)][Nullable[int]]$PanTempo = $null,
     [ValidateRange(1,1000)][Nullable[int]]$TiltTempo = $null,
-    [ValidateRange(2,180)][int]$DurationSeconds = 5,
+    [ValidateRange(2,360)][int]$DurationSeconds = 5,
     [ValidatePattern('^2\.4\.\d+$')][string]$CaptureExpectedFirmware='2.4.40',
-    [ValidateRange(1,3)][int]$CaptureColumns=1,
+    [ValidateRange(1,6)][int]$CaptureColumns=1,
     [ValidateRange(2,8)][int]$CaptureRows=3,
     [ValidateRange(0,5000)][int]$CapturePanStepMdeg=0,
     [ValidateRange(-4000,-500)][int]$CaptureTiltStepMdeg=-1000,
     [ValidateRange(-5000,5000)][int]$CapturePanStartDeltaMdeg=0,
     [ValidateRange(-5000,5000)][int]$CaptureTiltStartDeltaMdeg=0,
+    [Nullable[int]]$CapturePanStartMdeg=$null,
+    [Nullable[int]]$CaptureTiltStartMdeg=$null,
     [ValidateRange(1,1000)][int]$CapturePanTempo=500,
     [ValidateRange(1,1000)][int]$CaptureTiltTempo=500,
     [ValidateRange(0,5000)][int]$CaptureSettleMs=1000,
@@ -163,7 +165,20 @@ try {
     $logDirectory = Split-Path -Parent ([IO.Path]::GetFullPath($LogPath))
     $null = New-Item -ItemType Directory -Path $logDirectory -Force
     $writer = [IO.StreamWriter]::new([IO.Path]::GetFullPath($LogPath),$false,[Text.UTF8Encoding]::new($false))
-    $serial.Open(); $timer.Start()
+    # Windows may briefly leave an outgoing Bluetooth port disconnected
+    # after the preceding owner closes it. Retry opening only; no command
+    # or movement is ever resent by this connection recovery.
+    for($openAttempt=1;$openAttempt -le 3;$openAttempt++) {
+        try {$serial.Open();break}
+        catch {
+            $cause=$_.Exception
+            while($cause.InnerException){$cause=$cause.InnerException}
+            if($openAttempt -eq 3 -or $cause -isnot [IO.IOException]){throw}
+            Write-Record 'TEST' 'PORT_OPEN_RETRY' @("$openAttempt")
+            Start-Sleep -Milliseconds 1000
+        }
+    }
+    $timer.Start()
     $null = Wait-Response (Send-Frame 'HELLO' @('PC_MOTION_TEST'))
     $deadline = $timer.ElapsedMilliseconds + 3000
     while ((!$state.status -or !$state.capabilities -or !$state.firmware -or ($Action -in @('Pulse','Cruise') -and !$state.benchCapabilities)) -and $timer.ElapsedMilliseconds -lt $deadline) { Read-Frames; Start-Sleep -Milliseconds 10 }
@@ -244,8 +259,8 @@ try {
         return
     }
     if($Action -eq 'CaptureSteps') {
-        # Three real shutter pulses, two small downward targets. This mode is
-        # explicitly for testing the full executor, not manual motor rides.
+        # Bounded real shutter grid with incremental downward columns.
+        # This tests the full executor, including the actual column return.
         if($state.firmware[0] -ne $CaptureExpectedFirmware -or $state.status[0] -ne '0' -or $state.status[1] -notin @('IDLE','STOPPED') -or $state.capabilities[4] -ne '1'){throw 'Kein freier Aufbau fuer Aufnahme-Schritttest.'}
         if($state.status[1] -eq 'STOPPED'){$null=Wait-Response (Send-Frame 'CLEAR_RUN')}
         if($StartDelaySeconds){
@@ -254,7 +269,9 @@ try {
             while($timer.ElapsedMilliseconds -lt $startAt){Read-Frames;Start-Sleep -Milliseconds 10}
         }
         if($state.status[1] -ne 'IDLE' -or $timer.ElapsedMilliseconds-$state.latestStatus -gt 1000){throw 'Aktuelle Freigabe fehlt.'}
-        $pan=[int]$state.status[9]+$CapturePanStartDeltaMdeg;$tilt=[int]$state.status[10]+$CaptureTiltStartDeltaMdeg
+        $pan=if($null -ne $CapturePanStartMdeg){[int]$CapturePanStartMdeg}else{[int]$state.status[9]+$CapturePanStartDeltaMdeg}
+        $tilt=if($null -ne $CaptureTiltStartMdeg){[int]$CaptureTiltStartMdeg}else{[int]$state.status[10]+$CaptureTiltStartDeltaMdeg}
+        if([math]::Abs($pan-[int]$state.status[9]) -gt 5000 -or [math]::Abs($tilt-[int]$state.status[10]) -gt 5000){throw 'Aufnahme-Teststart mehr als fuenf Grad von aktueller Position entfernt.'}
         $lastPan=$pan+($CaptureColumns-1)*$CapturePanStepMdeg;$lastTilt=$tilt+($CaptureRows-1)*$CaptureTiltStepMdeg
         if($pan -lt [int]$state.capabilities[0] -or $lastPan -gt [int]$state.capabilities[1] -or $lastTilt -lt [int]$state.capabilities[2] -or $tilt -gt [int]$state.capabilities[3]){throw 'Testplan ausserhalb der Grenzen.'}
         $null=Wait-Response (Send-Frame 'LOAD_PLAN' @('243803','1','0',"$pan","$tilt","$CaptureColumns","$CaptureRows","$CapturePanStepMdeg","$CaptureTiltStepMdeg","$CaptureSettleMs","$CaptureTriggerMs",'500',"$CapturePanTempo","$CaptureTiltTempo",'0','5000'))
@@ -265,7 +282,7 @@ try {
         $effectivePanTempo=if($null -ne $PanTempo){[int]$PanTempo}else{$Tempo}
         $effectiveTiltTempo=if($null -ne $TiltTempo){[int]$TiltTempo}else{$Tempo}
         if(($null -ne $PanTargetMdeg -or $null -ne $TiltTargetMdeg) -and ($PanDeltaMdeg -ne 0 -or $TiltDeltaMdeg -ne 0)) { throw 'Absolute Ziele und relative Schritte sind getrennte Testbefehle.' }
-        if ($state.firmware[0] -notin @('2.4.0','2.4.1','2.4.2','2.4.3','2.4.4','2.4.5','2.4.6','2.4.7','2.4.8','2.4.9','2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15','2.4.16','2.4.17','2.4.18','2.4.19','2.4.20','2.4.21','2.4.22','2.4.23','2.4.24','2.4.25','2.4.26','2.4.27','2.4.28','2.4.29','2.4.30','2.4.31','2.4.32','2.4.33','2.4.34','2.4.35','2.4.36','2.4.37','2.4.38','2.4.39','2.4.40','2.4.41','2.4.42','2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65')) { throw 'Unerwartete Firmware; Testfahrt nicht freigegeben.' }
+        if ($state.firmware[0] -notin @('2.4.0','2.4.1','2.4.2','2.4.3','2.4.4','2.4.5','2.4.6','2.4.7','2.4.8','2.4.9','2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15','2.4.16','2.4.17','2.4.18','2.4.19','2.4.20','2.4.21','2.4.22','2.4.23','2.4.24','2.4.25','2.4.26','2.4.27','2.4.28','2.4.29','2.4.30','2.4.31','2.4.32','2.4.33','2.4.34','2.4.35','2.4.36','2.4.37','2.4.38','2.4.39','2.4.40','2.4.41','2.4.42','2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67')) { throw 'Unerwartete Firmware; Testfahrt nicht freigegeben.' }
         if ($state.status[1] -notin @('IDLE','PLAN_READY','STOPPED','COMPLETED','PAUSED') -or $state.capabilities[4] -ne '1') { throw 'Keine Freigabe fuer manuelle Testfahrt.' }
         if ($timer.ElapsedMilliseconds - $state.latestStatus -gt 1000) { throw 'Istposition nicht aktuell.' }
         $pan = if($null -ne $PanTargetMdeg){[int]$PanTargetMdeg}else{[int]$state.status[9]+$PanDeltaMdeg}
@@ -293,14 +310,14 @@ try {
         $null = Wait-Response $moveSequence
     }
     if($Action -eq 'Jog') {
-        if($state.firmware[0] -notin @('2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65') -or $state.status[0] -ne '0' -or $state.status[1] -ne 'IDLE' -or
+        if($state.firmware[0] -notin @('2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67') -or $state.status[0] -ne '0' -or $state.status[1] -ne 'IDLE' -or
            $state.capabilities[4] -ne '1' -or $timer.ElapsedMilliseconds-$state.latestStatus -gt 1000) { throw 'Kein aktueller freier Aufbau fuer Jog-Test.' }
         $axis=if($PulseAxis -eq 'Tilt'){1}else{0}; $jogOrigin=[int]$state.status[9+$axis]
         $jogToken=Get-Random -Minimum 100000 -Maximum 2147483647
         Write-Output "Begrenzter Jog-Test $PulseAxis Richtung $JogDirection, maximal $JogHoldMs ms und $MaximumStepDegrees Grad."
         $moveAttempted=$true; $jogStartedMs=$timer.ElapsedMilliseconds; $nextJogKeep=$jogStartedMs+150
         if($JogSpeedDps -gt 0) {
-            if($state.firmware[0] -notin @('2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65') -or $JogSpeedDps -lt 0.5) { throw 'Absolute Haltegeschwindigkeit nicht freigegeben.' }
+            if($state.firmware[0] -notin @('2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67') -or $JogSpeedDps -lt 0.5) { throw 'Absolute Haltegeschwindigkeit nicht freigegeben.' }
             $jogSpeedMdeg=[int][math]::Round($JogSpeedDps*1000)
             $moveSequence=Send-Frame 'MANUAL_JOG_START_VELOCITY' @("$jogToken","$axis","$JogDirection","$jogSpeedMdeg")
         } else { $moveSequence=Send-Frame 'MANUAL_JOG_START' @("$jogToken","$axis","$JogDirection","$Tempo") }

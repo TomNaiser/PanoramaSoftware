@@ -1,7 +1,7 @@
 param(
     [string]$ControlPort='COM4',
     [string]$TracePort='COM3',
-    [ValidateRange(-3000,3000)][int]$PanDeltaMdeg=0,
+    [ValidateRange(-10000,10000)][int]$PanDeltaMdeg=0,
     [ValidateRange(-10000,10000)][int]$TiltDeltaMdeg=0,
     [ValidateRange(1,1000)][int]$Tempo=500,
     [ValidateRange(0,10)][int]$StartDelaySeconds=5,
@@ -35,11 +35,17 @@ try {
         Start-Sleep -Milliseconds 50
     }
     if(!$ready){throw 'Keine frischen gueltigen Reglerproben beider Achsen; keine Fahrt.'}
+    $preflight=$prefix+'.preflight.jsonl'
+    & (Join-Path $PSScriptRoot 'Test-MotionHardware.ps1') -Port $ControlPort -Action Monitor -DurationSeconds 2 -LogPath $preflight | Out-Null
+    $preflightFrames=@(Get-Content -LiteralPath $preflight | ConvertFrom-Json)
+    if(@($preflightFrames | Where-Object {$_.type -in @('CRC_BAD','NACK')}).Count){throw 'Messverbindung nicht fehlerfrei; keine Fahrt.'}
     $maximum=[int][math]::Ceiling([math]::Max([math]::Abs($PanDeltaMdeg),[math]::Abs($TiltDeltaMdeg))/1000.0)
     & (Join-Path $PSScriptRoot 'Test-MotionHardware.ps1') -Port $ControlPort -Action Move `
         -PanDeltaMdeg $PanDeltaMdeg -TiltDeltaMdeg $TiltDeltaMdeg -MaximumStepDegrees $maximum `
         -Tempo $Tempo -DurationSeconds 15 -WaitForArrival -DwellMs 0 `
         -StartDelaySeconds $StartDelaySeconds -DiagnosticIntervalMs 150 -AbortFile $AbortFile -LogPath $log
+    $controlFrames=@(Get-Content -LiteralPath $log | ConvertFrom-Json)
+    if(@($controlFrames | Where-Object {$_.type -in @('CRC_BAD','NACK')}).Count){throw 'Messfahrt mit Transportfehler; keine Modellidentifikation aus dieser Spur.'}
 }
 finally {
     Set-Content -LiteralPath $stop -Value 'CAPTURE_FINISHED' -Encoding ascii

@@ -1,8 +1,8 @@
 # PanoramaControl für Android
 
-**Aktueller Stand: App 0.6.16 und normale Bluetooth-Firmware 2.4.65 installiert.** Gemeinsamer Antrieb für Ziel- und Panorama-Fahrten, rauschtolerante Aufnahmeprüfung, korrigierte Pan-/Tilt-Nachlaufvorhersage und separat schnellere Spaltenrückfahrt nach oben mit 8°/s. 115 Motorparameter über JSON einstellbar. [Ursachen, Parameter und Messungen](PANORAMA-ROBUSTHEIT-2026-10-14.md).
+**Aktueller Stand: App 0.6.16 und normale Bluetooth-Firmware 2.4.67 installiert.** Gemessenes physikalisches Pan-Bremsmodell, 120 konfigurierbare Motorparameter, gespeicherte Revision 22. Der ursprüngliche Plan wurde über den echten App-Dienst mit **35 Spalten und 280/280 Auslösungen ohne Laufabbruch** abgeschlossen; Motorstopp und Entfernen des Testauftrags bestätigt. 1.148 Firmware-Prüfungen bestehen. [Modell, unabhängige Validierung und vollständige Statistik](PHYSIKALISCHES-FAHRMODELL-2026-10-16.md).
 
-**Noch keine vollständige Praxisfreigabe:** letzter Lauf nach acht von 16 Auslösungen mit Pan-Stillstand bei der Spaltenrückfahrt abgebrochen; Motoren abgeschaltet, Testplan entfernt. Abschluss auf Benutzerwunsch, weiterer Diagnosebedarf ausdrücklich dokumentiert.
+Der zuletzt gemeldete Abbruch in Spalte vier mit 2.4.66 ist im vollständigen neuen Lauf nicht aufgetreten. Maximale gemessene Aufnahmeabweichung: Pan 0,329°, Tilt 0,268°; die maximale Zielabweichung ist bisher nicht verkleinert. Mindestens 15 Schritte wurden nach der 3-Sekunden-Regel am beruhigten Istort aufgenommen; das 5-s-Supportlog erlaubt keine vollständige Timeoutzählung. Optisches Nachschwingen, gespeicherte Kameradateien und eine Ausfallrate von 1/10.000 sind damit nicht nachgewiesen. [Vorausgehender Stand 2.4.66](PAN-RUECKFAHRT-2026-10-16.md), [historischer Stand vom 14.10.](PANORAMA-ROBUSTHEIT-2026-10-14.md).
 
 Plan-/Lauf-Diagramme bleiben fest sichtbar, Groß/Normal bietet eine große Grafikfläche, Pan ±180° setzt die Übersicht zurück. Hoch-/Querformat, NOT-STOP und Pfeilbedienung wurden mit 0.6.15 auf dem Pixel geprüft. [Bedienung und Screenshots](PLAN-LAUF-GRAFIK-2026-10-14.md).
 

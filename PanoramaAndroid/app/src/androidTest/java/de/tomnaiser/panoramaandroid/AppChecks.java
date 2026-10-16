@@ -14,6 +14,7 @@ public final class AppChecks extends Instrumentation {
     private boolean recoveryCheck;
     private boolean manualStatusCheck;
     private boolean manualHardwareCheck,panPlanHardwareCheck;
+    private boolean panoramaHardwareCheck;
     private boolean jogHardwareCheck;
     private boolean jogUiCheck,chartUiCheck,chartLandscape;
     private boolean jogUiHardwareCheck;
@@ -27,6 +28,7 @@ public final class AppChecks extends Instrumentation {
         manualStatusCheck=arguments!=null && "true".equals(arguments.getString("manualStatusCheck"));
         panPlanHardwareCheck=arguments!=null && "true".equals(arguments.getString("panPlanHardwareCheck"));
         manualHardwareCheck=arguments!=null && "true".equals(arguments.getString("manualHardwareCheck"));
+        panoramaHardwareCheck=arguments!=null && "true".equals(arguments.getString("panoramaHardwareCheck"));
         jogHardwareCheck=arguments!=null && "true".equals(arguments.getString("jogHardwareCheck"));
         chartLandscape=arguments!=null && "true".equals(arguments.getString("chartLandscape"));
         chartUiCheck=arguments!=null && "true".equals(arguments.getString("chartUiCheck"));
@@ -46,6 +48,11 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(panoramaHardwareCheck) {
+                int checks=new PanoramaHardwareChecks().run(this,expectedFirmware);
+                report.putString("stream","\nPASS: "+checks+" checks: original 35-column / 280-shot panorama through real app service; stopped and test plan removed.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
             if(chartUiCheck) {
                 int checks=new ChartUiChecks().run(this,chartLandscape);
                 report.putString("stream","\nPASS: "+checks+" assertions: pinned Plan/Run plots, exact Pan +/-180 reset, large/normal toggle, Back and visible emergency stop. No movement or shutter commands.\n");
