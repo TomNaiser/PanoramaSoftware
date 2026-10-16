@@ -4,6 +4,12 @@ param(
     [ValidateRange(1,3)][int]$Repetitions=2,
     [ValidateRange(-150000,150000)][int]$PanStartMdeg=120278,
     [ValidateRange(1,207)][int]$StartIndex=1,
+    [ValidatePattern('^2\.4\.\d+$')][string]$ExpectedFirmware='2.4.40',
+    [switch]$NoUsbTrace,
+    [switch]$ReadMotionConfig,
+    [switch]$PlanOnly,
+    [ValidateRange(1,1000)][int]$RowTempoPermille=500,
+    [ValidateRange(1,1000)][int]$ReturnTempoPermille=800,
     [switch]$ContinueTargetMisses,
     [string]$AbortFile=''
 )
@@ -32,18 +38,28 @@ foreach($repeat in 1..$Repetitions) {
 }
 if($StartIndex -gt $plan.Count){throw 'Startindex liegt ausserhalb des Spaltenplans.'}
 $plan | Export-Csv -LiteralPath (Join-Path $directory 'plan.csv') -NoTypeInformation -Encoding utf8
-[pscustomobject]@{firmware='2.4.30';repetitions=$Repetitions;startIndex=$StartIndex;panStartMdeg=$PanStartMdeg;
-    panStepMdeg=3000;tiltStartMdeg=24000;tiltStepMdeg=-2000;rows=23;columns=3;tempoPermille=500;
+[pscustomobject]@{firmware=$ExpectedFirmware;usbTrace=(!$NoUsbTrace);repetitions=$Repetitions;startIndex=$StartIndex;panStartMdeg=$PanStartMdeg;
+    panStepMdeg=3000;tiltStartMdeg=24000;tiltStepMdeg=-2000;rows=23;columns=3;tempoPermille=$RowTempoPermille;returnTempoPermille=$ReturnTempoPermille;
     continueTargetMisses=[bool]$ContinueTargetMisses;additionalDwellMs=0} | ConvertTo-Json |
     Set-Content -LiteralPath (Join-Path $directory 'configuration.json') -Encoding utf8
-$job=Start-Job -ScriptBlock {
+if($PlanOnly){Write-Output "Nur Plan: $($plan.Count) Positionen; kein Geraetezugriff.";return}
+$job=$null
+if(!$NoUsbTrace){$job=Start-Job -ScriptBlock {
     param($script,$port,$log,$stopFile)
     & $script -Port $port -DurationSeconds 2400 -LogPath $log -StopFile $stopFile
-} -ArgumentList $capturePath,$TracePort,$trace,$stop
+} -ArgumentList $capturePath,$TracePort,$trace,$stop}
 $completed=@();$previous=$null;$consecutiveMisses=0
 try {
-    $timer=[Diagnostics.Stopwatch]::StartNew();$ready=$false
-    while($timer.ElapsedMilliseconds -lt 10000) {
+    $preflight=Join-Path $directory 'preflight.jsonl'
+    & (Join-Path $PSScriptRoot 'Test-MotionHardware.ps1') -Port $ControlPort -Action Monitor -DurationSeconds 2 -LogPath $preflight | Out-Null
+    $preflightInfo=Get-Content -LiteralPath $preflight | ConvertFrom-Json | Where-Object type -eq 'DEVICE_INFO' | Select-Object -First 1
+    $expectedBoard=if($NoUsbTrace){'ARDUINO_NANO_R4'}else{'ARDUINO_NANO_R4_BT_TRACE'}
+    if(!$preflightInfo -or $preflightInfo.fields[0] -ne $ExpectedFirmware -or $preflightInfo.fields[3] -ne $expectedBoard){throw 'Firmware stimmt nicht mit dem Spaltenplan ueberein; keine Fahrt.'}
+    if($ReadMotionConfig){
+        & (Join-Path $PSScriptRoot 'Motion-Config.ps1') -Action Read -Port $ControlPort -ConfigPath (Join-Path $directory 'motion-config.json') -LogPath (Join-Path $directory 'motion-config-read.jsonl')
+    }
+    $timer=[Diagnostics.Stopwatch]::StartNew();$ready=[bool]$NoUsbTrace
+    while(!$NoUsbTrace -and $timer.ElapsedMilliseconds -lt 10000) {
         if($job.State -ne 'Running'){throw 'USB-Aufzeichnung vor Fahrtbeginn beendet.'}
         if(Test-Path -LiteralPath $trace) {
             $head=@(Get-Content -LiteralPath $trace -TotalCount 2)
@@ -54,7 +70,7 @@ try {
     if(!$ready){throw 'Keine USB-Reglerproben; keine Spaltenfahrt.'}
     foreach($point in $plan) {
         if($point.index -lt $StartIndex){continue}
-        if($job.State -ne 'Running'){throw 'USB-Aufzeichnung waehrend Spaltenreihe ausgefallen.'}
+        if(!$NoUsbTrace -and $job.State -ne 'Running'){throw 'USB-Aufzeichnung waehrend Spaltenreihe ausgefallen.'}
         if($AbortFile -and (Test-Path -LiteralPath $AbortFile)){throw 'Spaltenreihe durch Abbruchdatei gestoppt.'}
         $log=Join-Path $directory $point.logName
         $shared=$previous -and $previous.panTargetMdeg -eq $point.panTargetMdeg -and $previous.tiltTargetMdeg -eq $point.tiltTargetMdeg
@@ -67,10 +83,11 @@ try {
             & (Join-Path $PSScriptRoot 'Test-MotionHardware.ps1') -Port $ControlPort -Action Monitor -DurationSeconds 2 -AbortFile $AbortFile -LogPath $log | Out-Null
         }else{
             $delay=if($completed.Count -eq 0){5}else{0}
+            $tiltTempo=if($point.row -eq 0 -and $point.index -gt 1){$ReturnTempoPermille}else{$RowTempoPermille}
             & (Join-Path $PSScriptRoot 'Test-MotionHardware.ps1') -Port $ControlPort -Action Move `
                 -PanTargetMdeg $point.panTargetMdeg -TiltTargetMdeg $point.tiltTargetMdeg `
-                -MaximumStepDegrees 46 -Tempo 500 -DurationSeconds 30 -WaitForArrival -DwellMs 0 `
-                -StartDelaySeconds $delay -DiagnosticIntervalMs 150 -AbortFile $AbortFile -LogPath $log | Out-Null
+                -MaximumStepDegrees 46 -Tempo $RowTempoPermille -TiltTempo $tiltTempo -DurationSeconds 30 -WaitForArrival -DwellMs 0 `
+                -IncrementalStep:($point.row -gt 0 -and [version]$ExpectedFirmware -ge [version]'2.4.38') -StartDelaySeconds $delay -DiagnosticIntervalMs 150 -AbortFile $AbortFile -LogPath $log | Out-Null
         }
         }catch {
             if(!$ContinueTargetMisses -or $_.Exception.Message -ne 'Geraetefehler: MOTION_TARGET_MISSE.'){throw}
@@ -79,7 +96,7 @@ try {
         $records=@(Get-Content -LiteralPath $log | ConvertFrom-Json)
         $status=$records | Where-Object {$_.direction -eq 'RX' -and $_.type -eq 'STATUS'} | Select-Object -Last 1
         $info=$records | Where-Object type -eq 'DEVICE_INFO' | Select-Object -First 1
-        if(!$status -or $info.fields[0] -ne '2.4.30' -or $info.fields[3] -ne 'ARDUINO_NANO_R4_BT_TRACE' -or $status.fields[1] -eq 'FAULT'){throw 'Unerwarteter Firmware- oder Endstatus.'}
+        if(!$status -or $info.fields[0] -ne $ExpectedFirmware -or $info.fields[3] -ne $expectedBoard -or $status.fields[1] -eq 'FAULT'){throw 'Unerwarteter Firmware- oder Endstatus.'}
         $move=$records | Where-Object {$_.direction -eq 'TX' -and $_.type -eq 'MANUAL_MOVE'} | Select-Object -First 1
         $arrival=$records | Where-Object type -eq 'ARRIVAL_CONFIRMED' | Select-Object -Last 1
         $stopTx=$records | Where-Object {$_.direction -eq 'TX' -and $_.type -eq 'ESTOP'} | Select-Object -Last 1
@@ -113,8 +130,10 @@ catch {
     throw
 }
 finally {
+    if($null -ne $job){
     Set-Content -LiteralPath $stop -Value 'CAPTURE_FINISHED' -Encoding ascii
     $null=Wait-Job -Job $job -Timeout 10
     if($job.State -eq 'Running'){Stop-Job -Job $job;throw 'USB-Aufzeichnung beendet sich nicht rechtzeitig.'}
     try {Receive-Job -Job $job -ErrorAction Stop}finally{Remove-Job -Job $job}
+    }
 }

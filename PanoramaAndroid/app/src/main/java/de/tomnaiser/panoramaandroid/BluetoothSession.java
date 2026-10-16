@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /** One transport and request lifetime; closed requests never move to a new socket. */
-public final class BluetoothSession implements AutoCloseable {
+public final class BluetoothSession implements DeviceLink {
     public interface Listener {
         void onConnected();
         void onAwaitingProtocol();
@@ -117,6 +117,11 @@ public final class BluetoothSession implements AutoCloseable {
     private static CompletableFuture<V2Client.Result> unavailable() {
         CompletableFuture<V2Client.Result> result = new CompletableFuture<>();
         result.completeExceptionally(new IOException("Keine V2-Verbindung")); return result;
+    }
+    public CompletableFuture<V2Client.Result> stopJog(String token) {
+        V2Client active=client;
+        if(!protocolReady || closed || active==null) return unavailable();
+        return active.stopJog(token);
     }
     public void fail(String reason) { failure = reason; close(); }
     @Override public void close() {

@@ -33,10 +33,21 @@ public final class MainActivity extends Activity {
     private final Map<String,EditText> inputs = new LinkedHashMap<>();
     private SharedPreferences preferences;
     private Spinner devicePicker, profilePicker, modePicker, runPicker;
-    private Spinner finePicker;
     private Button tiltRangeButton;
     private Button alignmentReset;
+    private Button recoveryAction, referenceReview;
+    private AlertDialog incidentDialog;
+    private long dialogIncidentId=-1;
     private LinearLayout navigationBar;
+    private TextView jogTempoLabel;
+    private LinearLayout endpointBar,runActionBar;
+    private PlotWorkspace planWorkspace,runWorkspace;
+    private View[] pageViews;
+    private LinearLayout headerBar,tabBar;
+    private Button emergencyButton;
+    private android.view.ViewGroup emergencyHome;
+    private android.view.ViewGroup.LayoutParams emergencyHomeParams;
+    private int emergencyHomeIndex;
     private final List<Button> tabs=new ArrayList<>();
     private TextView endpointSummary, alignmentHint, runProgress, activeProfile;
     private TextView tiltReference;
@@ -56,7 +67,6 @@ public final class MainActivity extends Activity {
     private boolean planRangeInitialized;
     private boolean restoreEndpoints;
     private int observedDraftRevision=-1;
-    private long fittedPlanRun=-1;
     private final Runnable recalculatePlot=() -> {
         try { calculate(); }
         catch(RuntimeException ex) { pendingPlan=null; preview.setPlan(null); planSummary.setText(!endpointSet("start") || !endpointSet("end")?"Noch kein Plan · Start und Ende ausrichten und merken.":"Plan ungültig: "+ex.getMessage()); render(); }
@@ -86,8 +96,8 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         preferences = getSharedPreferences("settings",MODE_PRIVATE);
-        restoreEndpoints=state!=null && state.getLong("processToken") == PROCESS_TOKEN;
-        observedDraftRevision=restoreEndpoints?state.getInt("draftRevision",-1):-1;
+        restoreEndpoints=true;
+        observedDraftRevision=state==null?-1:state.getInt("draftRevision",-1);
         migrateTiltSign();
         migrateTiltDirection();
         tiltRange=Math.max(0,Math.min(2,preferences.getInt("tiltRange",0)));
@@ -95,6 +105,8 @@ public final class MainActivity extends Activity {
         loadProfiles(); buildUi(); refreshDevices();
         plotReady=true; recalculatePlot.run(); preview.setEditMode(3); applyTiltRange();
         preview.restore(state,"planViewport"); runPreview.restore(state,"runViewport");
+        if(state!=null) { planWorkspace.setExpanded(state.getBoolean("planPlotExpanded")); runWorkspace.setExpanded(state.getBoolean("runPlotExpanded")); }
+        updatePlotSizeLabels();
         planRangeInitialized=state!=null && state.getBoolean("limitsKnown",false);
         updateProposal();
         selectPage(state == null ? 0 : state.getInt("page",0));
@@ -103,12 +115,18 @@ public final class MainActivity extends Activity {
         super.onStart(); bound = bindService(new Intent(this,PanoramaService.class),binding,BIND_AUTO_CREATE);
     }
     @Override protected void onStop() {
+        if(service!=null) service.endJog();
+        if(incidentDialog!=null) { incidentDialog.dismiss(); incidentDialog=null; }
         plotHandler.removeCallbacks(recalculatePlot);
         saveInputs(); if (service != null) service.removeObserver(observer);
         if (bound) { unbindService(binding); bound = false; } service = null;
         super.onStop();
     }
-    @Override protected void onSaveInstanceState(Bundle state) { state.putLong("processToken",PROCESS_TOKEN); state.putInt("page",selectedPage); state.putInt("draftRevision",observedDraftRevision); state.putBoolean("limitsKnown",service!=null && service.state.limitsKnown); state.putString("exportName",pendingExportName); state.putString("savedPlotKey",savedPlotKey); state.putLong("plottedRun",plottedRun); preview.save(state,"planViewport"); runPreview.save(state,"runViewport"); saveInputs(); super.onSaveInstanceState(state); }
+    @Override protected void onPause() { if(service!=null) service.endJog(); super.onPause(); }
+    @Override public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused); if(!focused && service!=null) service.endJog();
+    }
+    @Override protected void onSaveInstanceState(Bundle state) { state.putLong("processToken",PROCESS_TOKEN); state.putInt("page",selectedPage); state.putBoolean("planPlotExpanded",planWorkspace.expanded()); state.putBoolean("runPlotExpanded",runWorkspace.expanded()); state.putInt("draftRevision",observedDraftRevision); state.putBoolean("limitsKnown",service!=null && service.state.limitsKnown); state.putString("exportName",pendingExportName); state.putString("savedPlotKey",savedPlotKey); state.putLong("plottedRun",plottedRun); preview.save(state,"planViewport"); runPreview.save(state,"runViewport"); saveInputs(); super.onSaveInstanceState(state); }
     private int dp(int value) { return (int)(value*getResources().getDisplayMetrics().density+.5f); }
     private TextView text(String value,int size) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(size>=20?INK:MUTED); view.setPadding(0,dp(6),0,dp(6));
@@ -134,7 +152,7 @@ public final class MainActivity extends Activity {
     private void buildUi() {
         boolean landscape=getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE;
         LinearLayout root = vertical(); root.setFitsSystemWindows(true); root.setPadding(dp(12),dp(4),dp(12),dp(4)); root.setBackgroundColor(Color.rgb(239,244,247)); setContentView(root);
-        LinearLayout header=new LinearLayout(this); root.addView(header);
+        LinearLayout header=new LinearLayout(this); headerBar=header; root.addView(header);
         LinearLayout identity=vertical(); header.addView(identity,new LinearLayout.LayoutParams(0,-2,1));
         TextView heading=text("PanoramaControl",landscape?16:20); identity.addView(heading);
         heading.setContentDescription("PanoramaControl Version "+BuildConfig.VERSION_NAME);
@@ -143,22 +161,28 @@ public final class MainActivity extends Activity {
         connection.setTextSize(12); connection.setPadding(0,0,0,dp(4)); identity.addView(connection);
         message.setMaxLines(landscape?1:2); message.setTextSize(13);
         Button emergency = button(header,"NOT-STOP",() -> service.emergencyStop(),() -> service != null && service.connected);
+        emergencyButton=emergency;
+        recoveryAction=button(root,"Gerätestand prüfen / Fehler quittieren",() -> {
+            if(service.incident.needsAcknowledgement()) showIncident(); else service.recoverDevice();
+        },() -> service!=null && !service.recovering);
+        recoveryAction.setVisibility(View.GONE);
         emergency.setLayoutParams(new LinearLayout.LayoutParams(dp(112),dp(52)));
         emergency.setTextColor(Color.WHITE); emergency.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(160,20,30)));
-        LinearLayout nav = new LinearLayout(this);
+        LinearLayout nav = new LinearLayout(this); tabBar=nav;
         if(landscape) { header.removeView(emergency); header.addView(nav,new LinearLayout.LayoutParams(0,dp(56),2)); header.addView(emergency); }
         else root.addView(nav);
+        emergencyHome=(android.view.ViewGroup)emergency.getParent(); emergencyHomeIndex=emergencyHome.indexOfChild(emergency); emergencyHomeParams=emergency.getLayoutParams();
         root.addView(message);
         String[] names = {"Gerät","Manuell","Plan","Lauf","Extras"};
         for (int i=0;i<names.length;i++) {
             final int index=i; Button tab = new Button(this); tab.setText(names[i]); tab.setTextSize(12); tab.setAllCaps(false); tab.setMinWidth(0); tab.setMinimumWidth(0); tab.setPadding(0,0,0,0); tabs.add(tab);
-            tab.setOnClickListener(v -> selectPage(index)); nav.addView(tab,new LinearLayout.LayoutParams(0,dp(landscape?48:52),1));
+            tab.setOnClickListener(v -> selectPage(index)); nav.addView(tab,new LinearLayout.LayoutParams(0,dp(48),1));
         }
         android.widget.FrameLayout container = new android.widget.FrameLayout(this);
-        root.addView(container,new LinearLayout.LayoutParams(-1,0,1)); pages = new LinearLayout[5];
+        root.addView(container,new LinearLayout.LayoutParams(-1,0,1)); pages = new LinearLayout[5]; pageViews=new View[5];
         for (int i=0;i<5;i++) {
             ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true); pages[i]=vertical(); scroll.addView(pages[i]);
-            container.addView(scroll); scroll.setTag(i);
+            container.addView(scroll); scroll.setTag(i); pageViews[i]=scroll;
         }
         LinearLayout device = pages[0]; device.addView(text("Verbindung",20));
         devicePicker = new Spinner(this); device.addView(devicePicker);
@@ -169,16 +193,24 @@ public final class MainActivity extends Activity {
         live = text("Noch keine Statusdaten",16); device.addView(live);
         primary(button(device,"Weiter zum Panorama",() -> selectPage(2),() -> true));
         LinearLayout manual=pages[1]; manual.addView(text("Manuelle Bedienung",20));
-        manual.addView(text("Pfeile fahren zum nächsten Ziel. Loslassen stoppt keine Fahrt; dafür Not-Stop verwenden.",14));
+        manual.addView(text("Pfeil gedrückt halten: langsam anfahren. Loslassen stoppt die Motoransteuerung.",14));
         TextView manualHint=text("",14); manualHint.setTag("alignmentHint"); manual.addView(manualHint);
         button(manual,"Gestoppten Auftrag zurücksetzen",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
-        input(manual,"step","Eigene Schrittweite (°) · unten auswählen","1");
         input(manual,"pulse","Kamera-Puls (ms)","30");
-        input(manual,"manualSpeed","Manuelles Fahrtempo (‰, 1–1000)","500");
+        input(manual,"manualPanSpeed","Pan-Zielfahrten: Fahrtempo (‰, 1–1000)","500");
+        manual.addView(text("Pan: 500 ‰ für die getestete kontinuierliche Fahrt (ca. 4°/s auf diesem Aufbau). Sehr langsames Tempo kann pulsieren.",14));
+        input(manual,"manualSpeed","Tilt-Zielfahrten: Fahrtempo (‰, 1–1000)","500");
+        input(manual,"jogSpeed","Tilt-Haltefahrt: Höchsttempo (°/s)","5");
+        input(manual,"panJogSpeed","Pan-Haltefahrt: Höchsttempo (°/s)","10");
+        input(manual,"rememberSettleMs","Beruhigung vor Positionmerken (ms, 0–5000)","1000");
         button(manual,"Kamera einmal auslösen",() -> service.trigger(integer("pulse")),() -> service!=null && service.manualAllowed() && !service.manualMoving && service.state.positionSafe());
         button(manual,"Bewegungsdiagnose",() -> service.command("GET_DIAGNOSTICS"),this::ready);
         button(pages[2],"Plan entfernen",this::removePlan,() -> service==null || !service.hasConnection() || (ready() && !service.manualMoving && !service.manualTrigger && (service.state.state.equals("IDLE") || PlanAbort.allowed(service.state.state))));
         LinearLayout camera=card(pages[2],"1 · Kamera wählen");
+        referenceReview=button(pages[2],"Entwurfreferenz prüfen und bestätigen",() -> confirm("Entwurfreferenz geprüft?",
+            "Start und Ende wurden nach Geräte-/Nullpunktwechsel geprüft. Die Werte bleiben erhalten. Eine Fahrt wird dadurch nicht gestartet.",
+            () -> service.confirmDraftReference()),() -> service!=null && service.fresh());
+        referenceReview.setVisibility(View.GONE);
         profilePicker=new Spinner(this); camera.addView(profilePicker); updateProfilePicker();
         primary(button(camera,"Kameraprofil verwenden",this::applyProfile,() -> true));
         activeProfile=text("",13); camera.addView(activeProfile);
@@ -187,23 +219,19 @@ public final class MainActivity extends Activity {
         input(profileDetails,"focal","Brennweite (mm)","400"); input(profileDetails,"width","Sensorbreite (mm)","24"); input(profileDetails,"height","Sensorhöhe (mm)","35.9");
         button(profileDetails,"Profil speichern",this::saveProfile,() -> true);
         button(profileDetails,"Windows-Konfiguration importieren",this::importConfig,() -> true);
-        LinearLayout plan=card(pages[2],"2 · Bildausschnitt ausrichten");
+        LinearLayout plan=card(pages[2],"Ausrichtung & Endpunkte");
         alignmentHint=text("Punkt wählen → anfahren → Kamera prüfen → Start/Ende merken.",13); plan.addView(alignmentHint);
         alignmentReset=button(plan,"Auftrag zurücksetzen & Endpunkte ändern",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         alignmentReset.setVisibility(View.GONE);
-        LinearLayout graph=plan, steering=plan;
-        if(landscape) {
-            LinearLayout workspace=vertical();
-            plan.addView(workspace,new LinearLayout.LayoutParams(-1,-2));
-            graph=vertical(); workspace.addView(graph,new LinearLayout.LayoutParams(-1,-2));
-            steering=vertical(); workspace.addView(steering);
-        }
+        LinearLayout graph=vertical(), steering=plan;
+        graph.setBackground(surface(Color.WHITE)); graph.setPadding(dp(4),0,dp(4),0);
         LinearLayout selectionRow=new LinearLayout(this); graph.addView(selectionRow);
         plotSelection=text("Ansicht verschieben",14); selectionRow.addView(plotSelection,new LinearLayout.LayoutParams(0,-2,1));
-        if(landscape) { plotSelection.setSingleLine(true); plotSelection.setEllipsize(android.text.TextUtils.TruncateAt.END); }
+        plotSelection.setTextSize(12); plotSelection.setSingleLine(true); plotSelection.setEllipsize(android.text.TextUtils.TruncateAt.END);
         tiltRangeButton=button(selectionRow,"Tilt ±25°",this::chooseTiltRange,() -> true);
-        tiltRangeButton.setTextSize(12); tiltRangeButton.setLayoutParams(new LinearLayout.LayoutParams(dp(130),dp(landscape?48:56)));
-        preview=new PlanPreview(this); graph.addView(preview,new LinearLayout.LayoutParams(-1,Math.max(dp(210),preview.alignmentHeight())));
+        tiltRangeButton.setTextSize(12); tiltRangeButton.setLayoutParams(new LinearLayout.LayoutParams(dp(106),dp(48)));
+        preview=new PlanPreview(this); plotControls(graph,preview);
+        graph.addView(preview,new LinearLayout.LayoutParams(-1,0,1));
         preview.setProposalListener(this::updateProposal);
         preview.setDriveAction(() -> safely(this::driveSelection));
         preview.setListener((start,pan,tilt) -> {
@@ -212,8 +240,8 @@ public final class MainActivity extends Activity {
             refreshEndpoints(); schedulePlot();
         });
         LinearLayout remember=new LinearLayout(this); steering.addView(remember);
-        button(remember,"Start merken",() -> takePosition("start"),() -> positionReady() && service.state.positionSafe());
-        button(remember,"Ende merken",() -> takePosition("end"),() -> positionReady() && service.state.positionSafe());
+        button(remember,"Start merken",() -> takePosition("start"),() -> positionReady() && service.state.positionSafe() && service.endpointCaptureAllowed());
+        button(remember,"Ende merken",() -> takePosition("end"),() -> positionReady() && service.state.positionSafe() && service.endpointCaptureAllowed());
         endpointSummary=text("",14); plan.addView(endpointSummary);
         LinearLayout revisit=new LinearLayout(this); plan.addView(revisit);
         button(revisit,"Start anfahren",() -> driveEndpoint("start"),() -> positionReady() && endpointSet("start"));
@@ -232,7 +260,7 @@ public final class MainActivity extends Activity {
         button(graphMode,"Punkt wählen",() -> preview.setEditMode(3),() -> true);
         button(graphMode,"Verschieben",() -> preview.setEditMode(0),() -> true);
         button(plotOptions,"Ganzer Pan-/Tilt-Bereich",() -> { tiltRange=2; applyTiltRange(); },() -> true);
-        plotControls(plotOptions,preview);
+        plotOptions.addView(text("Tippen: Fahrziel wählen · Ziehen: Ansicht verschieben · Zwei Finger: Zoom. Pan ±180° stellt die Übersicht wieder her.",13));
         LinearLayout capture=card(pages[2],"3 · Prüfen & aufnehmen");
         planSummary=text("Noch kein Plan berechnet",15); capture.addView(planSummary);
         planDeviceStatus=text("Zum Übertragen mit dem Gerät verbinden",13); capture.addView(planDeviceStatus);
@@ -254,16 +282,17 @@ public final class MainActivity extends Activity {
         stopOnLoss.setChecked(preferences.getBoolean("stopOnLoss",false)); settings.addView(stopOnLoss);
         settings.addView(text("Ohne Häkchen führt der Arduino den Auftrag auch bei getrennter Handy-Verbindung weiter aus.",14));
         button(settings,"Vorschau berechnen",this::calculate,() -> true);
-        LinearLayout run=card(pages[3],null); runTitle=text("Aktueller Auftrag",20); run.addView(runTitle);
-        runProgress=text("Noch keine Aufnahme gestartet",17); run.addView(runProgress);
-        captureProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal); run.addView(captureProgress,new LinearLayout.LayoutParams(-1,dp(8)));
+        LinearLayout run=card(pages[3],null),runGraph=vertical(); runGraph.setBackground(surface(Color.WHITE)); runGraph.setPadding(dp(4),0,dp(4),0);
+        runTitle=text("Aktueller Auftrag",14); runTitle.setSingleLine(true); runTitle.setPadding(0,0,0,0); runGraph.addView(runTitle);
+        runProgress=text("Noch keine Aufnahme gestartet",13); runProgress.setSingleLine(true); runProgress.setPadding(0,0,0,dp(4)); runGraph.addView(runProgress);
+        captureProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal); runGraph.addView(captureProgress,new LinearLayout.LayoutParams(-1,dp(8)));
         LinearLayout runActions=new LinearLayout(this); run.addView(runActions);
         primary(button(runActions,"Pause",() -> service.runCommand("PAUSE"),() -> savedPlot==null && ready() && service.state.state.equals("RUNNING")));
         primary(button(runActions,"Fortsetzen",() -> service.runCommand("RESUME"),() -> savedPlot==null && ready() && service.state.positionSafe() && service.state.state.equals("PAUSED") && !service.manualMoving && !service.manualTrigger));
         button(run,"Stoppen & Endpunkte ändern",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
-        button(run,"Stop",() -> confirm("Auftrag stoppen?","Motoren und Kameraausgänge werden abgeschaltet. Es gibt keine Parkfahrt.",() -> service.runCommand("STOP")),() -> ready() && !service.state.state.equals("IDLE") && !service.state.state.startsWith("TIMELAPSE"));
-        runPreview=new PlanPreview(this); run.addView(runPreview,new LinearLayout.LayoutParams(-1,dp(300)));
-        plotControls(run,runPreview);
+        button(runActions,"Stop",() -> confirm("Auftrag stoppen?","Motoren und Kameraausgänge werden abgeschaltet. Es gibt keine Parkfahrt.",() -> service.runCommand("STOP")),() -> ready() && !service.state.state.equals("IDLE") && !service.state.state.startsWith("TIMELAPSE"));
+        runPreview=new PlanPreview(this); plotControls(runGraph,runPreview);
+        runGraph.addView(runPreview,new LinearLayout.LayoutParams(-1,0,1));
         runLegend=text("Blau: Sollpunkte · Violett: Fahrziel · Orange: Istposition\nGrün: gemessene Aufnahme · ×: rekonstruiertes Soll\nLetzte 512 Aufnahmen / Statuspunkte; graue Linie: empfangener Verlauf",13); run.addView(runLegend);
         button(run,"Aktuellen Gerätelauf anzeigen",() -> { savedPlotKey=null; savedPlot=null; plottedRun=-1; render(); },() -> service!=null);
         button(run,"Auftrag starten",this::startLoadedPlan,() -> savedPlot==null && canStartLoadedPlan());
@@ -286,7 +315,7 @@ public final class MainActivity extends Activity {
             CaptureStore.Run selected=(CaptureStore.Run)runPicker.getSelectedItem();
             if(selected==null) throw new IllegalArgumentException("Keine Aufnahmen gespeichert");
             savedPlotKey=selected.key; savedPlot=service.captures.plotSnapshot(selected.key);
-            selectPage(3); render(); runPreview.fit();
+            selectPage(3); render(); runPreview.wholeRange();
         },() -> service!=null);
         button(extras,"PapyWizard XML speichern",() -> exportCaptures(true),() -> service!=null);
         button(extras,"Capture-Manifest CSV speichern",() -> exportCaptures(false),() -> service!=null);
@@ -304,16 +333,24 @@ public final class MainActivity extends Activity {
         input(tiltSetup,"tiltMax","Tilt-Obergrenze (°)","50");
         button(tiltSetup,"Vermessene Tilt-Grenzen speichern",this::setTiltLimits,this::tiltCalibrationReady);
         tiltSetup.addView(text("Grenzen erst nach mechanischer Vermessung mit montiertem Objektiv und Steckern ändern.",14));
+        // Keep endpoint capture beside the persistent arrows, even when the
+        // camera profile or large plot has pushed alignment controls offscreen.
+        steering.removeView(remember); endpointBar=remember;
+        LinearLayout footer=new LinearLayout(this); footer.setOrientation(landscape?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL); footer.setGravity(android.view.Gravity.CENTER_VERTICAL); root.addView(footer);
+        footer.addView(endpointBar,new LinearLayout.LayoutParams(landscape?0:-1,-2,landscape?2:0));
+        if(steering.getChildCount()==0 && steering.getParent()!=null) ((android.view.ViewGroup)steering.getParent()).removeView(steering);
         navigationBar=new LinearLayout(this); navigationBar.setTag("navigationBar");
-        navigationBar.setPadding(0,dp(4),0,dp(4)); root.addView(navigationBar);
-        finePicker=new Spinner(this); finePicker.setContentDescription("Schrittweite für Pfeile");
-        finePicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"0,1°","0,5°","1°","Eigene"}));
-        finePicker.setSelection(Math.max(0,Math.min(3,preferences.getInt("fineStep",0))));
-        navigationBar.addView(finePicker,new LinearLayout.LayoutParams(0,dp(56),1.3f));
-        arrowButton(navigationBar,"←","Pan nach links",() -> fineMove(fineStep(),0));
-        arrowButton(navigationBar,"→","Pan nach rechts",() -> fineMove(-fineStep(),0));
-        arrowButton(navigationBar,"↑","Tilt erhöhen",() -> fineMove(0,fineStep()));
-        arrowButton(navigationBar,"↓","Tilt verringern",() -> fineMove(0,-fineStep()));
+        navigationBar.setPadding(0,dp(4),0,dp(4)); footer.addView(navigationBar,new LinearLayout.LayoutParams(landscape?0:-1,-2,landscape?4:0));
+        jogTempoLabel=text("Halten\n5°/s",12);
+        navigationBar.addView(jogTempoLabel,new LinearLayout.LayoutParams(0,dp(48),1.3f));
+        arrowButton(navigationBar,"←","Pan nach links",0,-1);
+        arrowButton(navigationBar,"→","Pan nach rechts",0,1);
+        arrowButton(navigationBar,"↑","Tilt erhöhen",1,1);
+        arrowButton(navigationBar,"↓","Tilt verringern",1,-1);
+        run.removeView(runActions); runActionBar=runActions;
+        footer.addView(runActionBar,new LinearLayout.LayoutParams(landscape?0:-1,-2,landscape?1:0));
+        planWorkspace=installPlotWorkspace(container,2,graph);
+        runWorkspace=installPlotWorkspace(container,3,runGraph);
         for(Map.Entry<String,EditText> entry:inputs.entrySet()) {
             String key=entry.getKey();
             if(key.equals("step") || key.equals("pulse") || key.equals("interval") || key.equals("tlPulse") || key.startsWith("tilt")) continue;
@@ -334,11 +371,47 @@ public final class MainActivity extends Activity {
         });
         render();
     }
+    private PlotWorkspace installPlotWorkspace(android.widget.FrameLayout container,int page,LinearLayout diagram) {
+        ScrollView settings=(ScrollView)pages[page].getParent(); container.removeView(settings);
+        PlotWorkspace workspace=new PlotWorkspace(this,diagram,settings);
+        container.addView(workspace,new android.widget.FrameLayout.LayoutParams(-1,-1)); pageViews[page]=workspace;
+        return workspace;
+    }
     private void plotControls(LinearLayout parent,PlanPreview view) {
-        LinearLayout row=new LinearLayout(this); parent.addView(row);
-        button(row,"−",() -> view.zoom(2),() -> true);
-        button(row,"+",() -> view.zoom(.5),() -> true);
-        button(row,"Einpassen",view::fit,() -> true);
+        LinearLayout row=new LinearLayout(this); row.setTag("plotTools"); parent.addView(row,0);
+        Button reset=button(row,"Pan ±180°",() -> { if(view==preview) applyTiltRange(); else view.wholeRange(); },() -> true); reset.setTag("plotReset"); reset.setContentDescription("Standardansicht: Pan minus 180 bis plus 180 Grad");
+        Button fit=button(row,"Einpassen",view::fit,() -> true); fit.setTag("plotFit"); fit.setContentDescription("Auf Plan und Aufnahmen einpassen");
+        button(row,"−",() -> view.zoom(2),() -> true).setContentDescription("Grafik herauszoomen");
+        button(row,"+",() -> view.zoom(.5),() -> true).setContentDescription("Grafik hineinzoomen");
+        Button large=button(row,"Groß",() -> togglePlotWorkspace(view),() -> true); large.setTag("plotLarge"); large.setContentDescription("Koordinatensystem vergrößern oder zur normalen Ansicht zurückkehren");
+        for(int i=0;i<row.getChildCount();i++) { Button control=(Button)row.getChildAt(i); control.setTextSize(12); control.setPadding(dp(2),0,dp(2),0); control.setMaxLines(2); }
+    }
+    private void togglePlotWorkspace(PlanPreview view) {
+        PlotWorkspace workspace=view==preview?planWorkspace:runWorkspace;
+        workspace.setExpanded(!workspace.expanded()); updatePlotSizeLabels();
+    }
+    private void updatePlotSizeLabels() {
+        if(planWorkspace!=null) ((Button)planWorkspace.findViewWithTag("plotLarge")).setText(planWorkspace.expanded()?"Normal":"Groß");
+        if(runWorkspace!=null) ((Button)runWorkspace.findViewWithTag("plotLarge")).setText(runWorkspace.expanded()?"Normal":"Groß");
+        syncPlotChrome();
+    }
+    private void syncPlotChrome() {
+        PlotWorkspace workspace=selectedPage==2?planWorkspace:selectedPage==3?runWorkspace:null;
+        boolean large=workspace!=null && workspace.expanded();
+        android.view.ViewGroup destination=large?(android.view.ViewGroup)workspace.findViewWithTag("plotTools"):emergencyHome;
+        android.view.ViewGroup current=(android.view.ViewGroup)emergencyButton.getParent();
+        if(current!=destination) {
+            current.removeView(emergencyButton);
+            if(large) destination.addView(emergencyButton,new LinearLayout.LayoutParams(0,dp(48),1));
+            else destination.addView(emergencyButton,Math.min(emergencyHomeIndex,destination.getChildCount()),emergencyHomeParams);
+        }
+        emergencyButton.setTextSize(large?12:14); emergencyButton.setPadding(dp(large?2:8),0,dp(large?2:8),0);
+        headerBar.setVisibility(large?View.GONE:View.VISIBLE); tabBar.setVisibility(large?View.GONE:View.VISIBLE); message.setVisibility(large?View.GONE:View.VISIBLE);
+    }
+    @Override public void onBackPressed() {
+        PlotWorkspace workspace=selectedPage==2?planWorkspace:selectedPage==3?runWorkspace:null;
+        if(workspace!=null && workspace.expanded()) { workspace.setExpanded(false); updatePlotSizeLabels(); return; }
+        super.onBackPressed();
     }
     private void chooseTiltRange() {
         new AlertDialog.Builder(this).setTitle("Tilt-Ausschnitt der Grafik")
@@ -394,8 +467,6 @@ public final class MainActivity extends Activity {
     private boolean endpointSet(String prefix) {
         try { number(prefix+"Pan"); number(prefix+"Tilt"); return true; } catch(RuntimeException ex) { return false; }
     }
-    private double fineStep() { int selected=finePicker.getSelectedItemPosition(); return selected==3?stepSize():new double[]{.1,.5,1}[selected]; }
-    private void fineMove(double pan,double tilt) { service.setManualTempo(integer("manualSpeed")); preview.discardSelection(); service.move(pan,tilt); }
     private void driveSelection() {
         if(!preview.selection.pending || preview.editMode()!=3) throw new IllegalArgumentException("Zuerst einen Fahrpunkt wählen");
         driveUiPoint(preview.selection.pan,preview.selection.tilt);
@@ -403,7 +474,7 @@ public final class MainActivity extends Activity {
     private void driveEndpoint(String prefix) { driveUiPoint(number(prefix+"Pan"),number(prefix+"Tilt")); }
     private void driveUiPoint(double pan,double tilt) {
         if(!positionReady()) throw new IllegalArgumentException("Zuerst aktuelle Zielankunft abwarten");
-        service.setManualTempo(integer("manualSpeed")); service.moveToUi(pan,tilt); preview.discardSelection();
+        service.setManualTempos(integer("manualPanSpeed"),integer("manualSpeed")); service.moveToUi(pan,tilt); preview.discardSelection();
     }
     private void refreshEndpoints() {
         try {
@@ -414,16 +485,43 @@ public final class MainActivity extends Activity {
         catch(RuntimeException ignored) { /* An incomplete numeric edit is rejected by calculation. */ }
     }
     private Button button(LinearLayout parent,String title,Runnable action,BooleanSupplier enabled) {
-        Button button=new Button(this); button.setText(title); button.setMinHeight(dp(48)); button.setAllCaps(false); button.setTextSize(14); button.setMinWidth(0); button.setMinimumWidth(0); button.setPadding(dp(8),0,dp(8),0);
+        Button button=new Button(this); button.setText(title); button.setMinHeight(dp(48)); button.setMinimumHeight(dp(48)); button.setAllCaps(false); button.setTextSize(14); button.setMinWidth(0); button.setMinimumWidth(0); button.setPadding(dp(8),0,dp(8),0);
         button.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{Color.rgb(119,133,144),INK}));
         button.setBackgroundTintList(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{Color.rgb(235,239,241),Color.rgb(226,238,241)}));
         button.setOnClickListener(v -> safely(action)); gates.put(button,enabled);
-        if (parent.getOrientation()==LinearLayout.HORIZONTAL) parent.addView(button,new LinearLayout.LayoutParams(0,dp(56),1)); else parent.addView(button);
+        if (parent.getOrientation()==LinearLayout.HORIZONTAL) parent.addView(button,new LinearLayout.LayoutParams(0,dp(48),1)); else parent.addView(button);
         return button;
     }
-    private void arrowButton(LinearLayout parent,String symbol,String description,Runnable action) {
-        Button arrow=button(parent,symbol,action,this::manualReady);
-        arrow.setTextSize(24); arrow.setContentDescription(description);
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private void arrowButton(LinearLayout parent,String symbol,String description,int axis,int direction) {
+        Runnable start=() -> safely(() -> { service.setJogSpeed(axis,number(axis==0?"panJogSpeed":"jogSpeed")); service.setRememberSettleMillis(integer("rememberSettleMs")); preview.discardSelection(); preview.followCurrentPosition();
+            service.beginJog(axis,direction); });
+        Runnable stop=() -> { if(service!=null && service.jogHeldFor(axis,direction)) service.endJog(); };
+        // Accessibility click is a bounded hold; touch and keyboard release
+        // cancel immediately, including while the start ACK is outstanding.
+        Button arrow=button(parent,symbol,() -> {
+            start.run(); long token=service==null ? 0 : service.jog.token;
+            plotHandler.postDelayed(() -> { if(service!=null && service.jog.token==token) stop.run(); },1000);
+        },
+            () -> service!=null && (service.jogHeldFor(axis,direction) || service.jogAllowed()));
+        arrow.setTextSize(24); arrow.setContentDescription(description+" · halten, loslassen stoppt");
+        arrow.setOnTouchListener((view,event) -> {
+            int action=event.getActionMasked();
+            if(action==android.view.MotionEvent.ACTION_DOWN) { view.setPressed(true); start.run(); }
+            else if(action==android.view.MotionEvent.ACTION_UP || action==android.view.MotionEvent.ACTION_CANCEL ||
+                    action==android.view.MotionEvent.ACTION_POINTER_DOWN || action==android.view.MotionEvent.ACTION_POINTER_UP ||
+                    action==android.view.MotionEvent.ACTION_MOVE &&
+                    (event.getX()<0 || event.getY()<0 || event.getX()>=view.getWidth() || event.getY()>=view.getHeight())) {
+                view.setPressed(false); stop.run();
+            }
+            return true;
+        });
+        arrow.setOnKeyListener((view,key,event) -> {
+            if(key!=android.view.KeyEvent.KEYCODE_ENTER && key!=android.view.KeyEvent.KEYCODE_DPAD_CENTER && key!=android.view.KeyEvent.KEYCODE_SPACE) return false;
+            if(event.getAction()==android.view.KeyEvent.ACTION_DOWN && event.getRepeatCount()==0) start.run();
+            else if(event.getAction()==android.view.KeyEvent.ACTION_UP) stop.run();
+            return true;
+        });
     }
     private EditText input(LinearLayout parent,String key,String label,String fallback) {
         parent.addView(text(label,14)); EditText view=new EditText(this); view.setSingleLine(true);
@@ -431,15 +529,17 @@ public final class MainActivity extends Activity {
         boolean endpoint=key.startsWith("start") || key.startsWith("end");
         view.setText(endpoint && !restoreEndpoints?"":preferences.getString(key,fallback)); inputs.put(key,view); parent.addView(view); return view;
     }
-    private boolean ready() { return service!=null && service.fresh() && !service.busy && !service.abortingPlan; }
+    private boolean ready() { return service!=null && service.fresh() && !service.uncertain && !service.recovering && !service.incident.needsAcknowledgement() && !service.busy && !service.abortingPlan && !service.jog.held && !service.jog.stopping; }
     private boolean manualReady() { return service!=null && service.navigationAllowed() && selectedPage!=3; }
     private void selectPage(int index) {
         selectedPage=Math.max(0,Math.min(4,index));
         navigationBar.setVisibility(selectedPage==1 || selectedPage==2?View.VISIBLE:View.GONE);
-        for (int i=0;i<pages.length;i++) ((View)pages[i].getParent()).setVisibility(i==selectedPage ? View.VISIBLE : View.GONE);
+        endpointBar.setVisibility(selectedPage==2?View.VISIBLE:View.GONE);
+        runActionBar.setVisibility(selectedPage==3?View.VISIBLE:View.GONE);
+        for (int i=0;i<pages.length;i++) pageViews[i].setVisibility(i==selectedPage ? View.VISIBLE : View.GONE);
         for(int i=0;i<tabs.size();i++) { Button tab=tabs.get(i); tab.setSelected(i==selectedPage); tab.setTextColor(i==selectedPage?Color.WHITE:MUTED); tab.setBackgroundTintList(ColorStateList.valueOf(i==selectedPage?ACCENT:Color.rgb(226,234,239))); }
         if (selectedPage==4 && service!=null) refreshRuns();
-        render();
+        syncPlotChrome(); render();
     }
     private String statusText() {
         if (service==null) return "Keine Geräteverbindung";
@@ -455,13 +555,30 @@ public final class MainActivity extends Activity {
     }
     private void render() {
         if (connection==null) return;
+        if(recoveryAction!=null) recoveryAction.setVisibility(service!=null && (service.incident.needsAcknowledgement() || service.uncertain || service.recovering || service.state.state.equals("FAULT") || (service.hasConnection() && !service.fresh()))?View.VISIBLE:View.GONE);
+        if(referenceReview!=null) referenceReview.setVisibility(service!=null && service.draftNeedsReview?View.VISIBLE:View.GONE);
         EditText manualTempo=inputs.get("manualSpeed");
-        if(manualTempo!=null) manualTempo.setEnabled(service==null || !service.connected || service.state.profiledMotion);
+        if(manualTempo!=null) manualTempo.setEnabled(service==null || !service.connected || (service.state.profiledMotion && !service.jog.held && !service.jog.stopping));
+        EditText panManualTempo=inputs.get("manualPanSpeed");
+        if(panManualTempo!=null) panManualTempo.setEnabled(manualTempo==null || manualTempo.isEnabled());
+        EditText jogTempo=inputs.get("jogSpeed");
+        if(jogTempo!=null) jogTempo.setEnabled(service==null || !service.connected || (service.state.jogMaximumVelocityMdeg>0 && !service.jog.held && !service.jog.stopping));
+        EditText rememberTempo=inputs.get("rememberSettleMs");
+        if(rememberTempo!=null) rememberTempo.setEnabled(service==null || (!service.jog.held && !service.jog.stopping));
+        EditText panJogTempo=inputs.get("panJogSpeed");
+        if(panJogTempo!=null) panJogTempo.setEnabled(service==null || !service.connected || (service.state.jogMaximumVelocityMdeg>0 && !service.jog.held && !service.jog.stopping));
+        if(jogTempoLabel!=null && jogTempo!=null) {
+            String tempo=service!=null && service.connected && service.state.jogMaximumVelocityMdeg==0 ? manualTempo.getText()+"‰" : "P"+panJogTempo.getText()+" · T"+jogTempo.getText()+"°/s";
+            String label="Halten\n"+tempo;
+            if(!jogTempoLabel.getText().toString().equals(label)) jogTempoLabel.setText(label);
+        }
         if(service!=null && observedDraftRevision>=0 && observedDraftRevision!=service.draftRevision) {
             observedDraftRevision=service.draftRevision; clearLocalPlan();
         }
         connection.setText(service==null ? "Nicht verbunden" : service.connection);
-        getWindow().setFlags(service!=null && service.connected?android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON:0,android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        int keepOn=android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+        boolean keepScreen=service!=null && service.connected;
+        if(((getWindow().getAttributes().flags&keepOn)!=0)!=keepScreen) getWindow().setFlags(keepScreen?keepOn:0,keepOn);
         message.setText(service==null ? "Bereit" : service.message);
         boolean loadedForAlignment=service!=null && service.fresh() && service.state.state.equals("PLAN_READY");
         if(alignmentReset!=null) alignmentReset.setVisibility(service!=null && service.fresh() && PlanAbort.allowed(service.state.state)?View.VISIBLE:View.GONE);
@@ -502,23 +619,44 @@ public final class MainActivity extends Activity {
             runPreview.setPlan(savedPlot!=null?savedPlot.plan:service==null?null:service.state.plan);
             runPreview.setLive(savedPlot!=null?null:service==null?null:service.state,savedPlot!=null?savedPlot.model:service==null?null:service.plot,savedPlot==null && service!=null && service.fresh());
             runLegend.setText((savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId+" · keine Live-Position\n":"Aktueller Gerätelauf\n")+"Blau: Sollpunkte · Violett: Fahrziel · Orange: Istposition\nGrün: gemessene Aufnahme · ×: rekonstruiertes Soll\nLetzte 512 Aufnahmen / Statuspunkte; graue Linie: empfangener Verlauf");
-            if(savedPlot==null && service!=null && service.fresh() && plottedRun!=service.state.runId) { plottedRun=service.state.runId; runPreview.fit(); }
-            if(savedPlot==null && service!=null && service.fresh() && service.state.plan!=null && fittedPlanRun!=service.state.runId) { fittedPlanRun=service.state.runId; runPreview.fit(); }
+            // New status/plan data never silently replace the chosen zoom.
+            if(savedPlot==null && service!=null && service.fresh()) plottedRun=service.state.runId;
         }
         devicePicker.setEnabled(service==null || !service.hasConnection());
         for (Map.Entry<Button,BooleanSupplier> entry:gates.entrySet()) entry.getKey().setEnabled(entry.getValue().getAsBoolean());
+        showIncident();
     }
     private String endpointLabel(String prefix,String title) {
         return endpointSet(prefix)?String.format(Locale.GERMANY,"%s  Pan %.3f° · Tilt %.3f°",title,number(prefix+"Pan"),number(prefix+"Tilt")):title+" noch nicht gesetzt";
     }
     private String alignmentHelp() {
-        if(service==null || !service.fresh()) return "Zum Ausrichten zuerst unter Gerät verbinden.";
-        if(!service.state.confirmed) return "Fahrt gesperrt: Gerätegrenzen sind noch nicht bestätigt.";
+        if(service==null) return "Zum Ausrichten mit dem Gerät verbinden.";
+        String reason=service.navigationReason(); if(!reason.isEmpty()) return reason;
         if(!service.state.positionSafe()) return "Istposition außerhalb der Grenze. Nur in Richtung des erlaubten Bereichs zurückfahren.";
-        if(service.abortingPlan) return "Auftrag wird gestoppt und zurückgesetzt … bitte Bestätigung abwarten.";
-        if(!service.state.navigation(SystemClock.elapsedRealtime())) return service.state.state.equals("RUNNING") || service.state.state.equals("PAUSE_PENDING")?"Aufnahme läuft · Pfeile gesperrt. Zum Ausrichten erst pausieren oder stoppen.":service.state.state.equals("TIMELAPSE")?"Timelapse läuft · Pfeile gesperrt.":"Fahrt hier nicht freigegeben · geladene/beendete Aufträge benötigen Firmware 2.3.6.";
         if(service.manualMoving) return "Kamera fährt … Zielankunft abwarten, dann Start oder Ende merken.";
-        return "Punkt antippen → Anfahren direkt am Punkt → Kamera prüfen → Start oder Ende merken. Pfeile unten fahren direkt; der Auftrag bleibt erhalten. ↑ hebt das Objektiv.";
+        if(!service.endpointCaptureAllowed()) return "Position beruhigt sich … frische Istposition abwarten, dann Start oder Ende merken.";
+        return "Pfeile halten: orangefarbenen Jetzt-Punkt bewegen. Loslassen → Start oder Ende merken. Alternativ Punkt antippen und anfahren.";
+    }
+    private void showIncident() {
+        if(service==null || !service.incident.needsAcknowledgement() || isFinishing()) return;
+        long id=service.incident.id;
+        if(incidentDialog!=null && incidentDialog.isShowing() && dialogIncidentId==id) {
+            incidentDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(service.connected); return;
+        }
+        if(incidentDialog!=null) incidentDialog.dismiss();
+        dialogIncidentId=id;
+        PanoramaService owner=service;
+        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle("Aktion unterbrochen")
+            .setMessage(owner.incident.detail+"\n\nQuittieren prüft den Gerätestand. Alte Fahrten werden nicht wiederholt; Entwurf und gespeicherte Aufnahmen bleiben erhalten.")
+            .setCancelable(false).setPositiveButton("Quittieren",(dialog,which) -> safely(() -> owner.acknowledgeIncident(id)));
+        builder.setNeutralButton("NOT-STOP",(dialog,which) -> safely(owner::emergencyStop));
+        incidentDialog=builder.create(); incidentDialog.setCanceledOnTouchOutside(false);
+        // Not-Stop remains reachable without dismissing the required acknowledgement.
+        incidentDialog.setOnShowListener(dialog -> {
+            incidentDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(owner.connected);
+            incidentDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> safely(owner::emergencyStop));
+        });
+        incidentDialog.show();
     }
     private String friendlyState(String state) {
         switch(state) { case "IDLE": return "Bereit"; case "PLAN_READY": return "Plan geladen"; case "RUNNING": return "Aufnahme läuft"; case "PAUSE_PENDING": return "Pause wird vorbereitet"; case "PAUSED": return "Pausiert"; case "STOPPED": return "Gestoppt"; case "COMPLETED": return "Abgeschlossen"; case "FAULT": return "Gerätefehler"; default: return state; }
@@ -531,11 +669,10 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle(title).setMessage(detail).setNegativeButton("Abbrechen",null).setPositiveButton("Ja",(d,w) -> safely(action)).show();
     }
     private double number(String key) { double n=Double.parseDouble(inputs.get(key).getText().toString().trim().replace(',','.')); if (!Double.isFinite(n)) throw new IllegalArgumentException("Ungültige Zahl"); return n; }
-    private double stepSize() { double n=number("step"); if (n<.001 || n>360) throw new IllegalArgumentException("Schrittweite zwischen 0,001° und 360° erforderlich"); return n; }
     private int integer(String key) { double n=number(key); if (n!=Math.rint(n) || n<Integer.MIN_VALUE || n>Integer.MAX_VALUE) throw new IllegalArgumentException("Ganze Millisekunden/Zahlen erforderlich"); return (int)n; }
     private void saveInputs() {
         SharedPreferences.Editor editor=preferences.edit(); for (Map.Entry<String,EditText> input:inputs.entrySet()) editor.putString(input.getKey(),input.getValue().getText().toString());
-        editor.putInt("mode",modePicker.getSelectedItemPosition()).putInt("fineStep",finePicker.getSelectedItemPosition()).putBoolean("stopOnLoss",stopOnLoss.isChecked()).apply();
+        editor.putInt("mode",modePicker.getSelectedItemPosition()).putBoolean("stopOnLoss",stopOnLoss.isChecked()).apply();
         if(service!=null) for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) service.draftEndpoints.put(key,inputs.get(key).getText().toString());
     }
     private boolean permission() {
@@ -569,7 +706,7 @@ public final class MainActivity extends Activity {
         Intent intent=new Intent(this,PanoramaService.class).putExtra("address",devices.get(devicePicker.getSelectedItemPosition()).getAddress());
         startForegroundService(intent);
     }
-    private void takePosition(String prefix) { if (!positionReady() || !service.state.positionSafe()) throw new IllegalArgumentException("Position erst nach sicherer Zielankunft übernehmen"); preview.discardSelection(); inputs.get(prefix+"Pan").setText(""+(-service.state.pan/1000.0)); inputs.get(prefix+"Tilt").setText(""+(service.state.tilt/1000.0)); Toast.makeText(this,prefix.equals("start")?"Startposition gespeichert":"Endposition gespeichert",Toast.LENGTH_SHORT).show(); }
+    private void takePosition(String prefix) { if (!positionReady() || !service.state.positionSafe() || !service.endpointCaptureAllowed()) throw new IllegalArgumentException("Position erst nach Beruhigung und frischer Rückmeldung übernehmen"); preview.discardSelection(); inputs.get(prefix+"Pan").setText(""+(-service.state.pan/1000.0)); inputs.get(prefix+"Tilt").setText(""+(service.state.tilt/1000.0)); Toast.makeText(this,prefix.equals("start")?"Startposition gespeichert":"Endposition gespeichert",Toast.LENGTH_SHORT).show(); }
     private void migrateTiltSign() {
         if(!preferences.getBoolean("tiltPositiveUp",false)) return;
         SharedPreferences.Editor editor=preferences.edit();

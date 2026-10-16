@@ -2,6 +2,9 @@ package de.tomnaiser.panoramaandroid;
 
 /** Validated firmware state in device millidegrees. Never inferred from button clicks. */
 public final class DeviceState {
+    boolean jogSupported;
+    int jogMaximumVelocityMdeg;
+    int jogMaximumPanVelocityMdeg;
     public String firmware = "—", hardware = "—", state = "UNKNOWN", phase = "NONE", lastError = "—";
     public long runId, completed, total, lastStatusMs;
     public int pan, tilt, column, row, revision;
@@ -10,6 +13,9 @@ public final class DeviceState {
     public boolean tiltCalibrationKnown;
     public boolean inactiveNavigation;
     public boolean profiledMotion;
+    public boolean manualStatusSupported;
+    ManualActionStatus manualStatus;
+    long manualStatusVersion, lastManualStatusMs, manualStatusExpectedMs;
     public int tiltZeroOffset, tiltAbsoluteMin, tiltAbsoluteMax;
     public PanoramaPlan plan;
 
@@ -51,10 +57,33 @@ public final class DeviceState {
                 runId = id; completed = count; total = maximum; pan = x; tilt = y;
                 state = f[1]; phase = f[2]; column = c; row = r; revision = rev;
                 lastError = f[13]; lastStatusMs = now; break;
+            case "MANUAL_STATUS_CAPABILITIES":
+                if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException("Manuelle Statusfreigabe ungültig");
+                if(!manualStatusSupported && f[0].equals("1")) manualStatusExpectedMs=now;
+                manualStatusSupported=f[0].equals("1"); break;
+            case "MANUAL_JOG_CAPABILITIES":
+                if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException("Dauerfahrt-Freigabe ungültig");
+                jogSupported=f[0].equals("1"); break;
+            case "MANUAL_JOG_VELOCITY_CAPABILITIES":
+                if(f.length!=1) throw new IllegalArgumentException("Haltefahrt-Tempo ungültig");
+                int jogMaximum=Integer.parseInt(f[0]);
+                if(jogMaximum!=0 && (jogMaximum<500 || jogMaximum>10000)) throw new IllegalArgumentException("Haltefahrt-Tempo ungültig");
+                jogMaximumVelocityMdeg=jogMaximum; break;
+            case "MANUAL_JOG_PAN_VELOCITY_CAPABILITIES":
+                if(f.length!=1) throw new IllegalArgumentException("Pan-Haltefahrt-Tempo ungültig");
+                int panJogMaximum=Integer.parseInt(f[0]);
+                if(panJogMaximum!=0 && (panJogMaximum<500 || panJogMaximum>20000)) throw new IllegalArgumentException("Pan-Haltefahrt-Tempo ungültig");
+                jogMaximumPanVelocityMdeg=panJogMaximum; break;
+            case "MANUAL_STATUS":
+                ManualActionStatus manual=ManualActionStatus.parse(f);
+                manualStatus=manual; manualStatusVersion++; lastManualStatusMs=now; break;
             default: break;
         }
     }
     public boolean fresh(long now) { return compatible && lastStatusMs > 0 && now - lastStatusMs < 2500; }
+    boolean manualStatusFresh(long now) { return manualStatus!=null && lastManualStatusMs>0 && now-lastManualStatusMs<2500; }
     public boolean manual(long now) { return fresh(now) && (state.equals("IDLE") || state.equals("PAUSED")); }
     public boolean navigation(long now) {
         return manual(now) || fresh(now) && inactiveNavigation &&

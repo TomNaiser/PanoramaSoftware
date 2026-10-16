@@ -148,6 +148,12 @@ def analyze(directory, additional=()):
             record[field] = int(record[field])
         record["arrivalMs"] = int(record["arrivalMs"]) if record["arrivalMs"] else None
         record["positionPassed"] = bool(record["arrivalMs"] is not None and not record["pointFailure"])
+        log_records = [json.loads(line) for line in (Path(record["sourceDirectory"]) / record["logName"]).read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+        move = next((r for r in log_records if r["direction"] == "TX" and r["type"] == "MANUAL_MOVE"), None)
+        sampled_motion = [r for r in log_records if move and r["direction"] == "RX" and r["type"] == "MOTION_DIAGNOSTICS" and r["elapsedMs"] >= move["elapsedMs"] and len(r["fields"]) >= 12]
+        fine_samples = [r for r in sampled_motion if int(r["fields"][11]) == 5]
+        record["finePhaseObserved"] = bool(fine_samples)
+        record["fineTelemetrySamples"] = len(fine_samples)
         sequence = int(record["firstDiagnosticSequence"]) if record["firstDiagnosticSequence"] else None
         matches = [run for run in runs if sequence is not None and run[0]["sequence"] <= sequence <= run[-1]["sequence"]]
         record.update(motion_metrics(matches[0]) if len(matches) == 1 else {
@@ -194,6 +200,8 @@ def analyze(directory, additional=()):
               "rowSteadyMeanDps": describe(record["steadyMeanDps"] for record in row_steps),
               "rowStartupDips": sum(record["startupSpeedDip"] is True for record in row_steps),
               "matchedRows": sum(record["actualDirection"] != "unmatched" for record in row_steps),
+              "fineObservedPositions": sum(record["finePhaseObserved"] for record in enriched),
+              "fineTelemetrySamples": sum(record["fineTelemetrySamples"] for record in enriched),
               "returnArrivalMs": describe(record["arrivalMs"] for record in returns),
               "returnStartupDips": sum(record["startupSpeedDip"] is True for record in returns)}
     (directory / "statistics.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -209,14 +217,16 @@ def analyze(directory, additional=()):
         item = result[key]
         format_value = lambda value: "—" if value is None else f"{value:.4f}"
         text.append("| " + label + " | " + str(item["n"]) + " | " + " | ".join(format_value(item[field]) for field in ("mean", "sd", "median", "p95", "min", "max")) + " |")
-    text.extend(["", f"Tempodelle nach erster Beschleunigung: {result['rowStartupDips']} bei {len(row_steps)} Zeilenschritten; "
-                 f"{result['returnStartupDips']} bei {len(returns)} Spaltenanfängen/Rückfahrten.", "",
+    dip_text = (f"Tempodelle nach erster Beschleunigung: {result['rowStartupDips']} bei {len(row_steps)} Zeilenschritten; "
+                f"{result['returnStartupDips']} bei {len(returns)} Spaltenanfängen/Rückfahrten.") if result['matchedRows'] else "Keine zugeordneten USB-Reglerproben: Anlauf, Tempodellen und mechanische Geschwindigkeitsspitzen sind in dieser Reihe nicht bewertet."
+    text.extend(["", dip_text, "",
+                 f"Feinphase in abgefragter Bluetooth-Telemetrie bei {result['fineObservedPositions']} Positionen beobachtet, insgesamt {result['fineTelemetrySamples']} Proben. "
+                 "Kurze Phasen können zwischen Abfragen liegen; die Zahl ist keine vollständige Übergangszählung.", "",
                  "Tempo: Mittel aus Fahrtproben ab 250 ms nach Phasenwechsel, mindestens fünf Proben, Zielrest >0,3°. "
                  "Tempodelle: gefiltertes Tempo nach Erreichen von 70 % des Solltempos im ersten Grad mindestens 100 ms unter 40 %. "
                  "Encoderrauschen kann einzelne negative Geschwindigkeiten erzeugen; die Auswertung behauptet keinen mechanischen Stillstand.", "",
                  "Standardabweichung ist die Stichprobenabweichung (n−1); P95 wird linear zwischen geordneten Werten interpoliert. "
                  "Winkelfehler schließen fehlgeschlagene Positionen ein; Ankunftszeiten enthalten nur bestätigte Ankünfte. "
-                 "Zwei Wiederholungen pro Zelle waren geplant; diese Reihe wurde vorher abgebrochen. "
                  "Die erreichte Abdeckung und n je Zelle sind maßgeblich; aus einer Messung je Zelle folgt keine Wiederholpräzision. "
                  "Spaltenanfänge und Rückfahrten werden getrennt von den 2°-Zeilenschritten ausgewertet. "
                  "Ankunftszeit wird ab Fahrbefehl bis zur ersten abgefragten bestätigten Zielruhe gemessen und enthält Kommunikationslatenz. "

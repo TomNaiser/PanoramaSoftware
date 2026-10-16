@@ -8,7 +8,7 @@ final class EndpointSelection {
         baseTilt=committedTilt;
         pan=round(Math.max(minPan,Math.min(maxPan,x)));
         tilt=round(Math.max(minTilt,Math.min(maxTilt,y)));
-        limited=Math.abs(tilt-y)>.001; pending=true;
+        limited=Math.abs(pan-x)>.001 || Math.abs(tilt-y)>.001; pending=true;
     }
     private static double round(double value) { return Math.rint(value*1000)/1000; }
     void clear() { pending=false; limited=false; }

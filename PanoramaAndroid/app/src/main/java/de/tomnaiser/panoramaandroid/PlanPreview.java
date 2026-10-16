@@ -100,8 +100,24 @@ final class PlanPreview extends FrameLayout {
         for(int i=0;i<points.length;i++) points[i]=value.target(i);
         invalidate();
     }
-    void setLive(DeviceState value,RunPlotModel model,boolean current) { state=value; run=model; fresh=current; invalidate(); }
-    void zoom(double factor) { viewport.zoom(factor); updateSelectionActions(); invalidate(); }
+    private boolean followingPosition;
+    private boolean positionKnown() { return (fresh && state!=null) || (run!=null && run.positionKnown); }
+    private int currentPan() { return fresh && state!=null?state.pan:run.pan; }
+    private int currentTilt() { return fresh && state!=null?state.tilt:run.tilt; }
+    void followCurrentPosition() {
+        if(!positionKnown()) return;
+        double pan=-currentPan()/1000.0,tilt=currentTilt()/1000.0;
+        // Arrow movement follows a deliberately chosen view; it never
+        // silently replaces the 360-degree overview by a small zoom window.
+        viewport.keepVisible(pan,tilt);
+        followingPosition=true; invalidate();
+    }
+    void setLive(DeviceState value,RunPlotModel model,boolean current) {
+        state=value; run=model; fresh=current;
+        if(followingPosition && fresh && positionKnown()) viewport.keepVisible(-currentPan()/1000.0,currentTilt()/1000.0);
+        invalidate();
+    }
+    void zoom(double factor) { followingPosition=false; viewport.zoom(factor); updateSelectionActions(); invalidate(); }
     int alignmentHeight() {
         android.util.DisplayMetrics metrics=getResources().getDisplayMetrics();
         float dpi=Float.isFinite(metrics.ydpi) && metrics.ydpi>0?metrics.ydpi:metrics.densityDpi;
@@ -109,11 +125,11 @@ final class PlanPreview extends FrameLayout {
         return (int)Math.ceil(25*dpi/25.4+76*metrics.density);
     }
     void wholeRange() {
-        viewport.left=state!=null && state.limitsKnown?-state.panMax/1000.0:-180;
-        viewport.right=state!=null && state.limitsKnown?-state.panMin/1000.0:180;
+        followingPosition=false;
+        viewport.left=-180; viewport.right=180;
         viewport.bottom=state!=null && state.limitsKnown?state.tiltMin/1000.0:-90;
         viewport.top=state!=null && state.limitsKnown?state.tiltMax/1000.0:90;
-        invalidate();
+        updateSelectionActions(); invalidate();
     }
     void alignmentRange(double tiltExtent) {
         wholeRange();
@@ -124,6 +140,7 @@ final class PlanPreview extends FrameLayout {
         discardSelection();
     }
     void fit() {
+        followingPosition=false;
         double x0=Double.POSITIVE_INFINITY,x1=Double.NEGATIVE_INFINITY,y0=Double.POSITIVE_INFINITY,y1=Double.NEGATIVE_INFINITY;
         if(listener!=null && startKnown) { x0=x1=sx; y0=y1=sy; }
         if(listener!=null && endKnown) { x0=Math.min(x0,ex); x1=Math.max(x1,ex); y0=Math.min(y0,ey); y1=Math.max(y1,ey); }
@@ -208,7 +225,12 @@ final class PlanPreview extends FrameLayout {
                 } else dot(c,capture.pan,capture.tilt,Color.rgb(0,130,75),4);
             }
             }
-            if(run.positionKnown) { if(listener==null && plan!=null && fresh) dot(c,run.targetPan,run.targetTilt,Color.rgb(190,60,180),6); dot(c,run.pan,run.tilt,fresh?Color.rgb(220,70,25):Color.GRAY,5); }
+            if(run.positionKnown && listener==null && plan!=null && fresh) dot(c,run.targetPan,run.targetTilt,Color.rgb(190,60,180),6);
+        }
+        if(positionKnown()) {
+            dot(c,currentPan(),currentTilt(),fresh?Color.rgb(220,70,25):Color.GRAY,7);
+            paint.setTextSize(12*density()); paint.setColor(fresh?Color.rgb(180,55,20):Color.GRAY);
+            c.drawText(fresh?"Jetzt":"Letzte Position",px(-currentPan()/1000.0)+10*density(),py(currentTilt()/1000.0)-10*density(),paint);
         }
         if(listener!=null) {
             paint.setTextSize(12*density());
@@ -228,6 +250,7 @@ final class PlanPreview extends FrameLayout {
     @Override public boolean onTouchEvent(MotionEvent e) {
         float x=e.getX(),y=e.getY(); int action=e.getActionMasked();
         if(action==MotionEvent.ACTION_DOWN) {
+            followingPosition=false;
             if(x<l() || x>l()+w() || y<t() || y>t()+h()) return false;
             getParent().requestDisallowInterceptTouchEvent(editMode==0); lastX=downX=x; lastY=downY=y; multiTouch=dragged=false;
         }
@@ -236,6 +259,10 @@ final class PlanPreview extends FrameLayout {
         scale.onTouchEvent(e);
         if(!multiTouch && (action==MotionEvent.ACTION_MOVE || action==MotionEvent.ACTION_UP)) {
             if(listener!=null && editMode!=0) {
+                if(action==MotionEvent.ACTION_MOVE && dragged) {
+                    viewport.shift((x-lastX)/w()*(viewport.right-viewport.left),(y-lastY)/h()*(viewport.top-viewport.bottom));
+                    updateSelectionActions(); invalidate();
+                }
                 if(action==MotionEvent.ACTION_UP && !dragged && x>=l() && x<=l()+w() && y>=t() && y<=t()+h()) {
                     double pan=viewport.pan(Math.max(0,Math.min(1,(x-l())/w()))),tilt=viewport.tilt(Math.max(0,Math.min(1,(y-t())/h())));
                     propose(pan,tilt);

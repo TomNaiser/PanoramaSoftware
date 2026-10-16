@@ -17,4 +17,8 @@ public final class EndpointSelectionTest {
         assertEquals(180,p.pan,0); assertEquals(45,p.tilt,0);
         p.clear(); assertFalse(p.pending);
     }
+    @Test public void fullPanOverviewStillClampsAndMarksNarrowerDeviceLimits() {
+        EndpointSelection p=new EndpointSelection(); p.propose(170,0,0,-150,150,-45,45);
+        assertEquals(150,p.pan,0); assertTrue(p.limited);
+    }
 }

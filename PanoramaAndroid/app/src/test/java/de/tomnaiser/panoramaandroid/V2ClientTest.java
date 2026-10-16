@@ -23,6 +23,7 @@ public final class V2ClientTest {
         String first = next(); worker.advance(); assertEquals(first, next());
         reply("ACK", 65535, "TRIGGERED");
         assertTrue(result.get(1, TimeUnit.SECONDS).accepted);
+        assertEquals(65535,result.get().commandSequence);
     }
     @Test public void foreignAckAndMalformedAckDoNotCompleteRequest() throws Exception {
         CompletableFuture<V2Client.Result> result = client.send("GET_STATUS"); next();
@@ -53,6 +54,15 @@ public final class V2ClientTest {
         assertEquals("STOPPED", stop.get(1, TimeUnit.SECONDS).code);
         worker.advance(); assertTrue(writes.isEmpty());
     }
+    @Test public void releaseSupersedesStartAndAllRetries() throws Exception {
+        CompletableFuture<V2Client.Result> old=client.send("MANUAL_JOG_START","123","1","-1","300"); next();
+        CompletableFuture<V2Client.Result> stop=client.stopJog("123");
+        P2Codec.Frame wire=P2Codec.decode(next()); assertEquals("MANUAL_JOG_STOP",wire.type);
+        assertEquals("123",wire.fields[0]); assertTrue(old.isCompletedExceptionally());
+        reply("ACK",65535,"JOGGING"); assertFalse(stop.isDone());
+        reply("ACK",1,"JOG_STOPPED"); assertTrue(stop.get().accepted);
+        worker.advance(); assertTrue(writes.isEmpty());
+    }
     @Test public void exhaustedRetryBudgetBlocksNewActionsUntilResync() throws Exception {
         CompletableFuture<V2Client.Result> result = client.send("TRIGGER_ONCE", "30");
         String wire = next(); worker.advance(); assertEquals(wire, next()); worker.advance(); assertEquals(wire, next()); worker.advance();
@@ -63,6 +73,15 @@ public final class V2ClientTest {
         CompletableFuture<V2Client.Result> result = client.send("PAUSE", "5"); next();
         client.heartbeat("5"); assertEquals("HEARTBEAT", P2Codec.decode(next()).type);
         reply("ACK", 65535, "PAUSED"); assertTrue(result.get(1, TimeUnit.SECONDS).accepted);
+    }
+    @Test public void missingReadOnlyAckDoesNotPoisonPhysicalCommandState() throws Exception {
+        CompletableFuture<V2Client.Result> log=client.send("GET_DEBUG_LOG","0");
+        next(); worker.advance(); next(); worker.advance(); next(); worker.advance();
+        assertTrue(log.isCompletedExceptionally());
+        CompletableFuture<V2Client.Result> status=client.send("GET_STATUS");
+        int id=P2Codec.decode(next()).sequence;
+        reply("ACK",id,"OK"); assertTrue(status.get().accepted);
+        assertEquals(id,status.get().commandSequence);
     }
     private static final class ManualScheduler extends ScheduledThreadPoolExecutor {
         private final java.util.Queue<Scheduled> tasks = new java.util.ArrayDeque<>();

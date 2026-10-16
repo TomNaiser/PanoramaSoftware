@@ -11,7 +11,11 @@ public final class V2Client implements AutoCloseable {
     public static final class Result {
         public final boolean accepted;
         public final String code;
-        Result(boolean accepted, String code) { this.accepted = accepted; this.code = code; }
+        public final int commandSequence;
+        Result(boolean accepted, String code) { this(accepted,code,0); }
+        Result(boolean accepted, String code,int commandSequence) {
+            this.accepted = accepted; this.code = code; this.commandSequence=commandSequence;
+        }
     }
     private final Transport transport;
     private final ScheduledExecutorService worker;
@@ -41,6 +45,11 @@ public final class V2Client implements AutoCloseable {
         uncertain = false;
         return begin("ESTOP", new String[] { runId, "ANDROID_ESTOP" });
     }
+    public synchronized CompletableFuture<Result> stopJog(String token) {
+        if(closed) return failed("Sitzung geschlossen");
+        cancelPending("Durch Loslassen verworfen"); uncertain=false;
+        return begin("MANUAL_JOG_STOP",new String[]{token});
+    }
 
     private CompletableFuture<Result> begin(String type, String[] fields) {
         int id = nextSequence();
@@ -55,10 +64,10 @@ public final class V2Client implements AutoCloseable {
     private synchronized void transmit(Pending request) {
         if (closed || pending != request) return;
         if (request.attempts > retries) {
-            uncertain = true;
+            uncertain = !CommandEffects.readOnly(request.type);
             pending = null;
             request.completion.completeExceptionally(new IOException(
-                "Keine Bestätigung für " + request.type + "; Wirkung unklar. Neu verbinden."));
+                "Keine Bestätigung für " + request.type + (uncertain?"; Wirkung unklar. Gerätestand prüfen.":"; Abfrage unvollständig.")));
             return;
         }
         request.attempts++;
@@ -66,7 +75,7 @@ public final class V2Client implements AutoCloseable {
             transport.write(request.wire);
             worker.schedule(() -> transmit(request), timeoutMs, TimeUnit.MILLISECONDS);
         } catch (IOException ex) {
-            uncertain = true; pending = null;
+            uncertain = !CommandEffects.readOnly(request.type); pending = null;
             request.completion.completeExceptionally(ex);
         }
     }
@@ -79,7 +88,7 @@ public final class V2Client implements AutoCloseable {
         if (reference != pending.sequence) return;
         Pending completed = pending;
         pending = null;
-        completed.completion.complete(new Result(frame.type.equals("ACK"), frame.fields[1]));
+        completed.completion.complete(new Result(frame.type.equals("ACK"), frame.fields[1],completed.sequence));
     }
 
     public synchronized void heartbeat(String runId) {

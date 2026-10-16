@@ -17,5 +17,12 @@ final class PlotViewport {
         double h=Math.max(.02,Math.min(360,(top-bottom)*factor));
         left=cx-w/2; right=cx+w/2; bottom=cy-h/2; top=cy+h/2;
     }
+    void keepVisible(double pan,double tilt) {
+        double width=right-left,height=top-bottom;
+        boolean wholePan=left<=-180 && right>=180;
+        double dx=wholePan?0:pan<left+width*.15?pan-left-width*.15:pan>right-width*.15?pan-right+width*.15:0;
+        double dy=tilt<bottom+height*.15?tilt-bottom-height*.15:tilt>top-height*.15?tilt-top+height*.15:0;
+        shift(dx,dy);
+    }
     void shift(double dx,double dy) { left+=dx; right+=dx; bottom+=dy; top+=dy; }
 }

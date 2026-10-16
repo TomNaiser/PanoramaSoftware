@@ -13,8 +13,10 @@ final class ConnectionChecks {
     private volatile boolean connected;
     private volatile String failure, firmware;
     private volatile long lastStatus;
+    private volatile long lastManualStatus;
+    private volatile boolean manualStatusSupported;
     private volatile int activeCycle;
-    void run(Instrumentation instrumentation,long delayMs,boolean secure) throws Exception {
+    void run(Instrumentation instrumentation,long delayMs,boolean secure,String expectedFirmware) throws Exception {
         if (delayMs<0 || delayMs>120000) throw new IllegalArgumentException("Diagnose-Wartezeit");
         Context context = instrumentation.getTargetContext();
         String address = context.getSharedPreferences("settings",Context.MODE_PRIVATE).getString("device",null);
@@ -22,7 +24,7 @@ final class ConnectionChecks {
         if (delayMs>3000) pause(instrumentation,delayMs);
         for (int cycle=1; cycle<=2; cycle++) {
             final int cycleId=cycle; activeCycle=cycleId;
-            connected=false; failure=null; firmware=null; lastStatus=0;
+            connected=false; failure=null; firmware=null; lastStatus=lastManualStatus=0; manualStatusSupported=false;
             CountDownLatch ready = new CountDownLatch(1);
             BluetoothSession session = new BluetoothSession(new BluetoothSession.Listener() {
                 public void onAwaitingProtocol() { }
@@ -32,6 +34,8 @@ final class ConnectionChecks {
                     if (activeCycle!=cycleId) return;
                     if (frame.type.equals("DEVICE_INFO")) firmware=frame.fields[0];
                     if (frame.type.equals("STATUS")) lastStatus=SystemClock.elapsedRealtime();
+                    if(frame.type.equals("MANUAL_STATUS_CAPABILITIES")) manualStatusSupported=frame.fields.length==1 && frame.fields[0].equals("1");
+                    if(frame.type.equals("MANUAL_STATUS")) { ManualActionStatus.parse(frame.fields); lastManualStatus=SystemClock.elapsedRealtime(); }
                 }
             },secure);
             try {
@@ -44,8 +48,10 @@ final class ConnectionChecks {
                     if (!connected) throw new AssertionError("Sitzung abgebrochen: "+failure);
                     if (lastStatus!=0 && SystemClock.elapsedRealtime()-lastStatus>2500) throw new AssertionError("Statusdaten veraltet");
                 }
-                if (lastStatus==0 || !"2.3.1".equals(firmware)) throw new AssertionError("Firmware/Live-Status fehlt");
-                Bundle ok = new Bundle(); ok.putString("stream","\nZyklus "+cycle+": Firmware 2.3.1, 15 Sekunden aktuelle Daten\n"); instrumentation.sendStatus(0,ok);
+                if (lastStatus==0 || !expectedFirmware.equals(firmware)) throw new AssertionError("Erwartete Firmware "+expectedFirmware+", empfangen "+firmware);
+                if(!manualStatusSupported || lastManualStatus==0 || SystemClock.elapsedRealtime()-lastManualStatus>2500)
+                    throw new AssertionError("Aktueller manueller Betriebsstatus fehlt");
+                Bundle ok = new Bundle(); ok.putString("stream","\nZyklus "+cycle+": Firmware "+firmware+", 15 Sekunden aktuelle STATUS- und MANUAL_STATUS-Daten\n"); instrumentation.sendStatus(0,ok);
             } finally { activeCycle=0; session.close(); }
             // Closing posts its final callback to the main thread; drain it before resetting this probe.
             instrumentation.waitForIdleSync();

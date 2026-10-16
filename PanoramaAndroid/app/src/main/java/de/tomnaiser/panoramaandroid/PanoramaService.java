@@ -15,7 +15,7 @@ public final class PanoramaService extends Service {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final List<Observer> observers = new ArrayList<>();
     private final ReconnectPolicy reconnect = new ReconnectPolicy();
-    private BluetoothSession session;
+    private DeviceLink session;
     private BluetoothDevice device;
     private String plotDevice="";
     private int generation, actionGeneration;
@@ -29,6 +29,7 @@ public final class PanoramaService extends Service {
     private boolean discardDraftAfterAbort;
     public int draftRevision;
     public final Map<String,String> draftEndpoints=new LinkedHashMap<>();
+    public boolean draftNeedsReview;
     private String draftDevice="";
     private DeviceSession deviceSession;
     private boolean sessionIdentityReceived;
@@ -38,8 +39,26 @@ public final class PanoramaService extends Service {
     private int manualBaseline = -1;
     private Runnable pendingManual;
     private ManualMoveProgress manualProgress;
+    private ManualActionProgress manualAction;
+    final JogHold jog=new JogHold();
+    private final Runnable jogAlive=new Runnable() {
+        public void run() {
+            if(!jog.held) return;
+            if(!connected || session==null || !fresh() || incident.needsAcknowledgement()) { endJog(); return; }
+            if(!busy && jog.sequence>0) execute("MANUAL_JOG_KEEPALIVE",new String[]{""+jog.token},false,true);
+            ui.postDelayed(this,150);
+        }
+    };
     private int newestDebugSequence;
     private boolean debugPending;
+    private int debugRequestId;
+    private long statusVersion, manualDeadlineMs, triggerDeadlineMs;
+    private long endpointCaptureAfterMs;
+    final IncidentTracker incident=new IncidentTracker();
+    public boolean recovering;
+    private boolean recoveryRequested;
+    private RecoveryFlow recoveryFlow;
+    private long nextRecoveryAttemptMs;
     private long nextDiagnosticMs, openedMs;
     private long lastStatusLoggedMs;
     public CaptureStore captures;
@@ -51,10 +70,27 @@ public final class PanoramaService extends Service {
                 long now = SystemClock.elapsedRealtime();
                 if (now - (state.lastStatusMs == 0 ? openedMs : state.lastStatusMs) > 5000) {
                     session.fail("Keine aktuellen Statusdaten seit 5 Sekunden");
+                } else if(state.manualStatusSupported) {
+                    updateManualAction();
+                    if(!state.manualStatusFresh(now)) {
+                        long last=state.lastManualStatusMs==0?state.manualStatusExpectedMs:state.lastManualStatusMs;
+                        if(now-last>5000) session.fail("Manueller Betriebsstatus fehlt seit 5 Sekunden; Gerätestand prüfen");
+                        else if(!busy && now>nextDiagnosticMs) {
+                            nextDiagnosticMs=now+1000;
+                            execute("GET_STATUS",new String[0],false,true);
+                        }
+                    }
                 } else if (manualMoving && !manualPreparing && !debugPending && !busy && now > nextDiagnosticMs) {
                     nextDiagnosticMs = now + 1000;
                     execute("GET_DEBUG_LOG", new String[]{""+newestDebugSequence}, false, true);
                 }
+                if((manualMoving && now>=manualDeadlineMs) || (manualTrigger && now>=triggerDeadlineMs)) {
+                    raiseIncident("ACTION_COMPLETION", "Der Abschluss der manuellen Aktion wurde nicht bestätigt. Das alte Ziel wird verworfen.");
+                    manualMoving=manualTrigger=targetKnown=false; uncertain=true;
+                    emergencyStop();
+                }
+                if(incident.active && incident.acknowledged && uncertain && !recovering && !busy && fresh() && now>=nextRecoveryAttemptMs)
+                    recoverDevice();
             }
             notifyObservers(); ui.postDelayed(this, 500);
         }
@@ -62,6 +98,15 @@ public final class PanoramaService extends Service {
     @Override public void onCreate() {
         super.onCreate();
         captures = new CaptureStore(this); support = new SupportLog(getFilesDir());
+        android.content.SharedPreferences settings=getSharedPreferences("settings",MODE_PRIVATE);
+        for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) draftEndpoints.put(key,settings.getString(key,""));
+        draftDevice=settings.getString("draftDevice",settings.getString("device",""));
+        draftNeedsReview=settings.getBoolean("draftNeedsReview",false);
+        android.content.SharedPreferences faults=getSharedPreferences("incidents",MODE_PRIVATE);
+        incident.id=faults.getLong("id",0); incident.key=faults.getString("key","");
+        incident.detail=faults.getString("detail",""); incident.active=faults.getBoolean("active",false);
+        incident.acknowledged=faults.getBoolean("acknowledged",true);
+        incident.requiresStop=faults.getBoolean("requiresStop",true);
         getSystemService(NotificationManager.class).createNotificationChannel(
             new NotificationChannel("connection", "Panoramagerät", NotificationManager.IMPORTANCE_LOW));
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Panorama:Bluetooth");
@@ -95,17 +140,20 @@ public final class PanoramaService extends Service {
     private void notifyObservers() { for (Observer observer : new ArrayList<>(observers)) observer.changed(); }
     private void open() {
         if (device == null || session != null) return;
+        jog.finish(jog.token); ui.removeCallbacks(jogAlive);
+        if(wakeLock!=null && !wakeLock.isHeld()) wakeLock.acquire();
         int id = ++generation; ++actionGeneration;
         String address=device.getAddress();
-        if(!draftDevice.isEmpty() && !draftDevice.equals(address)) discardDraft();
+        if(!draftDevice.isEmpty() && !draftDevice.equals(address)) markDraftForReview();
         draftDevice=address;
+        getSharedPreferences("settings",MODE_PRIVATE).edit().putString("draftDevice",address).apply();
         deviceSession=new DeviceSession(getSharedPreferences("settings",MODE_PRIVATE).getLong("session."+address,-1));
         sessionIdentityReceived=false;
         state = new DeviceState(); connected = busy = manualMoving = manualTrigger = targetKnown = uncertain = false;
-        cancelPreparation(); manualProgress = null;
+        cancelPreparation(); manualProgress = null; manualAction=null;
         debugPending = false; newestDebugSequence = 0;
         connection = "Bluetooth-Verbindung wird aufgebaut …";
-        session = new BluetoothSession(new BluetoothSession.Listener() {
+        BluetoothSession opening = new BluetoothSession(new BluetoothSession.Listener() {
             @Override public void onAwaitingProtocol() {
                 if (id != generation) return; connection = "Bluetooth verbunden · Warte auf V2 …"; notifyObservers();
             }
@@ -125,8 +173,8 @@ public final class PanoramaService extends Service {
                         android.content.SharedPreferences settings=getSharedPreferences("settings",MODE_PRIVATE);
                         String key="tiltZero."+device.getAddress();
                         if(settings.contains(key) && settings.getInt(key,0)!=state.tiltZeroOffset) {
-                            discardDraft(); targetKnown=false; state.lastStatusMs=0;
-                            message="Tilt-Nullpunkt geändert · Plan geleert";
+                            markDraftForReview(); targetKnown=false; state.lastStatusMs=0;
+                            message="Tilt-Nullpunkt geändert · Entwurfreferenz prüfen";
                         }
                         settings.edit().putInt(key,state.tiltZeroOffset).apply();
                     }
@@ -136,19 +184,20 @@ public final class PanoramaService extends Service {
                         boolean reset=deviceSession.accept(boot);
                         getSharedPreferences("settings",MODE_PRIVATE).edit().putLong("session."+device.getAddress(),boot).apply();
                         if(reset) {
-                            discardDraft(); message="Gerät neu gestartet · Plan geleert";
+                            message="Gerät neu gestartet · Entwurf erhalten, Gerätestand prüfen";
+                            raiseIncident("DEVICE_RESTART","Das Gerät wurde neu gestartet. Alte Aktionen werden verworfen; der Entwurf bleibt erhalten.",false);
                             state.lastStatusMs=0; state.plan=null; targetKnown=false;
-                            cancelPreparation(); manualProgress=null; manualMoving=manualTrigger=false;
+                            cancelPreparation(); manualProgress=null; manualAction=null; manualMoving=manualTrigger=false;
                             planAbort=null; abortingPlan=discardDraftAfterAbort=false;
                             if(sessionIdentityReceived) {
                                 ++actionGeneration; busy=false; uncertain=false;
-                                session.fail("Gerät neu gestartet · Plan geleert");
+                                session.fail("Gerät neu gestartet · Gerätestand prüfen");
                                 notifyObservers(); return;
                             }
                         }
                         sessionIdentityReceived=true;
                     }
-                    if (frame.type.equals("STATUS") && !previousState.equals(state.state)) targetKnown = false;
+                    if (frame.type.equals("STATUS")) { statusVersion++; if(!previousState.equals(state.state)) targetKnown=false; }
                     captures.accept(device.getAddress(), state, frame);
                     if(frame.type.equals("STATUS")) plot.status(frame,SystemClock.elapsedRealtime());
                     if(frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") ||
@@ -159,32 +208,48 @@ public final class PanoramaService extends Service {
                     }
                     if (!frame.type.equals("STATUS")) support.append("RX " + P2Codec.encode(Math.max(1, frame.sequence), frame.type, frame.fields).trim());
                     if (frame.type.equals("STATUS") && !targetKnown) { targetPan = state.pan; targetTilt = state.tilt; targetKnown = true; }
-                    if (frame.type.equals("STATUS") && state.state.equals("FAULT")) { cancelPreparation(); manualProgress = null; manualMoving = manualTrigger = false; message = "Gerätefehler: " + state.lastError; }
-                    if (frame.type.equals("MANUAL_IMAGE_TRIGGERED")) { manualTrigger = false; message = "Manuelle Aufnahme abgeschlossen"; }
+                    if (frame.type.equals("STATUS") && state.state.equals("FAULT")) {
+                        cancelPreparation(); manualProgress=null; manualAction=null; manualMoving=manualTrigger=false;
+                        raiseIncident(state.lastError,faultDescription(state.lastError));
+                        message="Gerätefehler: "+faultDescription(state.lastError);
+                    }
+                    if(frame.type.equals("STATUS") && (state.lastError.equals("STEP_TARGET_MISSED") || state.lastError.equals("STEP_MOVE_TIMEOUT")))
+                        message="Aufnahmepunkt innerhalb der Fahrgrenze nicht genau erreicht · Beruhigung und Aufnahme an der Istposition; anschließend weiter.";
+                    if (frame.type.equals("MANUAL_IMAGE_TRIGGERED") && !state.manualStatusSupported) { manualTrigger = false; message = "Manuelle Aufnahme abgeschlossen"; }
+                    if (frame.type.equals("MANUAL_STATUS")) updateManualAction();
                     if (frame.type.equals("DIAGNOSTICS")) readDiagnostics(frame.fields);
                     if (frame.type.equals("DEBUG_LOG_END")) {
                         newestDebugSequence = Integer.parseInt(frame.fields[0]); debugPending = false;
                         if (manualPreparing) { manualBaseline = newestDebugSequence; finishPreparation(); }
                     }
                     if (frame.type.equals("DEBUG_EVENT")) acceptManualEvent(frame.fields);
+                    if(recoveryRequested && !recovering && fresh()) beginRecovery();
                 } catch (IllegalArgumentException | IOException ex) { message = "Daten-/Speicherfehler: " + ex.getMessage(); }
                 notifyObservers();
             }
             @Override public void onDisconnected(String reason) {
                 if (id != generation) return;
+                jog.finish(jog.token); ui.removeCallbacks(jogAlive);
+                if(connected && !incident.active) raiseIncident("CONNECTION",reason+". Der Gerätestand wird nach Wiederverbindung geprüft; alte Fahrten werden nicht wiederholt.",manualMoving || manualTrigger || uncertain);
+                if(recovering) recoveryRequested=true;
+                recoveryFlow=null; recovering=false;
                 plot.disconnected();
                 session = null; connected = busy = false; ++generation; ++actionGeneration;
                 manualMoving = manualTrigger = targetKnown = false;
-                cancelPreparation(); manualProgress = null;
+                cancelPreparation(); manualProgress = null; manualAction=null;
                 debugPending = false;
                 state = new DeviceState();
                 int attempt = reconnect.nextAttempt();
                 if (attempt > 0) { connection = reason + " · Neuer Versuch " + attempt + "/3 in 3 s"; ui.postDelayed(retry, 3000); }
-                else { disconnect(); connection = reason + " · Erneut verbinden"; }
+                else {
+                    connection=reason+" · Warte auf Gerät, neuer Versuch in 30 s · Trennen beendet die Suche";
+                    ui.postDelayed(retry,30000);
+                }
+                if(wakeLock!=null && wakeLock.isHeld()) wakeLock.release();
                 notifyObservers();
             }
         });
-        session.connect(device); notifyObservers();
+        session=opening; opening.connect(device); notifyObservers();
     }
     private void readDiagnostics(String[] f) {
         if (f.length < 21) throw new IllegalArgumentException("Diagnose unvollständig");
@@ -194,25 +259,138 @@ public final class PanoramaService extends Service {
             + stable + "/" + required + " · RAM: " + f[19] + " / Minimum " + f[20];
     }
     void acceptManualEvent(String[] fields) {
-        if (manualMoving && manualProgress != null && manualProgress.accept(fields)) {
+        if (!state.manualStatusSupported && manualMoving && manualProgress != null && manualProgress.accept(fields)) {
             manualMoving = false; manualProgress = null; message = "Manuelles Ziel erreicht";
         }
+    }
+    private void updateManualAction() {
+        if(jog.sequence>0 && state.manualStatusFresh(SystemClock.elapsedRealtime()) && state.manualStatus!=null &&
+           state.manualStatus.commandSequence==jog.sequence && state.manualStatus.kind.equals("JOG") && !state.manualStatus.active()) {
+            jog.finish(jog.token); ui.removeCallbacks(jogAlive); manualMoving=targetKnown=false;
+            message="Dauerfahrt beendet"; deferEndpointCapture();
+        }
+        if(manualAction==null || (!manualMoving && !manualTrigger) || !fresh() || !state.manualStatusFresh(SystemClock.elapsedRealtime())) return;
+        ManualActionProgress.Outcome outcome=manualAction.accept(state.manualStatus,state.manualStatusVersion);
+        if(outcome==ManualActionProgress.Outcome.WAITING) return;
+        boolean wasMove=manualMoving;
+        manualAction=null; manualProgress=null; manualMoving=manualTrigger=false;
+        if(outcome==ManualActionProgress.Outcome.SUCCEEDED) { message=wasMove?"Manuelles Ziel erreicht":"Manuelle Kameraauslösung bestätigt"; if(wasMove) deferEndpointCapture(); }
+        else {
+            targetKnown=false;
+            raiseIncident("MANUAL_"+state.manualStatus.result,"Die manuelle Aktion endete mit "+state.manualStatus.result+". Das alte Ziel wird verworfen; Gerätestand prüfen.");
+            message="Manuelle Aktion unterbrochen · Fehler quittieren";
+        }
+        support.append("MANUAL_COMPLETION "+state.manualStatus.commandSequence+" "+state.manualStatus.result);
+        notifyObservers();
     }
     void commandFeedback(String text, boolean background, boolean success) {
         if (!background || !success) message = text;
     }
-    public boolean fresh() { return connected && !uncertain && state.fresh(SystemClock.elapsedRealtime()); }
-    public boolean manualAllowed() { return fresh() && state.limitsKnown && state.confirmed && !busy && !abortingPlan && !debugPending && !manualPreparing && !manualTrigger && state.manual(SystemClock.elapsedRealtime()); }
-    public boolean navigationAllowed() { return fresh() && state.limitsKnown && state.confirmed && !busy && !abortingPlan && !debugPending && !manualPreparing && !manualTrigger && state.navigation(SystemClock.elapsedRealtime()); }
+    public boolean fresh() { return connected && state.fresh(SystemClock.elapsedRealtime()); }
+    public boolean manualAllowed() { return navigationReason().isEmpty() && state.manual(SystemClock.elapsedRealtime()); }
+    public boolean navigationAllowed() { return navigationReason().isEmpty(); }
+    public String navigationReason() {
+        if(incident.needsAcknowledgement()) return "Fehler quittieren, danach wird der Gerätestand geprüft.";
+        if(recovering || recoveryRequested) return "Gerätestand wird geprüft …";
+        if(!fresh()) return hasConnection()?"Aktuelle Statusdaten fehlen · Verbindung wird geprüft.":"Zum Ausrichten mit dem Gerät verbinden.";
+        if(uncertain) return "Befehlswirkung unklar · Gerätestand prüfen.";
+        if(!state.limitsKnown || !state.confirmed) return "Gerätegrenzen sind noch nicht bestätigt.";
+        if(state.state.equals("FAULT")) return faultDescription(state.lastError)+" · Gerätestand prüfen.";
+        if(state.manualStatusSupported && !state.manualStatusFresh(SystemClock.elapsedRealtime())) return "Aktueller Status der manuellen Aktion fehlt · Gerätestand wird geprüft.";
+        if(state.manualStatusSupported && state.manualStatus!=null && state.manualStatus.active() && !manualMoving && !manualTrigger)
+            return "Die Steuerung führt noch eine manuelle Aktion aus · Abschluss abwarten oder Not-Stop.";
+        if(jog.held) return "Handfahrt aktiv · Pfeil loslassen zum Stoppen.";
+        if(jog.stopping) return "Handfahrt wird gestoppt …";
+        if(busy) return "Befehlsbestätigung wird abgewartet …";
+        if(abortingPlan) return "Auftrag wird gestoppt und zurückgesetzt …";
+        if(debugPending || manualPreparing) return "Fahrt wird vorbereitet; Diagnose hat eine begrenzte Wartezeit.";
+        if(manualTrigger) return "Kameraauslösung wird abgeschlossen …";
+        if(!state.navigation(SystemClock.elapsedRealtime())) return state.state.equals("RUNNING") || state.state.equals("PAUSE_PENDING")?
+            "Aufnahme läuft · zum Ausrichten pausieren oder stoppen.":state.state.equals("TIMELAPSE")?"Timelapse läuft · zuerst stoppen.":
+            "Fahrt im Zustand "+state.state+" nicht freigegeben · Gerätestand prüfen.";
+        return "";
+    }
+    static String faultDescription(String code) {
+        if(code.equals("MOTION_STALLED")) return "Die Achse hat sich nicht ausreichend zum Ziel bewegt.";
+        if(code.equals("MOTION_TARGET_MISSED") || code.equals("MOTION_TARGET_MISSE")) return "Die Fahrt ist beendet, aber die Zielposition liegt außerhalb der eingestellten Toleranz. Motoren sind abgeschaltet.";
+        if(code.equals("EXPOSURE_UNSTABLE")) return "Während der Aufnahme wurde eine Positionsänderung erkannt. Die betroffene Aufnahme wurde nicht als erfolgreich gezählt; Motoren und Auslösung sind abgeschaltet.";
+        if(code.equals("MOTION_NOT_QUIET") || code.equals("MOTION_SETTLE_TIMEOUT")) return "Die Achse wurde innerhalb der Zeitgrenze nicht ruhig. Motoren sind abgeschaltet.";
+        if(code.equals("FAULT_PAN_SENSOR")) return "Der Pan-Encoder liefert keine gültigen Werte.";
+        if(code.equals("FAULT_TILT_SENSOR")) return "Der Tilt-Encoder liefert keine gültigen Werte.";
+        if(code.equals("MANUAL_MOVE_TIMEOUT")) return "Die manuelle Fahrt hat ihre Zeitgrenze erreicht.";
+        return "Gerätefehler "+code;
+    }
+    private void saveIncident() {
+        getSharedPreferences("incidents",MODE_PRIVATE).edit().putLong("id",incident.id).putString("key",incident.key)
+            .putString("detail",incident.detail).putBoolean("active",incident.active).putBoolean("acknowledged",incident.acknowledged)
+            .putBoolean("requiresStop",incident.requiresStop).apply();
+    }
+    private void raiseIncident(String code,String detail) {
+        raiseIncident(code,detail,true);
+    }
+    private void raiseIncident(String code,String detail,boolean requiresStop) {
+        String key=(device==null?"":device.getAddress())+"|"+code;
+        if(incident.active && incident.key.equals(key) && incident.detail.equals(detail)) return;
+        if(incident.active) { incident.detail=detail; incident.requiresStop|=requiresStop; }
+        else { incident.observe(key,detail); incident.requiresStop=requiresStop; }
+        saveIncident(); support.append("INCIDENT "+incident.id+" "+key+" "+detail);
+    }
+    public void acknowledgeIncident(long id) {
+        if(!incident.acknowledge(id)) return;
+        saveIncident(); recoverDevice();
+    }
+    public void recoverDevice() {
+        if(incident.needsAcknowledgement()) return;
+        if(recovering) return;
+        recoveryRequested=true; cancelPreparation(); manualProgress=null; manualAction=null; debugPending=false;
+        if(fresh()) beginRecovery();
+        else if(device!=null && session==null) { ui.removeCallbacks(retry); open(); }
+        else message=hasConnection()?"Warte auf aktuelle Geräteverbindung …":"Zum Prüfen zuerst mit dem Gerät verbinden.";
+        notifyObservers();
+    }
+    private void beginRecovery() {
+        if(!uncertain && !incident.requiresStop && fresh() && state.limitsKnown && state.confirmed && !state.state.equals("FAULT")) {
+            recoveryRequested=false; incident.resolved(); saveIncident(); targetKnown=false;
+            message="Gerätestand abgeglichen · Auftrag "+state.runId+" im Zustand "+state.state+" erhalten";
+            support.append("RECOVERY RESYNC_WITHOUT_STOP "+state.runId+" "+state.state); notifyObservers(); return;
+        }
+        recoveryRequested=false; recovering=true; planAbort=null; abortingPlan=false; discardDraftAfterAbort=false;
+        RecoveryFlow flow=new RecoveryFlow(SystemClock.elapsedRealtime()); recoveryFlow=flow;
+        int id=generation;
+        Runnable advance=new Runnable() {
+            public void run() {
+                if(recoveryFlow!=flow || generation!=id) return;
+                String next=flow.next(state.state,state.runId,statusVersion,fresh(),SystemClock.elapsedRealtime());
+                if(flow.done() || flow.failed()) {
+                    recovering=false; recoveryFlow=null; manualMoving=manualTrigger=targetKnown=false;
+                    uncertain=!flow.done();
+                    nextRecoveryAttemptMs=SystemClock.elapsedRealtime()+10000;
+                    if(flow.done()) { incident.resolved(); saveIncident(); message="Gerätestand bestätigt · altes Fahrziel verworfen"; }
+                    else message=state.state.equals("FAULT")?faultDescription(state.lastError)+" · automatische Prüfung in 10 s.":"Gerätestand noch nicht bestätigt · automatische Prüfung in 10 s.";
+                    support.append("RECOVERY "+(flow.done()?"CONFIRMED":"WAITING")); notifyObservers(); return;
+                }
+                if(next!=null) {
+                    message="Gerätestand wird geprüft …";
+                    execute(next,new String[0],next.equals("ESTOP"),true).whenComplete((reply,error) -> {
+                        if(recoveryFlow!=flow || generation!=id) return;
+                        flow.acknowledged(error==null && reply.accepted,SystemClock.elapsedRealtime()); ui.post(this);
+                    });
+                } else ui.postDelayed(this,100);
+            }
+        };
+        advance.run(); notifyObservers();
+    }
     public boolean hasConnection() { return device != null; }
     public void disconnect() {
+        endJog(); jog.finish(jog.token); ui.removeCallbacks(jogAlive);
+        recoveryFlow=null; recovering=recoveryRequested=false;
         planAbort=null; abortingPlan=false; discardDraftAfterAbort=false;
         plot.disconnected();
         ui.removeCallbacks(retry); reconnect.stop(); ++generation; ++actionGeneration;
-        BluetoothSession old = session; session = null;
+        DeviceLink old = session; session = null;
         if (old != null) old.close();
-        device = null; connected = busy = manualMoving = manualTrigger = targetKnown = false;
-        cancelPreparation(); manualProgress = null;
+        device = null; connected = busy = manualMoving = manualTrigger = targetKnown = uncertain = false;
+        cancelPreparation(); manualProgress = null; manualAction=null;
         debugPending = false;
         state = new DeviceState(); connection = "Nicht verbunden";
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
@@ -220,6 +398,9 @@ public final class PanoramaService extends Service {
     }
     private void requireReady() {
         if (!fresh() || session == null) throw new IllegalArgumentException("Aktuelle Geräteverbindung fehlt");
+        if(incident.needsAcknowledgement() || uncertain || recovering || recoveryRequested) throw new IllegalArgumentException(navigationReason());
+        if(state.manualStatusSupported && (!state.manualStatusFresh(SystemClock.elapsedRealtime()) ||
+            state.manualStatus.active() && !manualMoving && !manualTrigger)) throw new IllegalArgumentException(navigationReason());
         if (busy) throw new IllegalArgumentException("Befehl wird noch bestätigt");
         if (abortingPlan) throw new IllegalArgumentException("Auftrag wird abgebrochen und zurückgesetzt");
         if (manualPreparing) throw new IllegalArgumentException("Fahrt wird vorbereitet");
@@ -233,27 +414,37 @@ public final class PanoramaService extends Service {
         return execute(type, fields, emergency, false);
     }
     private CompletableFuture<V2Client.Result> execute(String type, String[] fields, boolean emergency, boolean background) {
+        boolean jogStop=type.equals("MANUAL_JOG_STOP");
+        if(session==null || (!emergency && !jogStop && busy)) {
+            CompletableFuture<V2Client.Result> unavailable=new CompletableFuture<>();
+            unavailable.completeExceptionally(new IOException(session==null?"Keine Geräteverbindung":"Andere Aktion wartet auf Bestätigung")); return unavailable;
+        }
         int sessionId = generation, actionId = ++actionGeneration;
         if (type.equals("GET_DEBUG_LOG")) {
+            int requestId=++debugRequestId;
             debugPending = true;
             ui.postDelayed(() -> {
-                if (sessionId == generation && debugPending && actionId == actionGeneration) {
-                    debugPending = false; uncertain = true;
-                    message = "Gerätelog unvollständig; erneut verbinden"; notifyObservers();
+                if (sessionId == generation && debugPending && requestId == debugRequestId) {
+                    debugPending=false; cancelPreparation();
+                    message="Diagnoselog unvollständig · Abfrage beendet; Gerätestand bleibt sichtbar"; notifyObservers();
                 }
             },5000);
         }
         busy = true; commandFeedback(actionName(type) + " wird gesendet …", background, true); support.append("TX " + type + " " + String.join("|", fields));
-        CompletableFuture<V2Client.Result> wireResult = emergency ? session.emergencyStop(""+state.runId) : session.send(type, fields);
+        CompletableFuture<V2Client.Result> wireResult;
+        try { wireResult=emergency?session.emergencyStop(""+state.runId):jogStop?session.stopJog(fields[0]):session.send(type,fields); }
+        catch(RuntimeException ex) { wireResult=new CompletableFuture<>(); wireResult.completeExceptionally(ex); }
         CompletableFuture<V2Client.Result> result = new CompletableFuture<>();
         wireResult.whenComplete((reply, error) -> ui.post(() -> {
             if (sessionId != generation || actionId != actionGeneration) {
                 result.completeExceptionally(new IOException("Alte Aktion verworfen")); return;
             }
             busy = false;
-            if (error != null) uncertain = true;
+            if(error!=null && !CommandEffects.readOnly(type) && !(error instanceof IllegalArgumentException)) {
+                uncertain=true; raiseIncident("COMMAND_"+type,"Die Wirkung von „"+actionName(type)+"“ wurde nicht bestätigt. Gerätestand prüfen.");
+            }
             if (type.equals("GET_DEBUG_LOG") && (error != null || !reply.accepted)) debugPending = false;
-            commandFeedback(error != null ? "Keine eindeutige Bestätigung; erneut verbinden oder Not-Stop senden."
+            commandFeedback(error != null ? (CommandEffects.readOnly(type)?"Geräteabfrage nicht abgeschlossen; keine neue Bewegung gesendet.":"Befehlswirkung unklar · Fehler quittieren und Gerätestand prüfen.")
                 : (reply.accepted ? "Bestätigt: " : "Abgelehnt: ") + resultName(reply.code), background, error == null && reply.accepted);
             support.append(error == null ? "RESULT " + type + " " + reply.code : "ERROR " + type + " " + error.getMessage());
             if (emergency && error == null && reply.accepted) { manualMoving = manualTrigger = targetKnown = uncertain = false; }
@@ -264,6 +455,10 @@ public final class PanoramaService extends Service {
     }
     private static String actionName(String type) {
         switch (type) {
+            case "MANUAL_JOG_START": return "Handfahrt";
+            case "MANUAL_JOG_START_VELOCITY": return "Handfahrt";
+            case "MANUAL_JOG_KEEPALIVE": return "Tastensignal";
+            case "MANUAL_JOG_STOP": return "Fahrtstopp";
             case "MANUAL_MOVE": return "Fahrziel"; case "TRIGGER_ONCE": return "Kameraauslösung";
             case "LOAD_PLAN": return "Panoramaauftrag"; case "START": return "Start";
             case "PAUSE": return "Pause"; case "RESUME": return "Fortsetzen";
@@ -278,6 +473,12 @@ public final class PanoramaService extends Service {
     }
     private static String resultName(String code) {
         switch (code) {
+            case "JOGGING": return "Handfahrt aktiv";
+            case "JOG_ALIVE": return "Taste gehalten";
+            case "JOG_STOPPED": return "Handfahrt gestoppt";
+            case "JOG_RELEASED": return "Handfahrt beendet";
+            case "JOG_NOT_READY": return "Achse beruhigt sich oder Grenze erreicht · Taste loslassen und erneut halten";
+            case "JOG_SPEED_LIMIT": return "Haltefahrt-Tempo liegt über der Geräteobergrenze · Tempo reduzieren oder Motor-Konfiguration anpassen";
             case "OK": return "Geräteabfrage angenommen"; case "MOVING": return "Fahrziel angenommen";
             case "TRIGGERED": return "Kamera-Puls gestartet"; case "PLAN_ACCEPTED": return "Plan übernommen";
             case "STARTED": return "Auftrag gestartet"; case "PAUSED": return "Pausiert";
@@ -297,9 +498,12 @@ public final class PanoramaService extends Service {
         }
     }
     public void emergencyStop() {
+        jog.finish(jog.token); ui.removeCallbacks(jogAlive);
+        recoveryFlow=null; recovering=recoveryRequested=false;
         planAbort=null; abortingPlan=false; discardDraftAfterAbort=false;
         if (!connected || session == null) throw new IllegalArgumentException("Keine Bluetooth-Verbindung für Not-Stop");
         cancelPreparation(); manualProgress = null; debugPending = false;
+        manualAction=null;
         execute("ESTOP", new String[]{""+state.runId, "ANDROID_ESTOP"}, true);
     }
     public void setTiltZero(boolean reset) {
@@ -309,8 +513,8 @@ public final class PanoramaService extends Service {
         int id=generation;
         command(reset?"RESET_TILT_ZERO":"SET_TILT_ZERO").whenComplete((reply,error) -> {
             if(id==generation && error==null && reply.accepted) {
-                discardDraft(); targetKnown=false; state.lastStatusMs=0;
-                message="Tilt-Nullpunkt gespeichert · Plan geleert"; notifyObservers();
+                markDraftForReview(); targetKnown=false; state.lastStatusMs=0;
+                message="Tilt-Nullpunkt gespeichert · Entwurfreferenz prüfen"; notifyObservers();
                 // A cached ACK after a retry does not repeat calibration metadata.
                 execute("GET_SUPPORT_BUNDLE",new String[0],false,true);
             }
@@ -318,7 +522,8 @@ public final class PanoramaService extends Service {
     }
     public void move(double panDelta, double tiltDelta) {
         requireReady();
-        if (!navigationAllowed()) throw new IllegalArgumentException("Fahrt während der Aufnahme gesperrt; geladene/beendete Aufträge benötigen Firmware 2.3.6");
+        if(manualMoving || jog.held || jog.stopping) throw new IllegalArgumentException("Laufende Fahrt zuerst beenden");
+        if (!navigationAllowed()) throw new IllegalArgumentException(navigationReason());
         int dx = DeviceState.toDevice(panDelta), dy = DeviceState.toTiltDevice(tiltDelta);
         int x = ManualTargets.step(targetKnown && state.positionSafe() ? targetPan : state.pan, state.pan, dx);
         int y = ManualTargets.step(targetKnown && state.positionSafe() ? targetTilt : state.tilt, state.tilt, dy);
@@ -331,6 +536,86 @@ public final class PanoramaService extends Service {
         if(tempo<1 || tempo>1000) throw new IllegalArgumentException("Fahrtempo muss 1–1000 ‰ betragen");
         getSharedPreferences("settings",MODE_PRIVATE).edit().putString("manualSpeed",""+tempo).apply();
     }
+    public void setManualTempos(int panTempo,int tiltTempo) {
+        if(panTempo<1 || panTempo>1000 || tiltTempo<1 || tiltTempo>1000)
+            throw new IllegalArgumentException("Pan-/Tilt-Zielfahrtempo muss 1–1000 ‰ betragen");
+        getSharedPreferences("settings",MODE_PRIVATE).edit()
+            .putString("manualPanSpeed",Integer.toString(panTempo))
+            .putString("manualSpeed",Integer.toString(tiltTempo)).apply();
+    }
+    private String[] manualMoveFields(int x,int y) {
+        android.content.SharedPreferences preferences=getSharedPreferences("settings",MODE_PRIVATE);
+        int panTempo=Integer.parseInt(preferences.getString("manualPanSpeed","500"));
+        int tiltTempo=Integer.parseInt(preferences.getString("manualSpeed","500"));
+        return ManualMotionOptions.fields(state,x,y,panTempo,tiltTempo);
+    }
+    public boolean jogAllowed() { return state.jogSupported && navigationAllowed() && !busy && !manualMoving && !jog.held && !jog.stopping; }
+    public void setJogSpeed(double speed) {
+        setJogSpeed(1,speed);
+    }
+    public void setJogSpeed(int axis,double speed) {
+        int maximum=axis==0 && state.jogMaximumPanVelocityMdeg>0?state.jogMaximumPanVelocityMdeg:
+            state.jogMaximumVelocityMdeg>0?state.jogMaximumVelocityMdeg:10000;
+        if(!Double.isFinite(speed) || speed<0.5 || speed>maximum/1000.0)
+            throw new IllegalArgumentException("Haltefahrt-Tempo: 0,5 bis "+(maximum/1000.0)+" °/s; Geräteobergrenze per Motor-Konfiguration anpassbar");
+        getSharedPreferences("settings",MODE_PRIVATE).edit().putString(axis==0?"panJogSpeed":"jogSpeed",Double.toString(speed)).apply();
+    }
+    public void setRememberSettleMillis(int millis) {
+        if(millis<0 || millis>5000) throw new IllegalArgumentException("Beruhigung vor Positionmerken: 0 bis 5000 ms");
+        getSharedPreferences("settings",MODE_PRIVATE).edit().putString("rememberSettleMs",Integer.toString(millis)).apply();
+    }
+    private void deferEndpointCapture() {
+        int settle=1000;
+        try { int configured=Integer.parseInt(getSharedPreferences("settings",MODE_PRIVATE).getString("rememberSettleMs","1000"));
+            if(configured>=0 && configured<=5000) settle=configured;
+        } catch(NumberFormatException ignored) { /* Invalid edits keep the safe default. */ }
+        endpointCaptureAfterMs=SystemClock.elapsedRealtime()+settle;
+        ui.postDelayed(this::notifyObservers,settle);
+    }
+    public boolean endpointCaptureAllowed() {
+        return fresh() && !manualMoving && !manualTrigger && !jog.held && !jog.stopping &&
+            SystemClock.elapsedRealtime()>=endpointCaptureAfterMs && state.lastStatusMs>=endpointCaptureAfterMs;
+    }
+    public boolean jogHeldFor(int axis,int direction) { return jog.matches(axis,direction); }
+    public void beginJog(int axis,int direction) {
+        requireReady();
+        if(!jogAllowed()) throw new IllegalArgumentException(state.jogSupported?"Fahrt zuerst beenden":"Firmware für Gedrückthalten aktualisieren");
+        boolean velocityMode=state.jogMaximumVelocityMdeg>0;
+        int maximum=axis==0 && state.jogMaximumPanVelocityMdeg>0?state.jogMaximumPanVelocityMdeg:state.jogMaximumVelocityMdeg;
+        String defaultSpeed=axis==0?Double.toString(Math.min(10,maximum/1000.0)):"5";
+        double requested=velocityMode?Double.parseDouble(getSharedPreferences("settings",MODE_PRIVATE).getString(axis==0?"panJogSpeed":"jogSpeed",defaultSpeed)):0;
+        if(velocityMode && (!Double.isFinite(requested) || requested<0.5 || requested>maximum/1000.0))
+            throw new IllegalArgumentException("Haltefahrt-Tempo überschreitet die Geräteobergrenze; Tempo einstellen");
+        int speed=velocityMode?(int)Math.round(requested*1000):
+            Integer.parseInt(getSharedPreferences("settings",MODE_PRIVATE).getString("manualSpeed","300"));
+        if(!jog.begin(axis,direction,SystemClock.elapsedRealtime())) return;
+        long token=jog.token; int id=generation;
+        manualAction=null; manualProgress=null; targetKnown=false; manualMoving=true;
+        // A held gesture has no target-completion deadline. The renewable
+        // firmware lease and freshness checks bound loss of touch or link.
+        manualDeadlineMs=Long.MAX_VALUE;
+        execute(velocityMode?"MANUAL_JOG_START_VELOCITY":"MANUAL_JOG_START",new String[]{""+token,""+axis,""+direction,""+speed},false).whenComplete((reply,error) -> {
+            if(id!=generation || jog.token!=token || !jog.held) return;
+            if(error!=null || !reply.accepted) { jog.finish(token); manualMoving=false; ui.removeCallbacks(jogAlive); }
+            else { jog.sequence=reply.commandSequence; message="Gedrückt halten · Loslassen stoppt"; }
+            notifyObservers();
+        });
+        ui.postDelayed(jogAlive,150);
+    }
+    public void endJog() {
+        long token=jog.release(); ui.removeCallbacks(jogAlive);
+        if(token==0) return;
+        int id=generation;
+        execute("MANUAL_JOG_STOP",new String[]{""+token},false,true).whenComplete((reply,error) -> {
+            if(id!=generation || jog.token!=token) return;
+            jog.finish(token); manualMoving=targetKnown=false;
+            if(error==null && reply.accepted) {
+                message="Dauerfahrt gestoppt";
+                deferEndpointCapture();
+            }
+            notifyObservers();
+        });
+    }
     public void moveToUi(double pan,double tilt) {
         requireReady();
         if(manualMoving) throw new IllegalArgumentException("Vor der nächsten grafischen Fahrt Zielankunft abwarten");
@@ -340,18 +625,19 @@ public final class PanoramaService extends Service {
         requireReady();
         if(!navigationAllowed()) throw new IllegalArgumentException("Fahrt in diesem Gerätezustand nicht freigegeben");
         state.validateManualTarget(x, y);
+        if(state.manualStatusSupported) { sendManualMove(x,y); return; }
         int id = generation;
         manualPreparing = true; preparationAcknowledged = false; manualBaseline = -1;
         message = "Fahrt wird vorbereitet …";
         pendingManual = () -> {
             if (!navigationAllowed()) { message = "Fahrt nicht gestartet: aktuelle Freigabe fehlt"; return; }
             state.validateManualTarget(x,y);
-            int tempo=Integer.parseInt(getSharedPreferences("settings",MODE_PRIVATE).getString("manualSpeed","500"));
-            CompletableFuture<V2Client.Result> move = command("MANUAL_MOVE", ManualMotionOptions.fields(state,x,y,tempo));
+            CompletableFuture<V2Client.Result> move = command("MANUAL_MOVE", manualMoveFields(x,y));
             int action = actionGeneration;
             move.whenComplete((reply,error) -> {
                 if (id == generation && action == actionGeneration && error == null && reply.accepted) {
                     targetPan = x; targetTilt = y; targetKnown = true; manualMoving = true;
+                    manualDeadlineMs=SystemClock.elapsedRealtime()+125000;
                     manualProgress = new ManualMoveProgress(manualBaseline,x,y); notifyObservers();
                 }
             });
@@ -368,23 +654,54 @@ public final class PanoramaService extends Service {
             }
         }, 5000);
     }
+    private void sendManualMove(int x,int y) {
+        int id=generation;
+        CompletableFuture<V2Client.Result> sent=command("MANUAL_MOVE",manualMoveFields(x,y));
+        int action=actionGeneration;
+        sent.whenComplete((reply,error) -> {
+            if(id!=generation || action!=actionGeneration || error!=null || !reply.accepted) return;
+            if(reply.commandSequence<1 || reply.commandSequence>65535) {
+                uncertain=true; raiseIncident("MANUAL_CONFIRMATION","Fahrbestätigung ohne gültige Befehlsnummer. Gerätestand prüfen."); notifyObservers(); return;
+            }
+            targetPan=x; targetTilt=y; targetKnown=true; manualMoving=true;
+            manualDeadlineMs=SystemClock.elapsedRealtime()+125000;
+            // Discard all status received before this ACK, including an old
+            // retained result with a coincidentally reused uint16 sequence.
+            manualProgress=null; manualAction=new ManualActionProgress(reply.commandSequence,"MOVE",x,y,state.manualStatusVersion);
+            updateManualAction(); notifyObservers();
+        });
+    }
     private void cancelPreparation() { pendingManual = null; manualPreparing = false; preparationAcknowledged = false; }
     private void finishPreparation() {
         if (pendingManual == null || !preparationAcknowledged || manualBaseline < 0 || busy) return;
-        Runnable action = pendingManual; cancelPreparation(); action.run();
+        Runnable action = pendingManual; cancelPreparation();
+        try { action.run(); } catch(RuntimeException ex) { message="Fahrt nicht gestartet: "+ex.getMessage(); notifyObservers(); }
     }
     public void trigger(int pulse) {
         requireReady();
         if (!manualAllowed() || !state.positionSafe() || manualMoving || pulse < 1 || pulse > 60000)
             throw new IllegalArgumentException("Kamera-Test erst im Stillstand; Puls 1–60000 ms");
         manualTrigger = true;
+        triggerDeadlineMs=SystemClock.elapsedRealtime()+pulse+5000;
         int id = generation;
-        command("TRIGGER_ONCE", ""+pulse).whenComplete((reply, error) -> ui.post(() -> {
-            if (id == generation && error == null && !reply.accepted) manualTrigger = false;
-        }));
+        CompletableFuture<V2Client.Result> sent=command("TRIGGER_ONCE", ""+pulse);
+        int action=actionGeneration;
+        sent.whenComplete((reply,error) -> {
+            if(id!=generation || action!=actionGeneration || error!=null) return;
+            if(!reply.accepted) manualTrigger=false;
+            else if(state.manualStatusSupported) {
+                if(reply.commandSequence<1 || reply.commandSequence>65535) {
+                    uncertain=true; raiseIncident("MANUAL_CONFIRMATION","Auslösungsbestätigung ohne gültige Befehlsnummer. Gerätestand prüfen.");
+                } else {
+                    manualAction=new ManualActionProgress(reply.commandSequence,"TRIGGER",0,0,state.manualStatusVersion); updateManualAction();
+                }
+            }
+            notifyObservers();
+        });
     }
     public void loadPlan(PanoramaPlan plan) {
         requireReady();
+        if(draftNeedsReview) throw new IllegalArgumentException("Entwurfreferenz nach Geräte-/Nullpunktwechsel prüfen und bestätigen");
         if (!state.state.equals("IDLE")) throw new IllegalArgumentException("Vor neuem Plan vorhandenen Lauf bewusst löschen");
         if (manualMoving || manualTrigger) throw new IllegalArgumentException("Manuelle Aktion noch aktiv");
         plan.validate(state);
@@ -415,7 +732,18 @@ public final class PanoramaService extends Service {
     public void abortPlan() {
         abortPlan(false);
     }
-    public void discardDraft() { draftEndpoints.clear(); draftRevision++; }
+    private void markDraftForReview() {
+        draftNeedsReview=true; getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("draftNeedsReview",true).apply();
+    }
+    public void confirmDraftReference() {
+        if(!fresh() || !state.limitsKnown || !state.confirmed) throw new IllegalArgumentException("Aktuelle Referenz und Grenzen zuerst vom Gerät lesen");
+        draftNeedsReview=false; getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("draftNeedsReview",false).apply(); notifyObservers();
+    }
+    public void discardDraft() {
+        draftEndpoints.clear(); draftRevision++; draftNeedsReview=false;
+        android.content.SharedPreferences.Editor editor=getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("draftNeedsReview",false);
+        for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) editor.putString(key,""); editor.apply();
+    }
     public void abortPlan(boolean discardDraftWhenIdle) {
         requireReady();
         discardDraftAfterAbort=discardDraftWhenIdle;
@@ -469,7 +797,7 @@ public final class PanoramaService extends Service {
             throw new IllegalArgumentException("Timelapse benötigt IDLE, gültiges Intervall und kürzeren Puls");
         command("START_TIMELAPSE", ""+id, ""+interval, ""+pulse);
     }
-    @Override public void onDestroy() {
+    @Override public void onDestroy() { jog.finish(jog.token); ui.removeCallbacks(jogAlive); ++generation; ++actionGeneration;
         disconnect(); ui.removeCallbacksAndMessages(null); captures.close(); support.close(); observers.clear(); super.onDestroy();
     }
 }

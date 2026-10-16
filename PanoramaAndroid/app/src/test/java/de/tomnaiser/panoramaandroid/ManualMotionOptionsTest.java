@@ -20,4 +20,17 @@ public final class ManualMotionOptionsTest {
         DeviceState state=new DeviceState(); state.profiledMotion=true;
         ManualMotionOptions.fields(state,0,0,0);
     }
+    @Test public void planMoveUsesTestedPanTempoAndRetainsSlowerTilt() {
+        DeviceState state=new DeviceState(); state.profiledMotion=true;
+        assertArrayEquals(new String[]{"20000","1000","500","200"},ManualMotionOptions.fields(state,20000,1000,500,200));
+    }
+    @Test public void legacyFrameIgnoresSeparateTempos() {
+        assertArrayEquals(new String[]{"20000","1000"},ManualMotionOptions.fields(new DeviceState(),20000,1000,500,200));
+    }
+    @Test(expected=IllegalArgumentException.class) public void invalidPanTempoIsRejected() {
+        DeviceState state=new DeviceState(); state.profiledMotion=true; ManualMotionOptions.fields(state,1,1,0,200);
+    }
+    @Test(expected=IllegalArgumentException.class) public void invalidTiltTempoIsRejected() {
+        DeviceState state=new DeviceState(); state.profiledMotion=true; ManualMotionOptions.fields(state,1,1,500,1001);
+    }
 }

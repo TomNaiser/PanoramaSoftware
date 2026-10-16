@@ -17,6 +17,11 @@ public final class PlotTest {
         assertTrue(v.right>v.left && v.top>v.bottom);
         v.fit(-180,180,-90,90); assertTrue(v.x(-180)>v.x(180));
     }
+    @Test public void wholePanOverviewDoesNotDriftWhenCameraApproachesAnEdge() {
+        PlotViewport v=new PlotViewport(); v.bottom=-25; v.top=25;
+        v.keepVisible(175,20);
+        assertEquals(-180,v.left,0); assertEquals(180,v.right,0);
+    }
     private P2Codec.Frame status(long id,int pan) {
         return P2Codec.decode(P2Codec.encode(1,"STATUS",""+id,"RUNNING","MOVING","1","4","0","0","51000","1500",""+pan,"1400","0","1","NONE","1","0","1","1","0","0").trim());
     }

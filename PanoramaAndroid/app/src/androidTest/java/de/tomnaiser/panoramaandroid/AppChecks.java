@@ -11,12 +11,29 @@ public final class AppChecks extends Instrumentation {
     private int assertions;
     private boolean connectionCheck;
     private boolean abortPlanCheck;
+    private boolean recoveryCheck;
+    private boolean manualStatusCheck;
+    private boolean manualHardwareCheck,panPlanHardwareCheck;
+    private boolean jogHardwareCheck;
+    private boolean jogUiCheck,chartUiCheck,chartLandscape;
+    private boolean jogUiHardwareCheck;
     private long connectionDelayMs=3000;
     private boolean connectionSecure=true;
+    private String expectedFirmware="2.4.41";
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments); connectionCheck=arguments!=null && "true".equals(arguments.getString("connectionCheck"));
         abortPlanCheck=arguments!=null && "true".equals(arguments.getString("abortPlanCheck"));
+        recoveryCheck=arguments!=null && "true".equals(arguments.getString("recoveryCheck"));
+        manualStatusCheck=arguments!=null && "true".equals(arguments.getString("manualStatusCheck"));
+        panPlanHardwareCheck=arguments!=null && "true".equals(arguments.getString("panPlanHardwareCheck"));
+        manualHardwareCheck=arguments!=null && "true".equals(arguments.getString("manualHardwareCheck"));
+        jogHardwareCheck=arguments!=null && "true".equals(arguments.getString("jogHardwareCheck"));
+        chartLandscape=arguments!=null && "true".equals(arguments.getString("chartLandscape"));
+        chartUiCheck=arguments!=null && "true".equals(arguments.getString("chartUiCheck"));
+        jogUiCheck=arguments!=null && "true".equals(arguments.getString("jogUiCheck"));
+        jogUiHardwareCheck=arguments!=null && "true".equals(arguments.getString("jogUiHardwareCheck"));
         if (arguments!=null && arguments.containsKey("connectionDelayMs")) connectionDelayMs=Long.parseLong(arguments.getString("connectionDelayMs"));
+        if(arguments!=null && arguments.containsKey("expectedFirmware")) expectedFirmware=arguments.getString("expectedFirmware");
         if (arguments!=null && arguments.containsKey("connectionTransport")) {
             String transport=arguments.getString("connectionTransport");
             if (!"secure".equals(transport) && !"insecure".equals(transport)) throw new IllegalArgumentException("connectionTransport: secure oder insecure");
@@ -29,13 +46,53 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(chartUiCheck) {
+                int checks=new ChartUiChecks().run(this,chartLandscape);
+                report.putString("stream","\nPASS: "+checks+" assertions: pinned Plan/Run plots, exact Pan +/-180 reset, large/normal toggle, Back and visible emergency stop. No movement or shutter commands.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(panPlanHardwareCheck) {
+                int checks=new ManualHardwareChecks().runPanPlan(this);
+                report.putString("stream","\nPASS: "+checks+" assertions: real app Plan-target service, Pan 500 / Tilt 200, 20-degree Pan and return, firmware REACHED, controls released. No shutter commands.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(jogUiHardwareCheck) {
+                int checks=new ManualHardwareChecks().runUiJog(this);
+                report.putString("stream","\nPASS: "+checks+" assertions: real Plan-page touch, all four held arrows, release, priority stop and IDLE. No shutter commands.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(jogUiCheck) {
+                int checks=new JogUiChecks().run(this);
+                report.putString("stream","\nPASS: "+checks+" assertions: Plan-page held touch, stable status rendering, release and focus loss. Simulated transport, no hardware.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(jogHardwareCheck) {
+                int checks=new ManualHardwareChecks().runJog(this);
+                report.putString("stream","\nPASS: "+checks+" assertions: real held Pan/Tilt both directions, immediate release, safe stop. No shutter commands.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(manualHardwareCheck) {
+                int checks=new ManualHardwareChecks().run(this);
+                report.putString("stream","\nPASS: "+checks+" assertions: physical 1-degree tilt and return, real service/firmware status, ESTOP and IDLE. No camera command.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(manualStatusCheck) {
+                int checks=new ManualServiceChecks().run(this);
+                report.putString("stream","\nPASS: "+checks+" assertions: manual action status in real service, simulated transport, no hardware.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
+            if(recoveryCheck) {
+                int checks=new ServiceRecoveryChecks().run(this,launchActivity(context));
+                report.putString("stream","\nPASS: "+checks+" assertions: simulated service/dialog recovery, retained run, missing diagnostic ACK, persistent sensor fault. No hardware transport.\n");
+                finish(android.app.Activity.RESULT_OK,report); return;
+            }
             if(abortPlanCheck) {
                 abortPlanChecks(context);
                 report.putString("stream","\nPASS: Realer Service: Einpunktplan geladen, STOP/STOPPED, CLEAR_RUN/IDLE, manuelle Freigabe. Kein START und kein Kamerabefehl.\n");
                 finish(android.app.Activity.RESULT_OK,report); return;
             }
             if (connectionCheck) {
-                new ConnectionChecks().run(this,connectionDelayMs,connectionSecure);
+                new ConnectionChecks().run(this,connectionDelayMs,connectionSecure,expectedFirmware);
                 report.putString("stream","\nPASS: Zwei Bluetooth-Sitzungen mit aktuellem Firmware-/Statusnachweis.\n");
                 finish(android.app.Activity.RESULT_OK,report); return;
             }
@@ -82,7 +139,7 @@ public final class AppChecks extends Instrumentation {
                 PanoramaService service=(PanoramaService)serviceField.get(activity);
                 if(coldStart) {
                     for(String key:new String[]{"startPan","startTilt","endPan","endTilt"})
-                        check(fields.get(key).getText().length()==0,"Frischer Start ignoriert alten Endpunkt "+key);
+                        check(fields.get(key).getText().toString().equals(contextValue(activity,key)),"Frischer Start erhält gespeicherten Endpunkt "+key);
                     fields.get("startPan").setText("-40"); fields.get("startTilt").setText("10");
                     fields.get("endPan").setText("-30"); fields.get("endTilt").setText("5");
                     calculate.invoke(activity);
@@ -154,7 +211,7 @@ public final class AppChecks extends Instrumentation {
     private android.app.Activity landscapeChecks(android.app.Activity activity) throws Exception {
         java.lang.reflect.Field previewField=MainActivity.class.getDeclaredField("preview"); previewField.setAccessible(true);
         java.lang.reflect.Field inputField=MainActivity.class.getDeclaredField("inputs"); inputField.setAccessible(true);
-        java.lang.reflect.Field fineField=MainActivity.class.getDeclaredField("finePicker"); fineField.setAccessible(true);
+        java.lang.reflect.Field fineField=MainActivity.class.getDeclaredField("navigationBar"); fineField.setAccessible(true);
         PlanPreview before=(PlanPreview)previewField.get(activity);
         Map<String,android.widget.EditText> inputs=(Map<String,android.widget.EditText>)inputField.get(activity);
         String start=inputs.get("startPan").getText().toString(),end=inputs.get("endTilt").getText().toString();
@@ -162,7 +219,7 @@ public final class AppChecks extends Instrumentation {
         int original=activity.getRequestedOrientation();
         android.app.Activity rotated=rotate(activity,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         PlanPreview after=(PlanPreview)previewField.get(rotated);
-        android.widget.Spinner fine=(android.widget.Spinner)fineField.get(rotated);
+        android.view.View fine=(android.view.View)fineField.get(rotated);
         for(int attempt=0;attempt<30 && after.getWidth()==0;attempt++) Thread.sleep(100);
         mainCall(() -> {
             int[] windowPosition=new int[2],controlPosition=new int[2];
@@ -299,7 +356,8 @@ public final class AppChecks extends Instrumentation {
                     for(String state:new String[]{"IDLE","PAUSED","PLAN_READY","STOPPED","COMPLETED","RUNNING","PAUSE_PENDING","TIMELAPSE"}) {
                         simulated.state=state; simulated.lastStatusMs=android.os.SystemClock.elapsedRealtime(); render.invoke(activity);
                         boolean allowed=!(state.equals("RUNNING") || state.equals("PAUSE_PENDING") || state.equals("TIMELAPSE"));
-                        for(int i=1;i<bar.getChildCount();i++) check(bar.getChildAt(i).isEnabled()==allowed,"Pfeilfreigabe bei "+state);
+                        for(int i=1;i<bar.getChildCount();i++) check(bar.getChildAt(i).isEnabled(),"Pfeil erklärt Einschränkung bei "+state);
+                        check(service.navigationAllowed()==allowed,"Gerätefreigabe getrennt von erklärbarer Taste bei "+state);
                         if(!allowed) {
                             try { service.move(0,1); throw new AssertionError("Aufnahme muss Pfeilbefehl ablehnen"); }
                             catch(IllegalArgumentException expected) { check(simulated.state.equals(state) && simulated.runId==42 && simulated.completed==7,"Pfeilversuch verändert keinen Lauf: "+state); }
@@ -336,6 +394,9 @@ public final class AppChecks extends Instrumentation {
         long time=android.os.SystemClock.uptimeMillis();
         android.view.MotionEvent down=android.view.MotionEvent.obtain(time,time,0,x,y,0),up=android.view.MotionEvent.obtain(time,time+20,1,x,y,0);
         preview.dispatchTouchEvent(down); preview.dispatchTouchEvent(up); down.recycle(); up.recycle();
+    }
+    private static String contextValue(android.app.Activity activity,String key) {
+        return activity.getSharedPreferences("settings",Context.MODE_PRIVATE).getString(key,"");
     }
     private void storageChecks(Context context,String name) throws Exception {
         DeviceState state = new DeviceState();
