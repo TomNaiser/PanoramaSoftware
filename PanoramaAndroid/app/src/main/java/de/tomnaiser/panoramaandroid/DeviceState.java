@@ -5,8 +5,17 @@ public final class DeviceState {
     boolean jogSupported;
     int jogMaximumVelocityMdeg;
     int jogMaximumPanVelocityMdeg;
+    int runMaximumTempo=1000, warningPanMdeg, warningTiltMdeg;
+    long motionConfigRevision;
+    boolean warningSettingsSupported;
     public String firmware = "—", hardware = "—", state = "UNKNOWN", phase = "NONE", lastError = "—";
     public long runId, completed, total, lastStatusMs;
+    long nextImageIndex, timingRunId, timingImageIndex, moveMaximumMs;
+    long currentMoveMaximumMs() {
+        return timingRunId==runId && timingImageIndex==nextImageIndex &&
+            (phase.equals("MOVING") || phase.equals("SETTLING")) &&
+            (state.equals("RUNNING") || state.equals("PAUSE_PENDING")) ? moveMaximumMs : 0;
+    }
     public int pan, tilt, column, row, revision;
     public int panMin, panMax, tiltMin, tiltMax;
     public boolean limitsKnown, confirmed, compatible;
@@ -55,8 +64,24 @@ public final class DeviceState {
                 if (c < 0 || r < 0 || rev < 0) throw new IllegalArgumentException("Ungültiger Rasterstatus");
                 if ((plan != null && plan.runId != id) || f[1].equals("IDLE")) plan = null;
                 runId = id; completed = count; total = maximum; pan = x; tilt = y;
+                nextImageIndex=unsigned(f[14]);
                 state = f[1]; phase = f[2]; column = c; row = r; revision = rev;
                 lastError = f[13]; lastStatusMs = now; break;
+            case "STEP_TIMING":
+                if(f.length!=3) throw new IllegalArgumentException("Fahrzeit unvollständig");
+                long timingRun=unsigned(f[0]),timingImage=unsigned(f[1]),maximumMs=unsigned(f[2]);
+                if(maximumMs>120000) throw new IllegalArgumentException("Fahrzeit außerhalb der Grenze");
+                timingRunId=timingRun;timingImageIndex=timingImage;moveMaximumMs=maximumMs;break;
+            case "RUN_SPEED_CAPABILITIES":
+                if(f.length!=1) throw new IllegalArgumentException("Lauftempo-Freigabe unvollständig");
+                int runTempoMaximum=Integer.parseInt(f[0]);
+                if(runTempoMaximum<1000 || runTempoMaximum>2000) throw new IllegalArgumentException("Lauftempo-Freigabe ungültig");
+                runMaximumTempo=runTempoMaximum;break;
+            case "CAPTURE_WARNING_SETTINGS":
+                if(f.length!=3) throw new IllegalArgumentException("Warnschwellen unvollständig");
+                int wp=Integer.parseInt(f[0]),wt=Integer.parseInt(f[1]); long wr=unsigned(f[2]);
+                if(wp<44 || wp>10000 || wt<44 || wt>10000) throw new IllegalArgumentException("Warnschwellen ungültig");
+                warningPanMdeg=wp;warningTiltMdeg=wt;motionConfigRevision=wr;warningSettingsSupported=true;break;
             case "MANUAL_STATUS_CAPABILITIES":
                 if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
                     throw new IllegalArgumentException("Manuelle Statusfreigabe ungültig");

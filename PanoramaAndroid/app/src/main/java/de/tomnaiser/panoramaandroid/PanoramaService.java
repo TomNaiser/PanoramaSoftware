@@ -235,6 +235,7 @@ public final class PanoramaService extends Service {
             }
             @Override public void onDisconnected(String reason) {
                 if (id != generation) return;
+                pendingTiming=null;
                 jog.finish(jog.token); ui.removeCallbacks(jogAlive);
                 if(connected && !incident.active) raiseIncident("CONNECTION",reason+". Der Gerätestand wird nach Wiederverbindung geprüft; alte Fahrten werden nicht wiederholt.",manualMoving || manualTrigger || uncertain);
                 if(recovering) recoveryRequested=true;
@@ -401,6 +402,7 @@ public final class PanoramaService extends Service {
     }
     public boolean hasConnection() { return device != null; }
     public void disconnect() {
+        pendingTiming=null;
         endJog(); jog.finish(jog.token); ui.removeCallbacks(jogAlive);
         recoveryFlow=null; recovering=recoveryRequested=false;
         planAbort=null; abortingPlan=false; discardDraftAfterAbort=false;
@@ -486,6 +488,7 @@ public final class PanoramaService extends Service {
             case "CLEAR_RUN": return "Auftrag zurücksetzen"; case "UPDATE_TIMING": return "Zeitänderung";
             case "REWIND_COLUMNS": return "Spaltenrücksprung"; case "FORWARD_COLUMNS": return "Spaltenvorsprung";
             case "SET_TILT_LIMITS": return "Tilt-Grenzen";
+            case "SET_CAPTURE_WARNING_TOLERANCE": return "Warnschwellen speichern";
             case "SET_TILT_ZERO": return "Tilt-Nullpunkt"; case "RESET_TILT_ZERO": return "Tilt-Werkreferenz";
             default: return "Geräteabfrage";
         }
@@ -504,6 +507,7 @@ public final class PanoramaService extends Service {
             case "PAUSE_PENDING": return "Pause nach dem aktuellen Bild angefordert"; case "RESUMED": return "Auftrag fortgesetzt";
             case "STOPPED": return "Gestoppt"; case "CLEARED": return "Auftrag gelöscht";
             case "TIMING_UPDATED": return "Neue Zeiten übernommen"; case "TIMING_QUEUED": return "Neue Zeiten vorgemerkt";
+            case "WARNING_TOLERANCE_SAVED": return "Warnschwellen dauerhaft im Gerät gespeichert";
             case "INVALID_STATE": return "Im aktuellen Gerätezustand nicht möglich";
             case "MANUAL_ACTION_ACTIVE": return "Manuelle Aktion noch aktiv";
             case "SAFETY_UNCONFIRMED": return "Sicherheitsgrenzen nicht bestätigt";
@@ -803,11 +807,38 @@ public final class PanoramaService extends Service {
             throw new IllegalArgumentException("Spaltenwechsel nur in einem laufenden/pausierten Raster");
         command(forward ? "FORWARD_COLUMNS" : "REWIND_COLUMNS", ""+state.runId, "1");
     }
+    int[] pendingTiming;
+    long pendingTimingRun;
+    String timingSummary() {
+        PanoramaPlan p=state.plan;
+        if(p==null) return "Noch kein Geräteplan";
+        if(pendingTiming!=null && (pendingTimingRun!=state.runId ||
+            (p.settleMs==pendingTiming[0] && p.pulseMs==pendingTiming[1] && p.exposureMs==pendingTiming[2]))) pendingTiming=null;
+        if(pendingTiming!=null && pendingTimingRun==state.runId &&
+            (p.settleMs!=pendingTiming[0] || p.pulseMs!=pendingTiming[1] || p.exposureMs!=pendingTiming[2]) &&
+            (state.state.equals("RUNNING") || state.state.equals("PAUSE_PENDING")))
+            return "Vorgemerkt nach aktuellem Bild: Beruhigung "+pendingTiming[0]+" ms · Puls "+pendingTiming[1]+" ms · Belichtung "+pendingTiming[2]+" ms";
+        return "Aktiv: Beruhigung "+p.settleMs+" ms · Puls "+p.pulseMs+" ms · Belichtung "+p.exposureMs+" ms";
+    }
+    public void saveWarningTolerances(double pan,double tilt) {
+        requireReady();
+        if(!state.warningSettingsSupported || manualMoving || manualTrigger || jog.held || jog.stopping ||
+            !(state.state.equals("IDLE") || state.state.equals("STOPPED")))
+            throw new IllegalArgumentException("Warnschwellen im Zustand Bereit oder Gestoppt speichern");
+        if(!Double.isFinite(pan) || !Double.isFinite(tilt) || pan<.044 || pan>10 || tilt<.044 || tilt>10)
+            throw new IllegalArgumentException("Warnschwelle: 0,044 bis 10 Grad");
+        command("SET_CAPTURE_WARNING_TOLERANCE",""+Math.round(pan*1000),""+Math.round(tilt*1000),""+state.motionConfigRevision);
+    }
     public void updateTiming(int settle, int pulse, int exposure) {
         requireReady();
         if (state.plan == null || settle < 0 || settle > 600000 || pulse < 1 || pulse > 60000 || exposure < 0 || exposure > 3600000)
             throw new IllegalArgumentException("Zeitparameter oder Auftrag ungültig");
-        command("UPDATE_TIMING", ""+state.runId, ""+settle, ""+pulse, ""+exposure);
+        long run=state.runId;
+        command("UPDATE_TIMING", ""+run, ""+settle, ""+pulse, ""+exposure).whenComplete((reply,error) -> {
+            if(error==null && reply.accepted) {
+                pendingTimingRun=run;pendingTiming=new int[]{settle,pulse,exposure};notifyObservers();
+            }
+        });
     }
     public void timelapse(long id, int interval, int pulse) {
         requireReady();

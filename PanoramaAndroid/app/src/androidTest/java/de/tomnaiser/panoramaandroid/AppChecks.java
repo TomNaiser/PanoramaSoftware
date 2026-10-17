@@ -77,7 +77,7 @@ public final class AppChecks extends Instrumentation {
             }
             if(jogUiCheck) {
                 int checks=new JogUiChecks().run(this);
-                report.putString("stream","\nPASS: "+checks+" assertions: Plan-page held touch, stable status rendering, release and focus loss. Simulated transport, no hardware.\n");
+                report.putString("stream","\nPASS: "+checks+" assertions: held arrows across right diagram edge, stable rendering, release, focus loss, live timing dialog and durable settings. Simulated transport, no hardware.\n");
                 finish(android.app.Activity.RESULT_OK,report); return;
             }
             if(jogHardwareCheck) {

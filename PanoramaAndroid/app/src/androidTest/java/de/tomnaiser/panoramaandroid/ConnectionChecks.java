@@ -26,12 +26,14 @@ final class ConnectionChecks {
             final int cycleId=cycle; activeCycle=cycleId;
             connected=false; failure=null; firmware=null; lastStatus=lastManualStatus=0; manualStatusSupported=false;
             CountDownLatch ready = new CountDownLatch(1);
+            DeviceState capabilities=new DeviceState();
             BluetoothSession session = new BluetoothSession(new BluetoothSession.Listener() {
                 public void onAwaitingProtocol() { }
                 public void onConnected() { if (activeCycle!=cycleId) return; connected=true; ready.countDown(); }
                 public void onDisconnected(String reason) { if (activeCycle!=cycleId) return; connected=false; failure=reason; ready.countDown(); }
                 public void onFrame(P2Codec.Frame frame) {
                     if (activeCycle!=cycleId) return;
+                    capabilities.accept(frame,SystemClock.elapsedRealtime());
                     if (frame.type.equals("DEVICE_INFO")) firmware=frame.fields[0];
                     if (frame.type.equals("STATUS")) lastStatus=SystemClock.elapsedRealtime();
                     if(frame.type.equals("MANUAL_STATUS_CAPABILITIES")) manualStatusSupported=frame.fields.length==1 && frame.fields[0].equals("1");
@@ -51,7 +53,9 @@ final class ConnectionChecks {
                 if (lastStatus==0 || !expectedFirmware.equals(firmware)) throw new AssertionError("Erwartete Firmware "+expectedFirmware+", empfangen "+firmware);
                 if(!manualStatusSupported || lastManualStatus==0 || SystemClock.elapsedRealtime()-lastManualStatus>2500)
                     throw new AssertionError("Aktueller manueller Betriebsstatus fehlt");
-                Bundle ok = new Bundle(); ok.putString("stream","\nZyklus "+cycle+": Firmware "+firmware+", 15 Sekunden aktuelle STATUS- und MANUAL_STATUS-Daten\n"); instrumentation.sendStatus(0,ok);
+                if(expectedFirmware.equals("2.4.70") && (capabilities.runMaximumTempo!=2000 || !capabilities.warningSettingsSupported))
+                    throw new AssertionError("Neue Lauf-/Warnkonfiguration auf dem echten Gerät nicht bestätigt");
+                Bundle ok = new Bundle(); ok.putString("stream","\nZyklus "+cycle+": Firmware "+firmware+", 15 Sekunden aktuelle STATUS- und MANUAL_STATUS-Daten; Lauftempo bis "+capabilities.runMaximumTempo+" ‰, Warnschwellen "+capabilities.warningPanMdeg+"/"+capabilities.warningTiltMdeg+" m°, Config "+capabilities.motionConfigRevision+"\n"); instrumentation.sendStatus(0,ok);
             } finally { activeCycle=0; session.close(); }
             // Closing posts its final callback to the main thread; drain it before resetting this probe.
             instrumentation.waitForIdleSync();

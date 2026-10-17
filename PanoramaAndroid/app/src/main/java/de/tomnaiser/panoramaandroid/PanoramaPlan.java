@@ -17,7 +17,7 @@ public final class PanoramaPlan {
         if (id < 1 || id > 4294967295L || mode < 0 || mode > 1 || cols < 1 || rows < 1
                 || cols > 65535 || rows > 4000 || settle < 0 || settle > 600000
                 || pulse < 1 || pulse > 60000 || exposure < 0 || exposure > 3600000
-                || speedX < 1 || speedX > 1000 || speedY < 1 || speedY > 1000
+                || speedX < 1 || speedX > 2000 || speedY < 1 || speedY > 2000
                 || policy < 0 || policy > 1 || (policy == 1 && (heartbeat < 500 || heartbeat > 60000)))
             throw new IllegalArgumentException("Ungültige Planparameter");
         if (mode == 1 && (dx <= 0 || y < -90000 || y > 90000 || ey < -90000 || ey > 90000
@@ -88,6 +88,8 @@ public final class PanoramaPlan {
         throw new IllegalArgumentException("Bildindex");
     }
     public void validate(DeviceState device) {
+        if(panSpeed>device.runMaximumTempo || tiltSpeed>device.runMaximumTempo)
+            throw new IllegalArgumentException("Gerät unterstützt höchstens "+device.runMaximumTempo+" ‰ Lauftempo; neue Firmware erforderlich");
         for (int i = 0; i < total(); i++) { int[] t = target(i); device.validateTarget(t[0], t[1]); }
         if (mode == 1) device.validateTarget(endPan, endTilt);
         if (P2Codec.encode(65535, "LOAD_PLAN", fields()).length() > 164)

@@ -2,6 +2,28 @@ package de.tomnaiser.panoramaandroid;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public final class PanoramaPlanTest {
+    @Test public void extendedRunTempoRequiresDeviceCapability() {
+        PanoramaPlan p=PanoramaPlan.create(5,false,0,0,10,-10,5,5,0,700,30,500,1500,false);
+        DeviceState d=new DeviceState();d.limitsKnown=d.confirmed=true;d.panMin=-180000;d.panMax=180000;d.tiltMin=-45000;d.tiltMax=30000;
+        try { p.validate(d);fail("Old firmware accepted extended tempo"); } catch(IllegalArgumentException expected) { }
+        d.accept(new P2Codec.Frame(1,"RUN_SPEED_CAPABILITIES",new String[]{"2000"}),100);p.validate(d);
+        assertEquals(1500,PanoramaPlan.parse(p.fields()).panSpeed);
+        try { PanoramaPlan.create(5,false,0,0,10,-10,5,5,0,700,30,500,2001,false);fail(); } catch(IllegalArgumentException expected) { }
+    }
+    @Test public void warningSettingsValidateAtomically() {
+        DeviceState d=new DeviceState();d.accept(new P2Codec.Frame(1,"CAPTURE_WARNING_SETTINGS",new String[]{"750","1000","24"}),100);
+        assertTrue(d.warningSettingsSupported);assertEquals(750,d.warningPanMdeg);assertEquals(24,d.motionConfigRevision);
+        try {d.accept(new P2Codec.Frame(2,"CAPTURE_WARNING_SETTINGS",new String[]{"250","10001","25"}),100);fail();} catch(IllegalArgumentException expected) { }
+        assertEquals(750,d.warningPanMdeg);assertEquals(24,d.motionConfigRevision);
+    }
+    @Test public void stepTimingIsBoundToCurrentRunAndImageAndIgnoresOldTiming() {
+        DeviceState s=new DeviceState();
+        s.accept(new P2Codec.Frame(1,"STATUS",new String[]{"5","RUNNING","MOVING","1","3","0","1","0","-9796","0","17000","0","2","NONE","1","0","1","1","0","0"}),100);
+        s.accept(new P2Codec.Frame(2,"STEP_TIMING",new String[]{"5","1","21024"}),100);assertEquals(21024,s.currentMoveMaximumMs());
+        s.accept(new P2Codec.Frame(3,"STEP_TIMING",new String[]{"4","1","21024"}),100);assertEquals(0,s.currentMoveMaximumMs());
+        s.accept(new P2Codec.Frame(4,"STEP_TIMING",new String[]{"5","0","21024"}),100);assertEquals(0,s.currentMoveMaximumMs());
+        try {s.accept(new P2Codec.Frame(5,"STEP_TIMING",new String[]{"5","1","120001"}),100);fail("Unbounded time accepted");} catch(IllegalArgumentException expected) { }
+    }
     @Test public void sphericalMatchesWindowsReference() {
         PanoramaPlan p = PanoramaPlan.parse(new String[]{"77","2","1","-60000","-45000","5","3","30000","30000","10","30","50","500","500","0","0","60000","45000"});
         assertEquals(13, p.total()); assertArrayEquals(new int[]{-60000,-45000,0,0}, p.target(0));

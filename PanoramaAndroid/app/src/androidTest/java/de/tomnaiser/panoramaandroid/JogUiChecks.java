@@ -26,6 +26,25 @@ final class JogUiChecks {
         Map<String,String> originalDraft=new HashMap<>();
         FakeLink fake=new FakeLink();
         link=fake;
+        Handler telemetry=new Handler(Looper.getMainLooper());
+        Runnable heartbeat=new Runnable() {
+            public void run() {
+                if(service!=null && service.connected) {
+                    // The simulated controller continues publishing its
+                    // unchanged measurements while dialogs/disk I/O are tested.
+                    service.state.lastStatusMs=service.state.lastManualStatusMs=SystemClock.elapsedRealtime();
+                }
+                telemetry.postDelayed(this,200);
+            }
+        };
+        android.app.Application application=(android.app.Application)context.getApplicationContext();
+        android.app.Application.ActivityLifecycleCallbacks lifecycle=new android.app.Application.ActivityLifecycleCallbacks() {
+            public void onActivityCreated(android.app.Activity a,Bundle b) { if(a instanceof MainActivity) { a.setShowWhenLocked(true);a.setTurnScreenOn(true);a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } }
+            public void onActivityStarted(android.app.Activity a) { } public void onActivityResumed(android.app.Activity a) { }
+            public void onActivityPaused(android.app.Activity a) { } public void onActivityStopped(android.app.Activity a) { }
+            public void onActivitySaveInstanceState(android.app.Activity a,Bundle b) { } public void onActivityDestroyed(android.app.Activity a) { }
+        };
+        main(() -> application.registerActivityLifecycleCallbacks(lifecycle));
         try {
             activity=(MainActivity)runner.startActivitySync(new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             // Exercise this app's views while the phone remains locked; no
@@ -47,6 +66,7 @@ final class JogUiChecks {
                 service.state.accept(new P2Codec.Frame(3,"MANUAL_JOG_VELOCITY_CAPABILITIES",new String[]{"5000"}),SystemClock.elapsedRealtime());
                 service.state.accept(new P2Codec.Frame(4,"MANUAL_JOG_PAN_VELOCITY_CAPABILITIES",new String[]{"10000"}),SystemClock.elapsedRealtime());
                 status("IDLE"); invoke(activity,"selectPage",new Class[]{int.class},2);
+                telemetry.post(heartbeat);
             });
             runner.waitForIdleSync();
             LinearLayout navigation=(LinearLayout)read(activity,"navigationBar");
@@ -119,7 +139,69 @@ final class JogUiChecks {
             phase="focus release";
             await(() -> !service.jog.held && !service.busy);
             main(() -> check(fake.stops==2,"Window focus loss releases held gesture"));
+            // Cross the right edge of a zoomed diagram, well inside hardware
+            // limits. The viewport must follow without interrupting the hold.
+            Button right=(Button)navigation.getChildAt(2);
+            phase="right edge";
+            main(() -> {
+                status("CANCELLED");
+                PlanPreview preview=(PlanPreview)read(activity,"preview");
+                ((PlotViewport)read(preview,"viewport")).fit(-122,-120,-10,0);
+                touch(right,MotionEvent.ACTION_DOWN);
+            });
+            await(() -> service.jog.held && !service.busy);
+            for(int i=0;i<15;i++) {
+                final int pan=121250+i*250;
+                main(() -> {
+                    status("ACTIVE");service.state.pan=pan;invoke(activity,"render",new Class[0]);
+                    PlanPreview preview=(PlanPreview)read(activity,"preview");PlotViewport vp=(PlotViewport)read(preview,"viewport");
+                    check(vp.x(-pan/1000.0)>=.1 && vp.x(-pan/1000.0)<=.9 && right.isPressed() && service.jog.held,
+                        "Crossing right plot edge preserves continuous hold and visible measured point");
+                    if(fake.keepalive!=null && !fake.keepalive.isDone()) fake.keepalive.complete(new V2Client.Result(true,"JOG_ALIVE",fake.sequence));
+                });
+                Thread.sleep(100);
+            }
+            main(() -> touch(right,MotionEvent.ACTION_UP));await(() -> !service.jog.held && !service.busy);
+            main(() -> { status("CANCELLED");invoke(activity,"render",new Class[0]);
+                check(fake.starts==3 && fake.stops==3,"Edge crossing adds no intermediate start/stop or queued steps"); });
+            // Edit the actual live-run dialog; the simulated controller queues
+            // timing until the image boundary and never receives motion.
+            final android.app.AlertDialog[] timingDialog={null};
+            main(() -> {
+                status("CANCELLED");service.state.state="RUNNING";service.state.runId=900;
+                service.state.plan=PanoramaPlan.create(900,false,0,0,10,-10,5,5,0,700,30,500,1000,false);
+                invoke(activity,"selectPage",new Class[]{int.class},3);
+                check(invokeResult(activity,"timingReady"),("Timing remains editable during an autonomous run"));
+                android.app.AlertDialog dialog=(android.app.AlertDialog)invokeValue(activity,"editRunTiming");
+                timingDialog[0]=dialog;
+                ((EditText)dialog.getWindow().getDecorView().findViewWithTag("runTiming0")).setText("425");
+            });
+            runner.waitForIdleSync();
+            main(() -> timingDialog[0].getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick());
+            phase="queued timing";
+            await(() -> !service.busy && service.pendingTiming!=null);
+            main(() -> {
+                check(Arrays.equals(fake.lastTiming,new String[]{"900","425","30","500"}),"Dialog sends only UPDATE_TIMING for current run");
+                check(service.state.plan.settleMs==700 && service.timingSummary().contains("Vorgemerkt"),"Queued timing does not prematurely change active exposure parameters");
+                @SuppressWarnings("unchecked") Map<String,EditText> fields=(Map<String,EditText>)read(activity,"inputs");
+                fields.get("speed").setText("1500");fields.get("warningPan").setText("0.75");
+                check(preferences.getString("settle","").equals("425") && preferences.getString("speed","").equals("1500") && preferences.getString("warningPan","").equals("0.75"),
+                    "Speed, timing and warning edits are saved immediately without calculation or leaving Activity");
+                service.state.plan=PanoramaPlan.create(900,false,0,0,10,-10,5,5,0,425,30,500,1000,false);
+                check(service.timingSummary().startsWith("Aktiv:") && service.pendingTiming==null,"Device plan confirmation clears queued values and displays active times");
+                service.state.state="IDLE";service.state.plan=null;service.pendingTiming=null;
+            });
+            main(() -> {
+                status("CANCELLED");
+                check(preferences.edit().commit(),"Pending preference writes flushed to durable storage");
+                try {
+                    String xml=new String(java.nio.file.Files.readAllBytes(new java.io.File(context.getApplicationInfo().dataDir,"shared_prefs/settings.xml").toPath()),java.nio.charset.StandardCharsets.UTF_8);
+                    check(xml.contains("name=\"settle\">425<") && xml.contains("name=\"speed\">1500<") && xml.contains("name=\"warningPan\">0.75<"),
+                        "Independent on-disk XML retains timing, tempo and warning edits for the next process");
+                } catch(java.io.IOException ex) { throw new RuntimeException(ex); }
+            });
         } finally {
+            telemetry.removeCallbacks(heartbeat);
             DeviceState restore=originalState;
             if(service!=null && restore!=null) main(() -> {
                 service.disconnect(); service.state=restore; copyIncident(savedIncident,service.incident);
@@ -128,6 +210,7 @@ final class JogUiChecks {
             if(activity!=null) { main(activity::finish); runner.waitForIdleSync(); }
             if(service!=null) main(() -> { service.draftEndpoints.clear(); service.draftEndpoints.putAll(originalDraft); });
             restoreSettings(preferences,originalSettings);
+            main(() -> application.unregisterActivityLifecycleCallbacks(lifecycle));
         }
         return checks;
     }
@@ -170,11 +253,14 @@ final class JogUiChecks {
     private static Object read(Object owner,String name) { try { Field f=owner.getClass().getDeclaredField(name); f.setAccessible(true); return f.get(owner); } catch(Exception ex) { throw new RuntimeException(ex); } }
     private static void write(Object owner,String name,Object value) { try { Field f=owner.getClass().getDeclaredField(name); f.setAccessible(true); f.set(owner,value); } catch(Exception ex) { throw new RuntimeException(ex); } }
     private static void invoke(Object owner,String name,Class[] types,Object... args) { try { Method m=owner.getClass().getDeclaredMethod(name,types); m.setAccessible(true); m.invoke(owner,args); } catch(Exception ex) { throw new RuntimeException(ex); } }
+    private static Object invokeValue(Object owner,String name) { try { Method m=owner.getClass().getDeclaredMethod(name);m.setAccessible(true);return m.invoke(owner); } catch(Exception ex) { throw new RuntimeException(ex); } }
+    private static boolean invokeResult(Object owner,String name) {return (Boolean)invokeValue(owner,name);}
     private static void copyIncident(IncidentTracker from,IncidentTracker to) { to.id=from.id; to.key=from.key; to.detail=from.detail; to.active=from.active; to.acknowledged=from.acknowledged; to.requiresStop=from.requiresStop; }
     private static final class FakeLink implements DeviceLink {
-        int sequence=1000,startSequence,starts,stops,keeps; CompletableFuture<V2Client.Result> keepalive;
+        int sequence=1000,startSequence,starts,stops,keeps; CompletableFuture<V2Client.Result> keepalive;String[] lastTiming;
         public CompletableFuture<V2Client.Result> send(String type,String[] fields) {
             ++sequence;
+            if(type.equals("UPDATE_TIMING")) { lastTiming=fields.clone();return CompletableFuture.completedFuture(new V2Client.Result(true,"TIMING_QUEUED",sequence)); }
             if(type.equals("MANUAL_JOG_START") || type.equals("MANUAL_JOG_START_VELOCITY")) { starts++; startSequence=sequence; return CompletableFuture.completedFuture(new V2Client.Result(true,"JOGGING",sequence)); }
             if(type.equals("MANUAL_JOG_KEEPALIVE")) { keeps++; keepalive=new CompletableFuture<>(); return keepalive; }
             return CompletableFuture.completedFuture(new V2Client.Result(true,"OK",sequence));

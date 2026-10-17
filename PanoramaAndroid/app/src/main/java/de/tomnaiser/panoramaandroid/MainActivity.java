@@ -278,7 +278,14 @@ public final class MainActivity extends Activity {
         button(settings,"Grafische Planänderung übernehmen",preview::commitSelection,() -> preview.selection.pending && (preview.editMode()==1 || preview.editMode()==2));
         button(settings,"Zurück zum Ausrichten",() -> preview.setEditMode(3),() -> true);
         input(settings,"settle","Beruhigungszeit (ms)","700"); input(settings,"planPulse","Triggerdauer (ms)","30"); input(settings,"exposure","Belichtungswartezeit (ms)","500");
-        input(settings,"speed","Fahrtempo im Aufnahmelauf (‰, 1–1000)","500");
+        input(settings,"speed","Fahrtempo im Aufnahmelauf (‰, 1–2000)","500");
+        settings.addView(text("1000 = bisheriges Volltempo, 1500 = 150 %, 2000 = 200 %. Absolute Pan-/Tilt-Grenzen stehen in der Motor-Config. Höhere Werte gelten für den nächsten übertragenen Plan.",13));
+        input(settings,"warningPan","Pan-Warnschwelle (°, 0,044–10)","0.5");
+        input(settings,"warningTilt","Tilt-Warnschwelle (°, 0,044–10)","0.5");
+        button(settings,"Warnschwellen im Gerät speichern",() -> service.saveWarningTolerances(number("warningPan"),number("warningTilt")),
+            () -> ready() && service.state.warningSettingsSupported && !service.manualMoving && !service.manualTrigger &&
+                (service.state.state.equals("IDLE") || service.state.state.equals("STOPPED")));
+        settings.addView(text("Warnschwellen betreffen nur die Markierung und den Signalton. Zielregelung und Ruheprüfung bleiben unabhängig. Gespeichert werden beide Werte dauerhaft im Gerät; erst dessen Bestätigung macht sie aktiv.",13));
         stopOnLoss=new CheckBox(this); stopOnLoss.setText("Bei Verbindungsverlust nach 5 s stoppen");
         stopOnLoss.setChecked(preferences.getBoolean("stopOnLoss",false)); settings.addView(stopOnLoss);
         settings.addView(text("Ohne Häkchen führt der Arduino den Auftrag auch bei getrennter Handy-Verbindung weiter aus.",14));
@@ -303,7 +310,7 @@ public final class MainActivity extends Activity {
         button(run,"Auftrag starten",this::startLoadedPlan,() -> savedPlot==null && canStartLoadedPlan());
         button(run,"Eine Spalte zurück",() -> service.columns(false),() -> savedPlot==null && ready());
         button(run,"Eine Spalte vor",() -> service.columns(true),() -> savedPlot==null && ready());
-        button(run,"Zeiten aus Plan-Eingaben übernehmen",() -> service.updateTiming(integer("settle"),integer("planPulse"),integer("exposure")),() -> savedPlot==null && ready() && service.state.plan!=null);
+        button(runActions,"Zeiten…",this::editRunTiming,() -> savedPlot==null && timingReady());
         button(run,"Gerätestand neu einlesen",() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
         button(run,"Vorhandenen Auftrag löschen",() -> confirm("Auftrag löschen?","Der gespeicherte Geräteauftrag wird zurückgesetzt. Lokale Aufnahmedaten bleiben erhalten.",() -> service.runCommand("CLEAR_RUN")),this::ready);
         button(run,"Plan abbrechen / Neuer Plan",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
@@ -361,7 +368,7 @@ public final class MainActivity extends Activity {
         runWorkspace=installPlotWorkspace(container,3,runGraph);
         for(Map.Entry<String,EditText> entry:inputs.entrySet()) {
             String key=entry.getKey();
-            if(key.equals("step") || key.equals("pulse") || key.equals("interval") || key.equals("tlPulse") || key.startsWith("tilt")) continue;
+            if(key.equals("step") || key.equals("pulse") || key.equals("interval") || key.equals("tlPulse") || key.startsWith("tilt") || key.startsWith("warning")) continue;
             entry.getValue().addTextChangedListener(new TextWatcher() {
                 public void beforeTextChanged(CharSequence s,int start,int count,int after) { }
                 public void onTextChanged(CharSequence s,int start,int before,int count) { if(plotReady) { refreshEndpoints(); schedulePlot(); } }
@@ -369,10 +376,10 @@ public final class MainActivity extends Activity {
             });
         }
         modePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id) { schedulePlot(); }
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id) { preferences.edit().putInt("mode",position).apply();schedulePlot(); }
             public void onNothingSelected(android.widget.AdapterView<?> p) { }
         });
-        stopOnLoss.setOnCheckedChangeListener((v,checked) -> schedulePlot());
+        stopOnLoss.setOnCheckedChangeListener((v,checked) -> { preferences.edit().putBoolean("stopOnLoss",checked).apply();schedulePlot(); });
         profilePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id) { if(plotReady) render(); }
             public void onNothingSelected(android.widget.AdapterView<?> parent) { }
@@ -535,7 +542,37 @@ public final class MainActivity extends Activity {
         parent.addView(text(label,14)); EditText view=new EditText(this); view.setSingleLine(true);
         view.setInputType(key.equals("profileName") ? InputType.TYPE_CLASS_TEXT : InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_SIGNED);
         boolean endpoint=key.startsWith("start") || key.startsWith("end");
-        view.setText(endpoint && !restoreEndpoints?"":preferences.getString(key,fallback)); inputs.put(key,view); parent.addView(view); return view;
+        view.setText(endpoint && !restoreEndpoints?"":preferences.getString(key,fallback)); inputs.put(key,view); parent.addView(view);
+        view.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s,int start,int count,int after) { }
+            public void onTextChanged(CharSequence s,int start,int before,int count) { preferences.edit().putString(key,s.toString()).apply(); }
+            public void afterTextChanged(Editable value) { }
+        });
+        return view;
+    }
+    private boolean timingReady() {
+        return ready() && service.state.plan!=null && Arrays.asList("PLAN_READY","RUNNING","PAUSE_PENDING","PAUSED").contains(service.state.state);
+    }
+    private AlertDialog editRunTiming() {
+        if(!timingReady()) throw new IllegalArgumentException("Aktueller Geräteplan fehlt oder Aktion noch nicht bestätigt");
+        long run=service.state.runId; PanoramaPlan p=service.state.plan;
+        int[] values=service.pendingTiming!=null && service.pendingTimingRun==run ? service.pendingTiming : new int[]{p.settleMs,p.pulseMs,p.exposureMs};
+        LinearLayout body=vertical();body.setPadding(dp(20),dp(8),dp(20),dp(8));
+        body.addView(text(service.timingSummary()+"\nÄnderungen gelten nach dem aktuellen Bild, bei Pause vor dem nächsten Bild. Die laufende Belichtung bleibt vollständig.",14));
+        String[] labels={"Beruhigungsdauer (ms)","Triggerdauer (ms)","Belichtungswartezeit (ms)"};
+        EditText[] fields=new EditText[3];
+        for(int i=0;i<3;i++) { body.addView(text(labels[i],14));fields[i]=new EditText(this);fields[i].setSingleLine(true);
+            fields[i].setInputType(InputType.TYPE_CLASS_NUMBER);fields[i].setTag("runTiming"+i);fields[i].setText(""+values[i]);body.addView(fields[i]); }
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Zeiten im Lauf ändern").setView(body)
+            .setNegativeButton("Abbrechen",null).setPositiveButton("Übernehmen",null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> safely(() -> {
+            if(service==null || service.state.runId!=run) throw new IllegalArgumentException("Gerätelauf inzwischen geändert");
+            int settle=Integer.parseInt(fields[0].getText().toString()),pulse=Integer.parseInt(fields[1].getText().toString()),exposure=Integer.parseInt(fields[2].getText().toString());
+            service.updateTiming(settle,pulse,exposure);
+            inputs.get("settle").setText(""+settle);inputs.get("planPulse").setText(""+pulse);inputs.get("exposure").setText(""+exposure);
+            dialog.dismiss();
+        })));
+        dialog.show();return dialog;
     }
     private boolean ready() { return service!=null && service.fresh() && !service.uncertain && !service.recovering && !service.incident.needsAcknowledgement() && !service.busy && !service.abortingPlan && !service.jog.held && !service.jog.stopping; }
     private boolean manualReady() { return service!=null && service.navigationAllowed() && selectedPage!=3; }
@@ -553,12 +590,14 @@ public final class MainActivity extends Activity {
         if (service==null) return "Keine Geräteverbindung";
         DeviceState s=service.state;
         String result=String.format(Locale.GERMANY,"Firmware: %s · %s\nStatus: %s · %s\nPosition Pan %.3f° · Tilt %.3f°\nAufnahmen: %d / %d · Spalte %d · Zeile %d\nLauf: %d · Revision %d\n",s.firmware,s.hardware,s.state,s.phase,-s.pan/1000.0,s.tilt/1000.0,s.completed,s.total,s.column,s.row,s.runId,s.revision);
+        if(s.currentMoveMaximumMs()>0) result+=String.format(Locale.GERMANY,"Fahrzeitgrenze dieses Schritts: %.2f s\n",s.currentMoveMaximumMs()/1000.0);
         if (!service.fresh()) result+="Statusdaten fehlen oder sind veraltet.\n";
         if (s.limitsKnown) result+=String.format(Locale.GERMANY,"Grenzen %s\nPan %.3f° bis %.3f° · Tilt %.3f° bis %.3f°\n",s.confirmed ? "bestätigt" : "NICHT bestätigt",-s.panMax/1000.0,-s.panMin/1000.0,s.tiltMin/1000.0,s.tiltMax/1000.0);
         if (s.limitsKnown && s.confirmed && !s.positionSafe()) result+="Istposition außerhalb der Grenze: betroffene Achse in Richtung des erlaubten Bereichs zurückfahren.\n";
         if (service.manualMoving) result+="Manuelle Fahrt aktiv\n";
         if (service.manualTrigger) result+="Kameraauslösung aktiv/noch nicht abgeschlossen\n";
-        if (s.plan!=null) result+="Geräteplan: "+s.plan.total()+" Bilder · Beruhigung "+s.plan.settleMs+" ms · Puls "+s.plan.pulseMs+" ms · Belichtung "+s.plan.exposureMs+" ms\n";
+        if (s.plan!=null) result+="Geräteplan: "+s.plan.total()+" Bilder · "+service.timingSummary()+"\n";
+        if(s.warningSettingsSupported) result+=String.format(Locale.GERMANY,"Aktive Warnschwellen: Pan %.3f° · Tilt %.3f° (Geräte-Config %d)\n",s.warningPanMdeg/1000.0,s.warningTiltMdeg/1000.0,s.motionConfigRevision);
         return result;
     }
     private void render() {
