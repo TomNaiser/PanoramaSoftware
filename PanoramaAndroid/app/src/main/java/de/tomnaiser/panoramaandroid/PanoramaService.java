@@ -61,6 +61,7 @@ public final class PanoramaService extends Service {
     private long nextRecoveryAttemptMs;
     private long nextDiagnosticMs, openedMs;
     private long lastStatusLoggedMs;
+    private android.media.ToneGenerator warningTone;
     public CaptureStore captures;
     public SupportLog support;
     private final Runnable retry = () -> open();
@@ -198,9 +199,14 @@ public final class PanoramaService extends Service {
                         sessionIdentityReceived=true;
                     }
                     if (frame.type.equals("STATUS")) { statusVersion++; if(!previousState.equals(state.state)) targetKnown=false; }
-                    captures.accept(device.getAddress(), state, frame);
+                    boolean newWarning=captures.accept(device.getAddress(), state, frame);
+                    if(newWarning) {
+                        CaptureWarning warning=CaptureWarning.parse(frame.fields);
+                        message="Warnung bei Aufnahme "+warning.ordinal+": "+CaptureWarning.describe(warning.flags)+" · Lauf wird fortgesetzt";
+                        signalQualityWarning();
+                    }
                     if(frame.type.equals("STATUS")) plot.status(frame,SystemClock.elapsedRealtime());
-                    if(frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") ||
+                    if(frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") || frame.type.equals("CAPTURE_WARNING") ||
                         (frame.type.equals("STATUS") && (previousRun!=state.runId || previousCount!=state.completed || !previousState.equals(state.state))))
                         plot.captures=captures.plotCaptures(device.getAddress(),state.runId);
                     if (frame.type.equals("STATUS") && SystemClock.elapsedRealtime()-lastStatusLoggedMs>=5000) {
@@ -275,6 +281,11 @@ public final class PanoramaService extends Service {
         boolean wasMove=manualMoving;
         manualAction=null; manualProgress=null; manualMoving=manualTrigger=false;
         if(outcome==ManualActionProgress.Outcome.SUCCEEDED) { message=wasMove?"Manuelles Ziel erreicht":"Manuelle Kameraauslösung bestätigt"; if(wasMove) deferEndpointCapture(); }
+        else if(outcome==ManualActionProgress.Outcome.WARNING) {
+            targetKnown=false; deferEndpointCapture();
+            message="Warnung: Manuelles Ziel nicht genau erreicht · Motoren gestoppt, erneutes Anfahren möglich";
+            signalQualityWarning();
+        }
         else {
             targetKnown=false;
             raiseIncident("MANUAL_"+state.manualStatus.result,"Die manuelle Aktion endete mit "+state.manualStatus.result+". Das alte Ziel wird verworfen; Gerätestand prüfen.");
@@ -289,6 +300,14 @@ public final class PanoramaService extends Service {
     public boolean fresh() { return connected && state.fresh(SystemClock.elapsedRealtime()); }
     public boolean manualAllowed() { return navigationReason().isEmpty() && state.manual(SystemClock.elapsedRealtime()); }
     public boolean navigationAllowed() { return navigationReason().isEmpty(); }
+    boolean connectedTo(String address) { return device!=null && device.getAddress().equals(address); }
+    private void signalQualityWarning() {
+        if(!getSharedPreferences("settings",MODE_PRIVATE).getBoolean("captureWarningSound",true)) return;
+        try {
+            if(warningTone==null) warningTone=new android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION,60);
+            warningTone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2,180);
+        } catch(RuntimeException ex) { support.append("WARNING_SOUND_UNAVAILABLE"); }
+    }
     public String navigationReason() {
         if(incident.needsAcknowledgement()) return "Fehler quittieren, danach wird der Gerätestand geprüft.";
         if(recovering || recoveryRequested) return "Gerätestand wird geprüft …";
@@ -798,6 +817,6 @@ public final class PanoramaService extends Service {
         command("START_TIMELAPSE", ""+id, ""+interval, ""+pulse);
     }
     @Override public void onDestroy() { jog.finish(jog.token); ui.removeCallbacks(jogAlive); ++generation; ++actionGeneration;
-        disconnect(); ui.removeCallbacksAndMessages(null); captures.close(); support.close(); observers.clear(); super.onDestroy();
+        disconnect(); ui.removeCallbacksAndMessages(null); if(warningTone!=null) warningTone.release(); captures.close(); support.close(); observers.clear(); super.onDestroy();
     }
 }

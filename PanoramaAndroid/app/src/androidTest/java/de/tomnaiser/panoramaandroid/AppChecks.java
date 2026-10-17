@@ -15,6 +15,7 @@ public final class AppChecks extends Instrumentation {
     private boolean manualStatusCheck;
     private boolean manualHardwareCheck,panPlanHardwareCheck;
     private boolean panoramaHardwareCheck;
+    private boolean captureWarningCheck;
     private boolean jogHardwareCheck;
     private boolean jogUiCheck,chartUiCheck,chartLandscape;
     private boolean jogUiHardwareCheck;
@@ -29,6 +30,7 @@ public final class AppChecks extends Instrumentation {
         panPlanHardwareCheck=arguments!=null && "true".equals(arguments.getString("panPlanHardwareCheck"));
         manualHardwareCheck=arguments!=null && "true".equals(arguments.getString("manualHardwareCheck"));
         panoramaHardwareCheck=arguments!=null && "true".equals(arguments.getString("panoramaHardwareCheck"));
+        captureWarningCheck=arguments!=null && "true".equals(arguments.getString("captureWarningCheck"));
         jogHardwareCheck=arguments!=null && "true".equals(arguments.getString("jogHardwareCheck"));
         chartLandscape=arguments!=null && "true".equals(arguments.getString("chartLandscape"));
         chartUiCheck=arguments!=null && "true".equals(arguments.getString("chartUiCheck"));
@@ -48,6 +50,11 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(captureWarningCheck) {
+                storageChecks(context,name);captureWarningStorageChecks(context,name);
+                report.putString("stream","\nPASS: "+assertions+" storage/warning assertions; no hardware connection.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
             if(panoramaHardwareCheck) {
                 int checks=new PanoramaHardwareChecks().run(this,expectedFirmware);
                 report.putString("stream","\nPASS: "+checks+" checks: original 35-column / 280-shot panorama through real app service; stopped and test plan removed.\n");
@@ -439,6 +446,39 @@ public final class AppChecks extends Instrumentation {
     }
     private static void feed(CaptureStore store,DeviceState state,String type,String... fields) throws Exception {
         P2Codec.Frame frame=P2Codec.decode(P2Codec.encode(1,type,fields)); state.accept(frame,1000); store.accept("TEST_DEVICE",state,frame);
+    }
+    private void captureWarningStorageChecks(Context context,String name) throws Exception {
+        // Recreate the precise v1 schema on a temporary test database only.
+        try(android.database.sqlite.SQLiteDatabase db=android.database.sqlite.SQLiteDatabase.openDatabase(context.getDatabasePath(name).getPath(),null,android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)) {
+            db.execSQL("DROP TABLE capture_warnings");db.setVersion(1);
+        }
+        String key;
+        try(CaptureStore store=new CaptureStore(context,name)) {
+            key=store.runs().get(0).key;
+            check(store.export(key,false).split("\n").length==4,"v1-to-v2 migration retains raster and manual captures");
+            DeviceState state=new DeviceState();
+            P2Codec.Frame warning=new P2Codec.Frame(10,"CAPTURE_WARNING",new String[]{"5","1","9"});
+            check(store.accept("TEST_DEVICE",state,warning),"First warning accepted");
+            check(!store.accept("TEST_DEVICE",state,warning),"Repeated warning cannot generate another sound");
+            CaptureStore.PlotSnapshot snapshot=store.plotSnapshot(key);
+            check(snapshot.model.captures.get(0).warningFlags==9 && snapshot.model.captures.size()==3,"Late warning attaches to exact capture without creating a photograph");
+            feed(store,state,"CAPTURE_WARNING","5","3","4");
+            feed(store,state,"STATUS","5","RUNNING","MOVING","3","9","0","2","0","10000","0","0","0","2","NONE","3","0","1","3");
+            snapshot=store.plotSnapshot(key);
+            RunPlotModel.Capture inferred=snapshot.model.captures.stream().filter(c -> c.key.equals("R-5-3")).findFirst().get();
+            check(inferred.reconstructed && inferred.warningFlags==4,"Warning before missing image survives raster reconstruction");
+            feed(store,state,"IMAGE_COMPLETED","9","5","3","0","2","0","2","0","10000","500","9900","0");
+            snapshot=store.plotSnapshot(key);
+            RunPlotModel.Capture measured=snapshot.model.captures.stream().filter(c -> c.key.equals("R-5-3")).findFirst().get();
+            check(!measured.reconstructed && measured.warningFlags==4 && measured.pan==500,"Late measured image retains its warning and actual coordinates");
+            check(store.export(key,false).contains("Pan-Abweichung über Toleranz") && store.export(key,false).contains("Fahrzeitgrenze erreicht"),"CSV retains warning reasons");
+            // Force the first warning outside the ordinary 512-image window.
+            for(int i=4;i<=520;i++) feed(store,state,"IMAGE_COMPLETED",""+(20+i),"5",""+i,"0","0","0","0","0","0","0","0","0");
+            check(store.plotSnapshot(key).model.captures.stream().anyMatch(c -> c.key.equals("R-5-1") && c.warningFlags==9),"Old warning points never fall out of the 512-image view");
+        }
+        try(CaptureStore store=new CaptureStore(context,name)) {
+            check(store.plotSnapshot(key).model.captures.stream().anyMatch(c -> c.key.equals("R-5-3") && c.warningFlags==4),"Warning persists after database restart");
+        }
     }
     private void check(boolean condition,String name) { if (!condition) throw new AssertionError(name); assertions++; }
     private static int count(String text,String part) { return text.split(java.util.regex.Pattern.quote(part),-1).length-1; }

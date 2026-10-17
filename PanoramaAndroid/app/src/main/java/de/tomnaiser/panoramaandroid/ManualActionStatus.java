@@ -20,7 +20,7 @@ final class ManualActionStatus {
             valid=sequence>=1 && sequence<=65535 && (kind.equals("MOVE") || kind.equals("TRIGGER") || kind.equals("JOG")) && maximum>0 &&
                 maximum<=(kind.equals("MOVE")?120000:kind.equals("JOG")?1500:60000) &&
                 (result.equals("ACTIVE") || result.equals("CANCELLED") || result.equals("FAULT") ||
-                    kind.equals("MOVE") && (result.equals("REACHED") || result.equals("TIMED_OUT")) ||
+                    kind.equals("MOVE") && (result.equals("REACHED") || result.equals("TIMED_OUT") || result.equals("TARGET_MISSED")) ||
                     kind.equals("JOG") && result.equals("REACHED") ||
                     kind.equals("TRIGGER") && result.equals("TRIGGERED"));
         }

@@ -6,14 +6,23 @@ import java.util.*;
 final class RunPlotModel {
     static final class Capture {
         final String key; final int targetPan,targetTilt,pan,tilt; final boolean reconstructed;
+        final int warningFlags;
+        final long ordinal;
         Capture(String key,int tx,int ty,int x,int y,boolean inferred) {
+            this(key,tx,ty,x,y,inferred,0,0);
+        }
+        Capture(String key,int tx,int ty,int x,int y,boolean inferred,int flags,long ordinal) {
             this.key=key; targetPan=tx; targetTilt=ty; pan=x; tilt=y; reconstructed=inferred;
+            warningFlags=flags;this.ordinal=ordinal;
         }
         static Capture parse(String key,String payload) {
+            return parse(key,payload,0);
+        }
+        static Capture parse(String key,String payload,int flags) {
             String[] f=payload.split("\\|",-1);
             boolean manual=f[0].equals("MANUAL_IMAGE_TRIGGERED");
             int x=Integer.parseInt(f[manual?5:10]), y=Integer.parseInt(f[manual?6:11]);
-            return new Capture(key,manual?x:Integer.parseInt(f[8]),manual?y:Integer.parseInt(f[9]),x,y,f[manual?8:12].equals("1"));
+            return new Capture(key,manual?x:Integer.parseInt(f[8]),manual?y:Integer.parseInt(f[9]),x,y,f[manual?8:12].equals("1"),flags,DeviceState.unsigned(f[3]));
         }
     }
     static final class Sample {

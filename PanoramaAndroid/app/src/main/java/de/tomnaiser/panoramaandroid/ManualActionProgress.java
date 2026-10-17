@@ -2,7 +2,7 @@ package de.tomnaiser.panoramaandroid;
 
 /** Completion belongs to the ACKed command, never to proximity or old log events. */
 final class ManualActionProgress {
-    enum Outcome { WAITING, SUCCEEDED, INTERRUPTED }
+    enum Outcome { WAITING, SUCCEEDED, WARNING, INTERRUPTED }
     private final int commandSequence,pan,tilt;
     private final String kind;
     private final long baseline;
@@ -13,6 +13,6 @@ final class ManualActionProgress {
     Outcome accept(ManualActionStatus status,long version) {
         if(status==null || version<=baseline || status.commandSequence!=commandSequence || !status.kind.equals(kind) ||
             kind.equals("MOVE") && (status.pan!=pan || status.tilt!=tilt) || status.active()) return Outcome.WAITING;
-        return status.succeeded()?Outcome.SUCCEEDED:Outcome.INTERRUPTED;
+        return status.succeeded()?Outcome.SUCCEEDED:status.result.equals("TARGET_MISSED")?Outcome.WARNING:Outcome.INTERRUPTED;
     }
 }

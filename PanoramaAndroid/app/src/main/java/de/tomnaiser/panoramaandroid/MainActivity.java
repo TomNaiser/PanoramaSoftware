@@ -59,6 +59,7 @@ public final class MainActivity extends Activity {
     private LinearLayout[] pages;
     private PlanPreview preview, runPreview;
     private TextView plotSelection, runLegend, runTitle, planDeviceStatus;
+    private Button warningPoints;
     private final Handler plotHandler=new Handler(Looper.getMainLooper());
     private long plottedRun=-1;
     private String savedPlotKey;
@@ -292,6 +293,10 @@ public final class MainActivity extends Activity {
         button(run,"Stoppen & Endpunkte ändern",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         button(runActions,"Stop",() -> confirm("Auftrag stoppen?","Motoren und Kameraausgänge werden abgeschaltet. Es gibt keine Parkfahrt.",() -> service.runCommand("STOP")),() -> ready() && !service.state.state.equals("IDLE") && !service.state.state.startsWith("TIMELAPSE"));
         runPreview=new PlanPreview(this); plotControls(runGraph,runPreview);
+        runPreview.setWarningListener(this::reviewCaptureWarning);
+        warningPoints=new Button(this);warningPoints.setTag("warningPoints");warningPoints.setAllCaps(false);warningPoints.setTextSize(13);
+        warningPoints.setMinHeight(0);warningPoints.setMinimumHeight(0);warningPoints.setPadding(dp(6),0,dp(6),0);
+        warningPoints.setOnClickListener(v -> showCaptureWarnings());runGraph.addView(warningPoints,new LinearLayout.LayoutParams(-1,dp(36)));
         runGraph.addView(runPreview,new LinearLayout.LayoutParams(-1,0,1));
         runLegend=text("Blau: Sollpunkte · Violett: Fahrziel · Orange: Istposition\nGrün: gemessene Aufnahme · ×: rekonstruiertes Soll\nLetzte 512 Aufnahmen / Statuspunkte; graue Linie: empfangener Verlauf",13); run.addView(runLegend);
         button(run,"Aktuellen Gerätelauf anzeigen",() -> { savedPlotKey=null; savedPlot=null; plottedRun=-1; render(); },() -> service!=null);
@@ -321,6 +326,9 @@ public final class MainActivity extends Activity {
         button(extras,"Capture-Manifest CSV speichern",() -> exportCaptures(false),() -> service!=null);
         extras.addView(text("CSV kennzeichnet rekonstruierte Sollpositionen und fehlende historische Istwerte. XML verwendet bei rekonstruierten Bildern die Sollpositionen. Bei Verbindungslücken können manuelle Aufnahmen fehlen.",14));
         extras.addView(text("Diagnose und Grenzen",20));
+        CheckBox warningSound=new CheckBox(this);warningSound.setText("Signalton bei Ziel-/Aufnahmewarnung");
+        warningSound.setChecked(preferences.getBoolean("captureWarningSound",true));
+        warningSound.setOnCheckedChangeListener((button,checked) -> preferences.edit().putBoolean("captureWarningSound",checked).apply());extras.addView(warningSound);
         diagnostics=text("Noch keine Diagnose",15); extras.addView(diagnostics);
         button(extras,"Support-Bundle abfragen",() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
         button(extras,"Diagnose speichern",this::exportSupport,() -> service!=null);
@@ -618,13 +626,36 @@ public final class MainActivity extends Activity {
             runTitle.setText(savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId:"Aktueller Auftrag");
             runPreview.setPlan(savedPlot!=null?savedPlot.plan:service==null?null:service.state.plan);
             runPreview.setLive(savedPlot!=null?null:service==null?null:service.state,savedPlot!=null?savedPlot.model:service==null?null:service.plot,savedPlot==null && service!=null && service.fresh());
-            runLegend.setText((savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId+" · keine Live-Position\n":"Aktueller Gerätelauf\n")+"Blau: Sollpunkte · Violett: Fahrziel · Orange: Istposition\nGrün: gemessene Aufnahme · ×: rekonstruiertes Soll\nLetzte 512 Aufnahmen / Statuspunkte; graue Linie: empfangener Verlauf");
+            runLegend.setText((savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId+" · keine Live-Position\n":"Aktueller Gerätelauf\n")+"Blau: Soll · Grün: Aufnahme · Orange: Istposition\nRoter Kreis mit ×: Warnpunkt antippen · orange ×: rekonstruiert\nLetzte 512 Aufnahmen und alle Warnpunkte; grau: Verlauf");
+            int warnings=warningCaptures().size();warningPoints.setText("⚠ "+warnings+" Warnpunkte · anzeigen / erneut anfahren");warningPoints.setVisibility(warnings==0?View.GONE:View.VISIBLE);
             // New status/plan data never silently replace the chosen zoom.
             if(savedPlot==null && service!=null && service.fresh()) plottedRun=service.state.runId;
         }
         devicePicker.setEnabled(service==null || !service.hasConnection());
         for (Map.Entry<Button,BooleanSupplier> entry:gates.entrySet()) entry.getKey().setEnabled(entry.getValue().getAsBoolean());
         showIncident();
+    }
+    private List<RunPlotModel.Capture> warningCaptures() {
+        List<RunPlotModel.Capture> result=new ArrayList<>();
+        RunPlotModel model=savedPlot!=null?savedPlot.model:service==null?null:service.plot;
+        if(model!=null) for(RunPlotModel.Capture capture:model.captures) if(capture.warningFlags!=0) result.add(capture);
+        return result;
+    }
+    private void showCaptureWarnings() {
+        List<RunPlotModel.Capture> warnings=warningCaptures();String[] labels=new String[warnings.size()];
+        for(int i=0;i<labels.length;i++) labels[i]="Aufnahme "+warnings.get(i).ordinal+" · "+CaptureWarning.describe(warnings.get(i).warningFlags);
+        new AlertDialog.Builder(this).setTitle("Warnpunkte – Lauf wird fortgesetzt").setItems(labels,(dialog,index) -> reviewCaptureWarning(warnings.get(index))).setNegativeButton("Schließen",null).show();
+    }
+    private AlertDialog reviewCaptureWarning(RunPlotModel.Capture capture) {
+        String detail=CaptureWarning.describe(capture.warningFlags)+String.format(Locale.GERMANY,"\nSoll: Pan %.3f° · Tilt %.3f°",-capture.targetPan/1000.0,capture.targetTilt/1000.0);
+        detail+=capture.reconstructed?"\nIstposition nicht übertragen.":String.format(Locale.GERMANY,"\nIst: Pan %.3f° · Tilt %.3f°\nAbweichung: Pan %.3f° · Tilt %.3f°",-capture.pan/1000.0,capture.tilt/1000.0,(capture.targetPan-capture.pan)/1000.0,(capture.tilt-capture.targetTilt)/1000.0);
+        boolean drive=service!=null && service.navigationAllowed() && (savedPlot==null || service.connectedTo(savedPlot.device));
+        if(drive) try {service.state.validateManualTarget(capture.targetPan,capture.targetTilt);} catch(IllegalArgumentException ex) {drive=false;}
+        detail+=drive?"\nErneutes Anfahren löst keine Aufnahme aus. Danach bei Bedarf manuell auslösen.":"\nZum erneuten Anfahren: Lauf pausieren oder beenden und mit demselben Gerät verbinden. Der Sollpunkt muss innerhalb der aktuellen Grenzen liegen.";
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Warnpunkt · Aufnahme "+capture.ordinal).setMessage(detail).setNegativeButton("Schließen",null)
+            .setPositiveButton("Sollpunkt anfahren",(d,which) -> safely(() -> service.moveToUi(-capture.targetPan/1000.0,capture.targetTilt/1000.0))).create();
+        dialog.show();dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(drive);
+        return dialog;
     }
     private String endpointLabel(String prefix,String title) {
         return endpointSet(prefix)?String.format(Locale.GERMANY,"%s  Pan %.3f° · Tilt %.3f°",title,number(prefix+"Pan"),number(prefix+"Tilt")):title+" noch nicht gesetzt";

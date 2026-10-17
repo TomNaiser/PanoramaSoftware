@@ -3,6 +3,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class ManualActionProgressTest {
+    @Test public void missedPositionIsAWarningAndCannotBeMistakenForSuccessOrInterruption() {
+        ManualActionProgress progress=new ManualActionProgress(42,"MOVE",1000,2000,10);
+        assertEquals(ManualActionProgress.Outcome.WARNING,progress.accept(status(42,"MOVE","TARGET_MISSED",1000,2000),11));
+        assertEquals(ManualActionProgress.Outcome.WAITING,progress.accept(status(41,"MOVE","TARGET_MISSED",1000,2000),11));
+    }
     private ManualActionStatus status(int sequence,String kind,String result,int pan,int tilt) {
         return ManualActionStatus.parse(new String[]{""+sequence,kind,result,""+pan,""+tilt,"200","120000"});
     }

@@ -14,14 +14,21 @@ public final class CaptureStore extends SQLiteOpenHelper {
         Run(String key, String title) { this.key = key; this.title = title; }
         @Override public String toString() { return title; }
     }
-    public CaptureStore(Context context) { super(context, "captures.db", null, 1); }
-    CaptureStore(Context context, String name) { super(context, name, null, 1); }
+    public CaptureStore(Context context) { super(context, "captures.db", null, 2); }
+    CaptureStore(Context context, String name) { super(context, name, null, 2); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE runs (id TEXT PRIMARY KEY,device TEXT,run_id TEXT,stamp TEXT,plan TEXT,segments TEXT,completed INTEGER DEFAULT 0)");
         db.execSQL("CREATE TABLE captures (run TEXT,capture_key TEXT,payload TEXT,ordinal INTEGER,manual INTEGER,logged TEXT,PRIMARY KEY(run,capture_key))");
         db.execSQL("CREATE INDEX capture_order ON captures(run,ordinal,manual)");
+        createWarnings(db);
     }
-    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) { throw new IllegalStateException("Unbekannte Datenbankversion"); }
+    private void createWarnings(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE capture_warnings (run TEXT,ordinal INTEGER,flags INTEGER NOT NULL,PRIMARY KEY(run,ordinal))");
+    }
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if(oldVersion==1 && newVersion==2) createWarnings(db);
+        else throw new IllegalStateException("Unbekannte Datenbankversion");
+    }
     private String group(String device, long runId) {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT id FROM runs WHERE device=? AND run_id=? ORDER BY stamp DESC LIMIT 1",
                 new String[]{device, ""+runId})) { if (c.moveToFirst()) return c.getString(0); }
@@ -33,18 +40,24 @@ public final class CaptureStore extends SQLiteOpenHelper {
         values.put("run_id", ""+runId); values.put("stamp", java.time.Instant.now().toString());
         values.put("segments", "[]"); getWritableDatabase().insertOrThrow("runs", null, values); return id;
     }
-    public synchronized void accept(String device, DeviceState state, P2Codec.Frame frame) throws IOException {
+    public synchronized boolean accept(String device, DeviceState state, P2Codec.Frame frame) throws IOException {
         String[] f = frame.fields;
         if (!(frame.type.equals("PLAN") || frame.type.equals("RUN_SEGMENT") || frame.type.equals("STATUS")
-                || frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED"))) return;
+                || frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") || frame.type.equals("CAPTURE_WARNING"))) return false;
         try {
+            if(frame.type.equals("CAPTURE_WARNING")) {
+                CaptureWarning warning=CaptureWarning.parse(f);
+                ContentValues value=new ContentValues();value.put("run",group(device,warning.runId));
+                value.put("ordinal",warning.ordinal);value.put("flags",warning.flags);
+                return getWritableDatabase().insertWithOnConflict("capture_warnings",null,value,SQLiteDatabase.CONFLICT_IGNORE)!=-1;
+            }
             long runId = DeviceState.unsigned(frame.type.equals("STATUS") || frame.type.equals("PLAN") || frame.type.equals("RUN_SEGMENT") ? f[0] : f[1]);
             String key = group(device, runId);
             if (frame.type.equals("PLAN")) {
                 PanoramaPlan.parse(f);
                 ContentValues v = new ContentValues(); v.put("plan", String.join("|", f)); updateRun(key, v);
             } else if (frame.type.equals("RUN_SEGMENT")) {
-                if (f.length != 4) return;
+                if (f.length != 4) return false;
                 JSONArray segments = segments(key); int revision = Integer.parseInt(f[1]);
                 JSONObject segment = new JSONObject().put("revision", revision).put("start", DeviceState.unsigned(f[2])).put("count", DeviceState.unsigned(f[3]));
                 boolean found = false;
@@ -62,7 +75,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
                 if (state.total > 0 && state.completed > 0 && state.completed != previous) reconstruct(key, state);
             } else {
                 boolean manual = frame.type.equals("MANUAL_IMAGE_TRIGGERED");
-                if ((!manual && f.length != 12) || (manual && f.length != 8)) return;
+                if ((!manual && f.length != 12) || (manual && f.length != 8)) return false;
                 DeviceState.unsigned(f[2]); DeviceState.unsigned(f[0]);
                 int positionIndex = manual ? 4 : 9;
                 Integer.parseInt(f[positionIndex]); Integer.parseInt(f[positionIndex + 1]);
@@ -70,6 +83,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
                 insert(key, identity, frame.type + "|" + String.join("|", f), DeviceState.unsigned(manual ? f[3] : f[2]), manual, true);
             }
         } catch (RuntimeException | JSONException ex) { throw new IOException("Aufnahmedaten: " + ex.getMessage(), ex); }
+        return false;
     }
     private void updateRun(String key, ContentValues values) { getWritableDatabase().update("runs", values, "id=?", new String[]{key}); }
     private long completed(String key) {
@@ -134,34 +148,37 @@ public final class CaptureStore extends SQLiteOpenHelper {
         return result;
     }
     synchronized List<RunPlotModel.Capture> plotCaptures(String device,long runId) {
-        List<RunPlotModel.Capture> result=new ArrayList<>();
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT capture_key,payload FROM captures WHERE run=(SELECT id FROM runs WHERE device=? AND run_id=? ORDER BY stamp DESC LIMIT 1) ORDER BY ordinal DESC,manual DESC,logged DESC LIMIT 512",new String[]{device,""+runId})) {
-            while(c.moveToNext()) result.add(RunPlotModel.Capture.parse(c.getString(0),c.getString(1)));
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT id FROM runs WHERE device=? AND run_id=? ORDER BY stamp DESC LIMIT 1",new String[]{device,""+runId})) {
+            return c.moveToFirst()?plotCaptures(c.getString(0)):Collections.emptyList();
         }
-        Collections.reverse(result); return result;
+    }
+    private List<RunPlotModel.Capture> plotCaptures(String key) {
+        List<RunPlotModel.Capture> result=new ArrayList<>();
+        String query="SELECT c.capture_key,c.payload,COALESCE(w.flags,0) FROM captures c LEFT JOIN capture_warnings w ON w.run=c.run AND w.ordinal=c.ordinal AND c.manual=0 WHERE c.run=? AND (w.flags>0 OR c.capture_key IN (SELECT capture_key FROM captures WHERE run=? ORDER BY ordinal DESC,manual DESC,logged DESC LIMIT 512)) ORDER BY c.ordinal,c.manual,c.logged";
+        try(Cursor c=getReadableDatabase().rawQuery(query,new String[]{key,key})) {
+            while(c.moveToNext()) result.add(RunPlotModel.Capture.parse(c.getString(0),c.getString(1),c.getInt(2)));
+        }
+        return result;
     }
     static final class PlotSnapshot {
-        final PanoramaPlan plan; final RunPlotModel model;
-        PlotSnapshot(PanoramaPlan plan,RunPlotModel model) { this.plan=plan; this.model=model; }
+        final PanoramaPlan plan; final RunPlotModel model; final String device;
+        PlotSnapshot(PanoramaPlan plan,RunPlotModel model,String device) { this.plan=plan; this.model=model;this.device=device; }
     }
     synchronized PlotSnapshot plotSnapshot(String key) {
-        PanoramaPlan plan=null; RunPlotModel model=new RunPlotModel();
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT run_id,plan FROM runs WHERE id=?",new String[]{key})) {
+        PanoramaPlan plan=null; RunPlotModel model=new RunPlotModel();String device;
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT run_id,plan,device FROM runs WHERE id=?",new String[]{key})) {
             if(!c.moveToFirst()) throw new IllegalArgumentException("Gespeicherter Lauf fehlt");
             model.runId=Long.parseLong(c.getString(0));
+            device=c.getString(2);
             if(!c.isNull(1)) plan=PanoramaPlan.parse(c.getString(1).split("\\|",-1));
         }
-        List<RunPlotModel.Capture> result=new ArrayList<>();
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT capture_key,payload FROM captures WHERE run=? ORDER BY ordinal DESC,manual DESC,logged DESC LIMIT 512",new String[]{key})) {
-            while(c.moveToNext()) result.add(RunPlotModel.Capture.parse(c.getString(0),c.getString(1)));
-        }
-        Collections.reverse(result); model.captures=result; return new PlotSnapshot(plan,model);
+        model.captures=plotCaptures(key); return new PlotSnapshot(plan,model,device);
     }
     public synchronized String export(String key, boolean xml) {
         StringBuilder out = new StringBuilder(xml ? "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<papywizard version=\"c\"><header/><shoot>\n"
-            : "picture_id;camera_file_order;capture_key;run_id;event_sequence;capture_sequence;raster_capture_count;plan_revision;image_index;column;row;capture_type;position_source;device_time_ms;logged_utc;target_yaw_deg;target_pitch_deg;actual_yaw_deg;actual_pitch_deg\n");
+            : "picture_id;camera_file_order;capture_key;run_id;event_sequence;capture_sequence;raster_capture_count;plan_revision;image_index;column;row;capture_type;position_source;device_time_ms;logged_utc;target_yaw_deg;target_pitch_deg;actual_yaw_deg;actual_pitch_deg;warning\n");
         int id = 0;
-        try (Cursor c = getReadableDatabase().rawQuery("SELECT capture_key,payload,logged FROM captures WHERE run=? ORDER BY ordinal,manual,logged,capture_key", new String[]{key})) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT c.capture_key,c.payload,c.logged,COALESCE(w.flags,0) FROM captures c LEFT JOIN capture_warnings w ON w.run=c.run AND w.ordinal=c.ordinal AND c.manual=0 WHERE c.run=? ORDER BY c.ordinal,c.manual,c.logged,c.capture_key", new String[]{key})) {
             while (c.moveToNext()) {
                 String[] p = c.getString(1).split("\\|", -1); String[] f = Arrays.copyOfRange(p, 1, p.length);
                 boolean manual = p[0].equals("MANUAL_IMAGE_TRIGGERED"), reconstructed = f[manual ? 7 : 11].equals("1");
@@ -174,7 +191,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
                         manual ? "" : f[3], manual ? "" : f[4], manual ? "" : f[5], manual ? "" : f[6], manual ? "MANUAL" : "RASTER",
                         reconstructed ? (manual ? "STORED_MANUAL_POSITION" : "RECONSTRUCTED_RASTER_TARGET") : "MEASURED_LIVE",
                         manual ? f[6] : "", c.getString(2), manual ? "" : degrees(f[7]), manual ? "" : tiltDegrees(f[8]),
-                        reconstructed && !manual ? "" : yaw, reconstructed && !manual ? "" : pitch};
+                        reconstructed && !manual ? "" : yaw, reconstructed && !manual ? "" : pitch,CaptureWarning.describe(c.getInt(3))};
                     out.append(String.join(";", fields)).append('\n');
                 }
                 id++;

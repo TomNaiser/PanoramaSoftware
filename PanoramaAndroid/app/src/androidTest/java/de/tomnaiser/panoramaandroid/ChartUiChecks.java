@@ -77,6 +77,44 @@ final class ChartUiChecks {
                     activity.onBackPressed();
                 }); runner.waitForIdleSync();
                 main(() -> check(settings.getVisibility()==View.VISIBLE && fullyVisible(plot),"Back exits large mode while staying on the diagram page"));
+                if(page==3) {
+                    java.util.concurrent.atomic.AtomicBoolean selected=new java.util.concurrent.atomic.AtomicBoolean();
+                    main(() -> {
+                        RunPlotModel fixture=new RunPlotModel();fixture.captures=Collections.singletonList(new RunPlotModel.Capture("R-123-7",-1000,1000,-1500,1100,false,9,7));
+                        plot.setLive(null,fixture,false);plot.viewport.fit(.5,2,0,2);
+                        plot.setWarningListener(c -> selected.set(c.ordinal==7 && c.targetPan==-1000 && c.pan==-1500));
+                        float density=plot.getResources().getDisplayMetrics().density;
+                        float x=(float)(55*density+plot.viewport.x(1)*(plot.getWidth()-69*density));
+                        float y=(float)(28*density+plot.viewport.y(1)*(plot.getHeight()-76*density));
+                        long now=SystemClock.uptimeMillis();
+                        MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,x,y,0),up=MotionEvent.obtain(now,now+20,MotionEvent.ACTION_UP,x,y,0);
+                        plot.dispatchTouchEvent(down);plot.dispatchTouchEvent(up);down.recycle();up.recycle();
+                        check(selected.get(),"Warning marker selects its exact intended target without moving or triggering");
+                        Object originalService=read(activity,"service");
+                        PanoramaService fake=new PanoramaService();fake.connected=true;
+                        fake.state.compatible=fake.state.confirmed=fake.state.limitsKnown=true;
+                        fake.state.panMin=-180000;fake.state.panMax=180000;fake.state.tiltMin=-45000;fake.state.tiltMax=30000;
+                        fake.state.lastStatusMs=SystemClock.elapsedRealtime();fake.state.state="RUNNING";
+                        try {
+                            Field field=MainActivity.class.getDeclaredField("service");field.setAccessible(true);field.set(activity,fake);
+                            Method review=MainActivity.class.getDeclaredMethod("reviewCaptureWarning",RunPlotModel.Capture.class);review.setAccessible(true);
+                            android.app.AlertDialog dialog=(android.app.AlertDialog)review.invoke(activity,fixture.captures.get(0));
+                            check(!dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled(),"Warning inspection during panorama cannot start a manual move");dialog.dismiss();
+                            fake.state.state="IDLE";
+                            dialog=(android.app.AlertDialog)review.invoke(activity,fixture.captures.get(0));
+                            check(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled(),"Stopped panorama permits explicit revisiting of the intended target");dialog.dismiss();
+                            fake.state.panMin=0;
+                            dialog=(android.app.AlertDialog)review.invoke(activity,fixture.captures.get(0));
+                            check(!dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled(),"Historical warning outside current limits cannot be driven");dialog.dismiss();
+                        } catch(Exception ex) {throw new RuntimeException(ex);}
+                        finally {
+                            try {Field field=MainActivity.class.getDeclaredField("service");field.setAccessible(true);field.set(activity,originalService);}
+                            catch(Exception ex) {throw new RuntimeException(ex);}
+                        }
+                        plot.invalidate();
+                    });
+                    runner.waitForIdleSync();screenshot(context,landscape?"warning-point-landscape.png":"warning-point.png");
+                }
                 screenshot(context,page==2?(landscape?"plan-normal-landscape.png":"plan-normal.png"):(landscape?"run-normal-landscape.png":"run-normal.png"));
                 main(expand::performClick); runner.waitForIdleSync(); screenshot(context,page==2?(landscape?"plan-large-landscape.png":"plan-large.png"):(landscape?"run-large-landscape.png":"run-large.png"));
                 main(expand::performClick); runner.waitForIdleSync();

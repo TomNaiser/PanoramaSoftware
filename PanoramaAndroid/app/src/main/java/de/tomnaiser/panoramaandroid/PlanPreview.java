@@ -20,6 +20,7 @@ final class PlanPreview extends FrameLayout {
     private boolean startKnown,endKnown;
     private int editMode;
     private EndpointListener listener;
+    private java.util.function.Consumer<RunPlotModel.Capture> warningListener;
     private Runnable proposalChanged=() -> { };
     final EndpointSelection selection=new EndpointSelection();
     private float lastX,lastY;
@@ -61,6 +62,7 @@ final class PlanPreview extends FrameLayout {
         });
     }
     void setListener(EndpointListener value) { listener=value; }
+    void setWarningListener(java.util.function.Consumer<RunPlotModel.Capture> value) { warningListener=value; }
     void setProposalListener(Runnable value) { proposalChanged=value; }
     void setDriveAction(Runnable value) { driveAction=value; }
     void setDriveReady(boolean ready) { driveButton.setEnabled(ready); }
@@ -152,6 +154,10 @@ final class PlanPreview extends FrameLayout {
         if(run!=null && listener==null) for(RunPlotModel.Capture capture:run.captures) {
             double x=-(capture.reconstructed?capture.targetPan:capture.pan)/1000.0,y=(capture.reconstructed?capture.targetTilt:capture.tilt)/1000.0;
             x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y);
+            if(capture.warningFlags!=0) {
+                x=-capture.targetPan/1000.0;y=capture.targetTilt/1000.0;
+                x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y);
+            }
         }
         if(Double.isFinite(x0)) viewport.fit(x0,x1,y0,y1); else viewport.fit(-180,180,-90,90);
         invalidate();
@@ -223,6 +229,14 @@ final class PlanPreview extends FrameLayout {
                     float x=px(-capture.targetPan/1000.0),y=py(capture.targetTilt/1000.0); paint.setColor(Color.rgb(210,130,0));
                     c.drawLine(x-4*density(),y-4*density(),x+4*density(),y+4*density(),paint); c.drawLine(x-4*density(),y+4*density(),x+4*density(),y-4*density(),paint);
                 } else dot(c,capture.pan,capture.tilt,Color.rgb(0,130,75),4);
+                if(capture.warningFlags!=0) {
+                    float x=px(-capture.targetPan/1000.0),y=py(capture.targetTilt/1000.0),r=7*density();
+                    paint.setColor(Color.rgb(190,35,40));paint.setStrokeWidth(2*density());paint.setStyle(Paint.Style.STROKE);
+                    c.drawCircle(x,y,r,paint);
+                    if(!capture.reconstructed) c.drawLine(x,y,px(-capture.pan/1000.0),py(capture.tilt/1000.0),paint);
+                    c.drawLine(x-r,y-r,x+r,y+r,paint);c.drawLine(x-r,y+r,x+r,y-r,paint);
+                    paint.setStyle(Paint.Style.FILL);paint.setStrokeWidth(density());
+                }
             }
             }
             if(run.positionKnown && listener==null && plan!=null && fresh) dot(c,run.targetPan,run.targetTilt,Color.rgb(190,60,180),6);
@@ -268,6 +282,14 @@ final class PlanPreview extends FrameLayout {
                     propose(pan,tilt);
                 }
             } else if(action==MotionEvent.ACTION_MOVE) { viewport.shift((x-lastX)/w()*(viewport.right-viewport.left),(y-lastY)/h()*(viewport.top-viewport.bottom)); updateSelectionActions(); invalidate(); }
+            else if(action==MotionEvent.ACTION_UP && !dragged && warningListener!=null && run!=null) {
+                RunPlotModel.Capture selected=null;double nearest=18*density();
+                for(RunPlotModel.Capture capture:run.captures) if(capture.warningFlags!=0) {
+                    double distance=Math.hypot(px(-capture.targetPan/1000.0)-x,py(capture.targetTilt/1000.0)-y);
+                    if(distance<=nearest) {nearest=distance;selected=capture;}
+                }
+                if(selected!=null) warningListener.accept(selected);
+            }
             lastX=x; lastY=y;
         }
         if(action==MotionEvent.ACTION_CANCEL) discardSelection();

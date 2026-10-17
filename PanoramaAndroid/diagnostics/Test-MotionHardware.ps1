@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Port = 'COM4',
     [ValidateSet('Monitor','Move','Jog','Stop','ClearTestStop','Pulse','Cruise','CaptureSteps')][string]$Action = 'Monitor',
     [ValidateSet(-1,1)][int]$JogDirection = -1,
@@ -282,7 +282,7 @@ try {
         $effectivePanTempo=if($null -ne $PanTempo){[int]$PanTempo}else{$Tempo}
         $effectiveTiltTempo=if($null -ne $TiltTempo){[int]$TiltTempo}else{$Tempo}
         if(($null -ne $PanTargetMdeg -or $null -ne $TiltTargetMdeg) -and ($PanDeltaMdeg -ne 0 -or $TiltDeltaMdeg -ne 0)) { throw 'Absolute Ziele und relative Schritte sind getrennte Testbefehle.' }
-        if ($state.firmware[0] -notin @('2.4.0','2.4.1','2.4.2','2.4.3','2.4.4','2.4.5','2.4.6','2.4.7','2.4.8','2.4.9','2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15','2.4.16','2.4.17','2.4.18','2.4.19','2.4.20','2.4.21','2.4.22','2.4.23','2.4.24','2.4.25','2.4.26','2.4.27','2.4.28','2.4.29','2.4.30','2.4.31','2.4.32','2.4.33','2.4.34','2.4.35','2.4.36','2.4.37','2.4.38','2.4.39','2.4.40','2.4.41','2.4.42','2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67')) { throw 'Unerwartete Firmware; Testfahrt nicht freigegeben.' }
+        if ($state.firmware[0] -notin @('2.4.0','2.4.1','2.4.2','2.4.3','2.4.4','2.4.5','2.4.6','2.4.7','2.4.8','2.4.9','2.4.10','2.4.11','2.4.12','2.4.13','2.4.14','2.4.15','2.4.16','2.4.17','2.4.18','2.4.19','2.4.20','2.4.21','2.4.22','2.4.23','2.4.24','2.4.25','2.4.26','2.4.27','2.4.28','2.4.29','2.4.30','2.4.31','2.4.32','2.4.33','2.4.34','2.4.35','2.4.36','2.4.37','2.4.38','2.4.39','2.4.40','2.4.41','2.4.42','2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67','2.4.68')) { throw 'Unerwartete Firmware; Testfahrt nicht freigegeben.' }
         if ($state.status[1] -notin @('IDLE','PLAN_READY','STOPPED','COMPLETED','PAUSED') -or $state.capabilities[4] -ne '1') { throw 'Keine Freigabe fuer manuelle Testfahrt.' }
         if ($timer.ElapsedMilliseconds - $state.latestStatus -gt 1000) { throw 'Istposition nicht aktuell.' }
         $pan = if($null -ne $PanTargetMdeg){[int]$PanTargetMdeg}else{[int]$state.status[9]+$PanDeltaMdeg}
@@ -310,14 +310,14 @@ try {
         $null = Wait-Response $moveSequence
     }
     if($Action -eq 'Jog') {
-        if($state.firmware[0] -notin @('2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67') -or $state.status[0] -ne '0' -or $state.status[1] -ne 'IDLE' -or
+        if($state.firmware[0] -notin @('2.4.43','2.4.44','2.4.45','2.4.46','2.4.47','2.4.48','2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67','2.4.68') -or $state.status[0] -ne '0' -or $state.status[1] -ne 'IDLE' -or
            $state.capabilities[4] -ne '1' -or $timer.ElapsedMilliseconds-$state.latestStatus -gt 1000) { throw 'Kein aktueller freier Aufbau fuer Jog-Test.' }
         $axis=if($PulseAxis -eq 'Tilt'){1}else{0}; $jogOrigin=[int]$state.status[9+$axis]
         $jogToken=Get-Random -Minimum 100000 -Maximum 2147483647
         Write-Output "Begrenzter Jog-Test $PulseAxis Richtung $JogDirection, maximal $JogHoldMs ms und $MaximumStepDegrees Grad."
         $moveAttempted=$true; $jogStartedMs=$timer.ElapsedMilliseconds; $nextJogKeep=$jogStartedMs+150
         if($JogSpeedDps -gt 0) {
-            if($state.firmware[0] -notin @('2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67') -or $JogSpeedDps -lt 0.5) { throw 'Absolute Haltegeschwindigkeit nicht freigegeben.' }
+            if($state.firmware[0] -notin @('2.4.49','2.4.50','2.4.51','2.4.52','2.4.53','2.4.54','2.4.55','2.4.56','2.4.57','2.4.58','2.4.59','2.4.60','2.4.61','2.4.62','2.4.63','2.4.64','2.4.65','2.4.66','2.4.67','2.4.68') -or $JogSpeedDps -lt 0.5) { throw 'Absolute Haltegeschwindigkeit nicht freigegeben.' }
             $jogSpeedMdeg=[int][math]::Round($JogSpeedDps*1000)
             $moveSequence=Send-Frame 'MANUAL_JOG_START_VELOCITY' @("$jogToken","$axis","$JogDirection","$jogSpeedMdeg")
         } else { $moveSequence=Send-Frame 'MANUAL_JOG_START' @("$jogToken","$axis","$JogDirection","$Tempo") }

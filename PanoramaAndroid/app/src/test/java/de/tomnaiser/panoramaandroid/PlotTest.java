@@ -2,6 +2,16 @@ package de.tomnaiser.panoramaandroid;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public final class PlotTest {
+    @Test public void warningRetainsExactTargetActualAndCaptureIdentity() {
+        CaptureWarning warning=CaptureWarning.parse(new String[]{"1","2","9"});
+        RunPlotModel.Capture c=RunPlotModel.Capture.parse("R-1-2","IMAGE_COMPLETED|20|1|2|0|1|0|1|50999|1494|51713|1296|0",warning.flags);
+        assertEquals(2,c.ordinal);assertEquals(9,c.warningFlags);assertEquals(50999,c.targetPan);assertEquals(51713,c.pan);
+        assertTrue(CaptureWarning.describe(c.warningFlags).contains("Pan-Abweichung"));
+        assertTrue(CaptureWarning.describe(c.warningFlags).contains("Ziel nicht genau erreicht"));
+        for(String[] fields:new String[][]{{"1","0","8"},{"0","1","8"},{"1","1","16"},{"1","1","0"},{"1","1"}}) {
+            try {CaptureWarning.parse(fields);fail("Malformed warning accepted");} catch(IllegalArgumentException expected) { }
+        }
+    }
     @Test public void projectionPreservesSignsAndRoundTripsWithReversedEndpoints() {
         PlotViewport v=new PlotViewport(); v.fit(-54,-51,-6,-1);
         assertEquals(-53.749,v.pan(v.x(-53.749)),.000001);

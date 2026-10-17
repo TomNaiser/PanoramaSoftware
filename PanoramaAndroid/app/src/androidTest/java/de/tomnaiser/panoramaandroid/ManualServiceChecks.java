@@ -155,6 +155,13 @@ final class ManualServiceChecks {
                     service.endJog();
                 });
                 await(() -> !service.busy);
+                main(() -> {
+                    fake.delayAck=false;service.moveToUi(0,2);
+                });
+                await(() -> !service.busy);
+                main(() -> status(fake.sequence,"MOVE","TARGET_MISSED",0,2000));
+                await(() -> !service.manualMoving);
+                main(() -> check(!service.uncertain && !service.incident.needsAcknowledgement() && service.navigationAllowed(),"Target miss releases controls as warning without acknowledgement or ESTOP"));
             } finally {
                 main(() -> {
                     service.disconnect(); service.state=original; copyIncident(preserved,service.incident);
