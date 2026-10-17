@@ -1,0 +1,6 @@
+[submodule "PanoramaControlGitRepo"]
+	path = PanoramaControlGitRepo
+	url = https://github.com/TomNaiser/PanoramaControl
+[submodule "PanoduinoControlGitRepo"]
+	path = PanoduinoControlGitRepo
+	url = https://github.com/TomNaiser/PanoDuinoControl
