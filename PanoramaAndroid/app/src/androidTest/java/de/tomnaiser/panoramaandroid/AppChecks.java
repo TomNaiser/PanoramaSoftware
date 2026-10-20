@@ -22,8 +22,19 @@ public final class AppChecks extends Instrumentation {
     private long connectionDelayMs=3000;
     private boolean connectionSecure=true;
     private String expectedFirmware="2.4.41";
+    private boolean restRecoveryCheck;
+    private boolean stabilityHardwareCheck;
+    @Override public void callActivityOnCreate(android.app.Activity activity,Bundle state) {
+        if(restRecoveryCheck) {
+            activity.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if(android.os.Build.VERSION.SDK_INT>=27) { activity.setShowWhenLocked(true);activity.setTurnScreenOn(true); }
+        }
+        super.callActivityOnCreate(activity,state);
+    }
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments); connectionCheck=arguments!=null && "true".equals(arguments.getString("connectionCheck"));
+        restRecoveryCheck=arguments!=null && "true".equals(arguments.getString("restRecoveryCheck"));
+        stabilityHardwareCheck=arguments!=null && "true".equals(arguments.getString("stabilityHardwareCheck"));
         abortPlanCheck=arguments!=null && "true".equals(arguments.getString("abortPlanCheck"));
         recoveryCheck=arguments!=null && "true".equals(arguments.getString("recoveryCheck"));
         manualStatusCheck=arguments!=null && "true".equals(arguments.getString("manualStatusCheck"));
@@ -50,6 +61,17 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(stabilityHardwareCheck) {
+                int checks=new CaptureStabilityHardwareChecks().run(this,expectedFirmware);
+                report.putString("stream","\nPASS: "+checks+" real Bluetooth stability-setting checks; saved/read/restored, no movement or shutter commands.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
+            if(restRecoveryCheck) {
+                int checks=new RestRecoveryChecks().run(this);
+                storageChecks(context,name);captureWarningStorageChecks(context,name);
+                report.putString("stream","\nPASS: "+checks+" rest recovery checks and "+assertions+" storage assertions; isolated SQLite/service/dialog, no hardware.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
             if(captureWarningCheck) {
                 storageChecks(context,name);captureWarningStorageChecks(context,name);
                 report.putString("stream","\nPASS: "+assertions+" storage/warning assertions; no hardware connection.\n");

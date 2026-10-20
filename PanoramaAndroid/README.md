@@ -1,6 +1,10 @@
 # PanoramaControl für Android
 
-**Aktuell installiert: App 0.6.19 / normale Firmware 2.4.70.** Eingaben werden unmittelbar dauerhaft gespeichert; unabhängige Pan-/Tilt-Warnschwellen stehen zunächst auf 0,50° und sind im Plan konfigurierbar. Lauftempo bis 2000 ‰ mit separaten absoluten Config-Grenzen; bisheriger Wert unverändert. **Lauf → Zeiten…** ändert die Beruhigungsdauer nach dem aktuellen Bild. Der vermutete Absturz fiel mit unserer Instrumentierung zusammen; Randbedienung simuliert geprüft. Revision 24, 128 Parameter, bisherige 124 Werte unverändert. 1177 Firmware-, 102 Android-Host- und 95 Pixel-Prüfungen sowie zwei echte Bluetooth-Verbindungen bestanden. [Bedienung und Prüfgrenzen](BEDIENUNG-TEMPO-ZEITEN-2026-10-17.md).
+**Aktuell installiert: App 0.6.21 / normale Firmware 2.4.71.** Einstellbare Stabilitätsgrenzen, durchgehend strenge Aufnahmefreigabe mit begrenztem Warten und quittierbare Problempause bei erhaltenem Auftrag. Spaltenwiederholung ohne neue Endpunkte; Einstellungen auch im pausierten Auftrag änderbar. [Bedienung und Prüfbelege](ROBUSTE-AUFNAHME-2026-10-18.md).
+
+**Vorheriger Stand: App 0.6.20 / damalige Firmware 2.4.70.** Wiederaufnahme eines unterbrochenen Rasters ab der betroffenen oder vorherigen Spalte, verknüpfter Export, zusätzliche Qualitäts-Pause und verbesserte Fehlerprotokollierung: [Bedienung und Abnahme vom 18.10.2026](WIEDERAUFNAHME-2026-10-18.md). Die Nano-Firmware bleibt unverändert.
+
+**Vorheriger Stand: App 0.6.19 / normale Firmware 2.4.70.** Eingaben werden unmittelbar dauerhaft gespeichert; unabhängige Pan-/Tilt-Warnschwellen stehen zunächst auf 0,50° und sind im Plan konfigurierbar. Lauftempo bis 2000 ‰ mit separaten absoluten Config-Grenzen; bisheriger Wert unverändert. **Lauf → Zeiten…** ändert die Beruhigungsdauer nach dem aktuellen Bild. Der vermutete Absturz fiel mit unserer Instrumentierung zusammen; Randbedienung simuliert geprüft. Revision 24, 128 Parameter, bisherige 124 Werte unverändert. 1177 Firmware-, 102 Android-Host- und 95 Pixel-Prüfungen sowie zwei echte Bluetooth-Verbindungen bestanden. [Bedienung und Prüfgrenzen](BEDIENUNG-TEMPO-ZEITEN-2026-10-17.md).
 
 Die folgenden Angaben beschreiben die vorherigen Stände.
 

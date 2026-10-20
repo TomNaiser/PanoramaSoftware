@@ -14,20 +14,114 @@ public final class CaptureStore extends SQLiteOpenHelper {
         Run(String key, String title) { this.key = key; this.title = title; }
         @Override public String toString() { return title; }
     }
-    public CaptureStore(Context context) { super(context, "captures.db", null, 2); }
-    CaptureStore(Context context, String name) { super(context, name, null, 2); }
+    public CaptureStore(Context context) { super(context, "captures.db", null, 4); }
+    CaptureStore(Context context, String name) { super(context, name, null, 4); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE runs (id TEXT PRIMARY KEY,device TEXT,run_id TEXT,stamp TEXT,plan TEXT,segments TEXT,completed INTEGER DEFAULT 0)");
         db.execSQL("CREATE TABLE captures (run TEXT,capture_key TEXT,payload TEXT,ordinal INTEGER,manual INTEGER,logged TEXT,PRIMARY KEY(run,capture_key))");
         db.execSQL("CREATE INDEX capture_order ON captures(run,ordinal,manual)");
         createWarnings(db);
+        createRecovery(db);
     }
     private void createWarnings(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE capture_warnings (run TEXT,ordinal INTEGER,flags INTEGER NOT NULL,PRIMARY KEY(run,ordinal))");
     }
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if(oldVersion==1 && newVersion==2) createWarnings(db);
-        else throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion<1 || oldVersion>3 || newVersion!=4) throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion<2) createWarnings(db);
+        if(oldVersion<3) createRecovery(db);
+        if(oldVersion==3) db.execSQL("ALTER TABLE run_faults ADD COLUMN tilt_zero INTEGER");
+    }
+    private void createRecovery(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS run_links (child TEXT PRIMARY KEY,parent TEXT NOT NULL,start_column INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS run_faults (run TEXT,boot INTEGER,tilt_zero INTEGER,image_index INTEGER,revision INTEGER,completed INTEGER,error TEXT,plan TEXT,status TEXT,logged TEXT,PRIMARY KEY(run,image_index,revision,completed,error))");
+    }
+    static final class Checkpoint {
+        final String key,device,error;
+        final long boot;
+        final int tiltZero;
+        final RasterRecovery raster;
+        Checkpoint(String key,String device,long boot,int tiltZero,String error,PanoramaPlan plan,long index) {
+            this.key=key;this.device=device;this.boot=boot;this.tiltZero=tiltZero;this.error=error;raster=new RasterRecovery(plan,index);
+        }
+    }
+    /** Store only a complete device recipe; repeated FAULT status cannot duplicate an uncertain exposure. */
+    synchronized boolean recordFault(String device,long boot,DeviceState state,String[] fields) {
+        if(!(state.state.equals("FAULT") || RunRecoveryPause.active(state)) || state.runId==0 || !state.tiltCalibrationKnown) return false;
+        String key=group(device,state.runId);PanoramaPlan plan=state.plan;
+        if(plan==null) try(Cursor c=getReadableDatabase().rawQuery("SELECT plan FROM runs WHERE id=?",new String[]{key})) {
+            if(c.moveToFirst() && !c.isNull(0)) plan=PanoramaPlan.parse(c.getString(0).split("\\|",-1));
+        }
+        if(plan==null || plan.runId!=state.runId) return false;
+        ContentValues v=new ContentValues();v.put("run",key);v.put("boot",boot);v.put("image_index",state.nextImageIndex);
+        v.put("tilt_zero",state.tiltZeroOffset);
+        v.put("revision",state.revision);v.put("completed",state.completed);v.put("error",state.lastError);
+        v.put("plan",String.join("|",plan.fields()));v.put("status",String.join("|",fields));v.put("logged",java.time.Instant.now().toString());
+        return getWritableDatabase().insertWithOnConflict("run_faults",null,v,SQLiteDatabase.CONFLICT_IGNORE)!=-1;
+    }
+    synchronized Checkpoint checkpoint(String device,long run) {
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT f.run,f.boot,f.error,f.plan,f.image_index,f.tilt_zero FROM run_faults f JOIN runs r ON r.id=f.run WHERE r.device=? AND r.run_id=? ORDER BY f.logged DESC LIMIT 1",new String[]{device,""+run})) {
+            if(!c.moveToFirst() || c.isNull(5) || !RasterRecovery.recoverable(c.getString(2))) return null;
+            try { return new Checkpoint(c.getString(0),device,c.getLong(1),c.getInt(5),c.getString(2),PanoramaPlan.parse(c.getString(3).split("\\|",-1)),c.getLong(4)); }
+            catch(IllegalArgumentException ex) { return null; }
+        }
+    }
+    synchronized Checkpoint pendingCheckpoint(String device) {
+        // Only the latest reserved, empty child can recover a CLEAR/LOAD interrupted by a lost link or process death.
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT p.run_id FROM runs r JOIN run_links l ON l.child=r.id JOIN runs p ON p.id=l.parent WHERE r.id=(SELECT id FROM runs WHERE device=? AND run_id!='0' ORDER BY stamp DESC LIMIT 1) AND r.completed=0 AND NOT EXISTS(SELECT 1 FROM captures WHERE run=r.id)",new String[]{device})) {
+            return c.moveToFirst()?checkpoint(device,Long.parseLong(c.getString(0))):null;
+        }
+    }
+    /** Reserve the child identity and its ancestry before sending LOAD_PLAN (also survives a process death). */
+    synchronized String linkRest(Checkpoint source,PanoramaPlan rest,int startColumn) {
+        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        try {
+            if((startColumn!=source.raster.startColumn(false) && startColumn!=source.raster.startColumn(true)) ||
+                !source.raster.remaining(rest.runId,startColumn<source.raster.startColumn(false)).sameRecipe(rest))
+                throw new IllegalArgumentException("Restauftrag passt nicht zum gespeicherten Raster");
+            try(Cursor c=db.rawQuery("SELECT id FROM runs WHERE device=? AND run_id=?",new String[]{source.device,""+rest.runId})) {
+                if(c.moveToFirst()) throw new IllegalArgumentException("Laufnummer bereits gespeichert");
+            }
+            String child=newGroup(source.device,rest.runId);
+            ContentValues recipe=new ContentValues();recipe.put("plan",String.join("|",rest.fields()));updateRun(child,recipe);
+            ContentValues link=new ContentValues();link.put("child",child);link.put("parent",source.key);link.put("start_column",startColumn);
+            db.insertOrThrow("run_links",null,link);db.setTransactionSuccessful();return child;
+        } finally { db.endTransaction(); }
+    }
+    private List<String> linkedKeys(String selected) {
+        String root=selected;Set<String> seen=new HashSet<>();
+        while(seen.add(root)) {
+            try(Cursor c=getReadableDatabase().rawQuery("SELECT parent FROM run_links WHERE child=?",new String[]{root})) {
+                if(!c.moveToFirst()) break;root=c.getString(0);
+            }
+        }
+        List<String> result=new ArrayList<>();collectChildren(root,result,new HashSet<>());return result;
+    }
+    private void collectChildren(String key,List<String> result,Set<String> seen) {
+        if(!seen.add(key)) throw new IllegalStateException("Zyklische Laufverknüpfung");
+        result.add(key);
+        List<String> children=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT l.child FROM run_links l JOIN runs r ON r.id=l.child WHERE l.parent=? ORDER BY r.stamp,r.id",new String[]{key})) {
+            while(c.moveToNext()) children.add(c.getString(0));
+        }
+        for(String child:children) collectChildren(child,result,seen);
+    }
+    synchronized boolean hasUncertainExposure(String selected) {
+        for(String key:linkedKeys(selected)) try(Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM run_faults WHERE run=? AND error='EXPOSURE_UNSTABLE' LIMIT 1",new String[]{key})) {
+            if(c.moveToFirst()) return true;
+        }
+        return false;
+    }
+    synchronized String exportInterruptions(String selected) {
+        StringBuilder out=new StringBuilder("run_key;run_id;parent_run_key;source_start_column;logged_utc;error;image_index;column;row;counted_captures;possible_extra_camera_file\n");
+        for(String key:linkedKeys(selected)) try(Cursor c=getReadableDatabase().rawQuery("SELECT r.run_id,COALESCE(l.parent,''),COALESCE(l.start_column,0),f.logged,f.error,f.image_index,f.completed,f.plan FROM run_faults f JOIN runs r ON r.id=f.run LEFT JOIN run_links l ON l.child=r.id WHERE f.run=? ORDER BY f.logged",new String[]{key})) {
+            while(c.moveToNext()) {
+                PanoramaPlan p=PanoramaPlan.parse(c.getString(7).split("\\|",-1));long index=c.getLong(5);
+                out.append(String.join(";",key,c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),""+index,
+                    p.mode==0?""+(index/p.rows):"",p.mode==0?""+(index%p.rows):"",c.getString(6),c.getString(4).equals("EXPOSURE_UNSTABLE")?"true":"false")).append('\n');
+            }
+        }
+        return out.toString();
     }
     private String group(String device, long runId) {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT id FROM runs WHERE device=? AND run_id=? ORDER BY stamp DESC LIMIT 1",
@@ -175,9 +269,21 @@ public final class CaptureStore extends SQLiteOpenHelper {
         model.captures=plotCaptures(key); return new PlotSnapshot(plan,model,device);
     }
     public synchronized String export(String key, boolean xml) {
+        return exportKeys(Collections.singletonList(key),xml,false);
+    }
+    public synchronized String exportLinked(String key,boolean xml) {
+        return exportKeys(linkedKeys(key),xml,true);
+    }
+    private String exportKeys(List<String> keys,boolean xml,boolean linked) {
         StringBuilder out = new StringBuilder(xml ? "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<papywizard version=\"c\"><header/><shoot>\n"
             : "picture_id;camera_file_order;capture_key;run_id;event_sequence;capture_sequence;raster_capture_count;plan_revision;image_index;column;row;capture_type;position_source;device_time_ms;logged_utc;target_yaw_deg;target_pitch_deg;actual_yaw_deg;actual_pitch_deg;warning\n");
-        int id = 0;
+        if(linked && !xml) { out.setLength(out.length()-1);out.append(";source_run_key;parent_run_key;source_start_column;camera_file_order_uncertain;repeated_target\n"); }
+        int id = 0;Set<String> seenTargets=new HashSet<>();boolean uncertain=linked && hasUncertainExposure(keys.get(0));
+        for(String key:keys) {
+        String parent="",startColumn="0";
+        try(Cursor relation=getReadableDatabase().rawQuery("SELECT parent,start_column FROM run_links WHERE child=?",new String[]{key})) {
+            if(relation.moveToFirst()) { parent=relation.getString(0);startColumn=relation.getString(1); }
+        }
         try (Cursor c = getReadableDatabase().rawQuery("SELECT c.capture_key,c.payload,c.logged,COALESCE(w.flags,0) FROM captures c LEFT JOIN capture_warnings w ON w.run=c.run AND w.ordinal=c.ordinal AND c.manual=0 WHERE c.run=? ORDER BY c.ordinal,c.manual,c.logged,c.capture_key", new String[]{key})) {
             while (c.moveToNext()) {
                 String[] p = c.getString(1).split("\\|", -1); String[] f = Arrays.copyOfRange(p, 1, p.length);
@@ -192,10 +298,14 @@ public final class CaptureStore extends SQLiteOpenHelper {
                         reconstructed ? (manual ? "STORED_MANUAL_POSITION" : "RECONSTRUCTED_RASTER_TARGET") : "MEASURED_LIVE",
                         manual ? f[6] : "", c.getString(2), manual ? "" : degrees(f[7]), manual ? "" : tiltDegrees(f[8]),
                         reconstructed && !manual ? "" : yaw, reconstructed && !manual ? "" : pitch,CaptureWarning.describe(c.getInt(3))};
-                    out.append(String.join(";", fields)).append('\n');
+                    out.append(String.join(";", fields));
+                    if(linked) out.append(';').append(key).append(';').append(parent).append(';').append(startColumn).append(';').append(uncertain)
+                        .append(';').append(!manual && !seenTargets.add(f[7]+"|"+f[8]));
+                    out.append('\n');
                 }
                 id++;
             }
+        }
         }
         if (xml) out.append("</shoot></papywizard>\n");
         return out.toString();

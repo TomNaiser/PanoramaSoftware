@@ -5,11 +5,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'de.tomnaiser.panoramaandroid'
+        applicationId providers.gradleProperty('validationApplicationId').getOrElse('de.tomnaiser.panoramaandroid')
         minSdk 26
         targetSdk 35
-        versionCode 32
-        versionName '0.6.19'
+        versionCode 34
+        versionName '0.6.21'
         testInstrumentationRunner 'de.tomnaiser.panoramaandroid.AppChecks'
     }
 

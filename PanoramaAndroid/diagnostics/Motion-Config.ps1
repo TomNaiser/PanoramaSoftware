@@ -91,7 +91,7 @@ function Request([string]$type,[string[]]$fields=@(),[int]$timeoutMs=4000) {
 function Snapshot {
     if(!$state.info -or [int]$state.info[0] -ne 1){throw 'Geraet unterstuetzt Konfigurationsschema 1 nicht.'}
     [uint32]$revision=$state.info[1];[int]$count=$state.info[2]
-    if($count -lt 1 -or $count -gt 128){throw 'Unerwarteter Parameterumfang.'}
+    if($count -lt 1 -or $count -gt 129){throw 'Unerwarteter Parameterumfang.'}
     $parameters=[ordered]@{}; $state.values.Clear()
     for($i=0;$i -lt $count;$i++) {
         for($readAttempt=0;$readAttempt -lt 2 -and !$state.values.ContainsKey($i);$readAttempt++) {

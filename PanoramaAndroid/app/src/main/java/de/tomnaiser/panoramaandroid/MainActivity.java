@@ -36,7 +36,12 @@ public final class MainActivity extends Activity {
     private Button tiltRangeButton;
     private Button alignmentReset;
     private Button recoveryAction, referenceReview;
+    private Button restRecoveryAction;
+    private Button columnRetryAction;
+    private TextView captureStabilityActive;
+    private String displayedCaptureStability="";
     private AlertDialog incidentDialog;
+    private AlertDialog restDialog;
     private long dialogIncidentId=-1;
     private LinearLayout navigationBar;
     private TextView jogTempoLabel;
@@ -118,6 +123,7 @@ public final class MainActivity extends Activity {
     @Override protected void onStop() {
         if(service!=null) service.endJog();
         if(incidentDialog!=null) { incidentDialog.dismiss(); incidentDialog=null; }
+        if(restDialog!=null) { restDialog.dismiss();restDialog=null; }
         plotHandler.removeCallbacks(recalculatePlot);
         saveInputs(); if (service != null) service.removeObserver(observer);
         if (bound) { unbindService(binding); bound = false; } service = null;
@@ -286,6 +292,21 @@ public final class MainActivity extends Activity {
             () -> ready() && service.state.warningSettingsSupported && !service.manualMoving && !service.manualTrigger &&
                 (service.state.state.equals("IDLE") || service.state.state.equals("STOPPED")));
         settings.addView(text("Warnschwellen betreffen nur die Markierung und den Signalton. Zielregelung und Ruheprüfung bleiben unabhängig. Gespeichert werden beide Werte dauerhaft im Gerät; erst dessen Bestätigung macht sie aktiv.",13));
+        LinearLayout stability=details(settings,"Positionsüberwachung bei Aufnahme");
+        captureStabilityActive=text("Zum Auslesen mit Firmware 2.4.71 oder neuer verbinden.",13);stability.addView(captureStabilityActive);
+        input(stability,"captureSpan","Maximale Winkelschwankung beider Achsen (°, 0,044–1)","0.25");
+        input(stability,"capturePanDrift","Zulässige Pan-Verschiebung während Aufnahme (°, 0,044–1)","0.25");
+        input(stability,"captureTiltDrift","Zulässige Tilt-Verschiebung während Aufnahme (°, 0,044–1,5)","0.4");
+        input(stability,"captureExtraWait","Maximale zusätzliche Wartezeit auf Ruhe (s, 1–120)","15");
+        button(stability,"Stabilitätsgrenzen auslesen",() -> service.readCaptureStability(),
+            () -> ready() && service.state.captureStability!=null);
+        button(stability,"Stabilitätsgrenzen im Gerät speichern",() -> service.saveCaptureStability(number("captureSpan"),number("capturePanDrift"),number("captureTiltDrift"),number("captureExtraWait")),
+            () -> service!=null && service.canConfigureStability());
+        stability.addView(text("Vor und während der Aufnahme gelten dieselben Grenzen. Unruhe verlängert zunächst die Wartezeit; danach pausiert der Auftrag. Die zusätzliche Wartezeit verlängert keine Motorfahrt. Größere Winkelgrenzen können Bewegung während der Aufnahme zulassen. Speichern ist ohne Auftrag oder in einer quittierten Pause möglich; der pausierte Auftrag bleibt erhalten.",13));
+        CheckBox qualityPause=new CheckBox(this);qualityPause.setText("Bei mehr als 1° Zielabweichung nach aktuellem Bild pausieren");
+        qualityPause.setChecked(preferences.getBoolean("qualityPause",true));
+        qualityPause.setOnCheckedChangeListener((button,checked) -> preferences.edit().putBoolean("qualityPause",checked).apply());settings.addView(qualityPause);
+        settings.addView(text("Die App fordert bei großer gemessener Abweichung eine quittierbare Pause an. Danach eine Spalte zurück und Fortsetzen. Dafür muss die Bluetooth-Verbindung bestehen; Geräteschutz und Nano-Warnschwellen gelten unabhängig.",13));
         stopOnLoss=new CheckBox(this); stopOnLoss.setText("Bei Verbindungsverlust nach 5 s stoppen");
         stopOnLoss.setChecked(preferences.getBoolean("stopOnLoss",false)); settings.addView(stopOnLoss);
         settings.addView(text("Ohne Häkchen führt der Arduino den Auftrag auch bei getrennter Handy-Verbindung weiter aus.",14));
@@ -297,6 +318,10 @@ public final class MainActivity extends Activity {
         LinearLayout runActions=new LinearLayout(this); run.addView(runActions);
         primary(button(runActions,"Pause",() -> service.runCommand("PAUSE"),() -> savedPlot==null && ready() && service.state.state.equals("RUNNING")));
         primary(button(runActions,"Fortsetzen",() -> service.runCommand("RESUME"),() -> savedPlot==null && ready() && service.state.positionSafe() && service.state.state.equals("PAUSED") && !service.manualMoving && !service.manualTrigger));
+        restRecoveryAction=button(run,"Unterbrochenen Lauf wiederaufnehmen…",this::prepareRest,() -> savedPlot==null && service!=null && service.canPrepareRest());
+        restRecoveryAction.setTag("restRecovery");
+        columnRetryAction=button(run,"Spalte wiederholen…",this::showColumnRetry,() -> savedPlot==null && service!=null && service.canRetryColumn());
+        columnRetryAction.setTag("columnRetry");
         button(run,"Stoppen & Endpunkte ändern",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         button(runActions,"Stop",() -> confirm("Auftrag stoppen?","Motoren und Kameraausgänge werden abgeschaltet. Es gibt keine Parkfahrt.",() -> service.runCommand("STOP")),() -> ready() && !service.state.state.equals("IDLE") && !service.state.state.startsWith("TIMELAPSE"));
         runPreview=new PlanPreview(this); plotControls(runGraph,runPreview);
@@ -331,6 +356,8 @@ public final class MainActivity extends Activity {
         },() -> service!=null);
         button(extras,"PapyWizard XML speichern",() -> exportCaptures(true),() -> service!=null);
         button(extras,"Capture-Manifest CSV speichern",() -> exportCaptures(false),() -> service!=null);
+        button(extras,"Unterbrechungen CSV speichern",this::exportInterruptions,() -> service!=null);
+        extras.addView(text("Wiederaufgenommene Teilaufträge werden gemeinsam exportiert. Wiederholte Zielpunkte bleiben erhalten und sind im CSV markiert. Nach einem Belichtungsfehler mögliche zusätzliche Kameradateien vor dem PTGui-Import abgleichen.",14));
         extras.addView(text("CSV kennzeichnet rekonstruierte Sollpositionen und fehlende historische Istwerte. XML verwendet bei rekonstruierten Bildern die Sollpositionen. Bei Verbindungslücken können manuelle Aufnahmen fehlen.",14));
         extras.addView(text("Diagnose und Grenzen",20));
         CheckBox warningSound=new CheckBox(this);warningSound.setText("Signalton bei Ziel-/Aufnahmewarnung");
@@ -466,6 +493,17 @@ public final class MainActivity extends Activity {
     private void abortLoadedPlan() {
         confirm("Auftrag stoppen & Endpunkte ändern?","Das Gerät stoppt. Danach wird der Geräteauftrag zurückgesetzt und das Ausrichten freigegeben. Start, Ende und bisherige Aufnahmen bleiben auf dem Handy erhalten. Anschließend den geänderten Plan übertragen und separat starten.",() -> { service.abortPlan(); preview.setEditMode(3); selectPage(2); ((ScrollView)pages[2].getParent()).smoothScrollTo(0,0); });
     }
+    private void prepareRest() {
+        CaptureStore.Checkpoint checkpoint=service.restCheckpoint();RasterRecovery raster=checkpoint.raster;
+        long run=raster.source.runId;int index=raster.nextIndex;final int[] choice={0};
+        String[] choices={"Betroffene Spalte "+(raster.startColumn(false)+1)+" wiederholen · "+raster.remaining(newRunId(),false).total()+" Aufnahmen",
+            "Eine Spalte davor beginnen ("+(raster.startColumn(true)+1)+") · "+raster.remaining(newRunId(),true).total()+" Aufnahmen"};
+        restDialog=new AlertDialog.Builder(this).setTitle("Restauftrag aus Originalraster")
+            .setSingleChoiceItems(choices,0,(dialog,which) -> choice[0]=which)
+            .setPositiveButton("Restauftrag laden",(dialog,which) -> safely(() -> {
+                service.prepareRest(choice[0]==1,run,index);savedPlot=null;savedPlotKey=null;plottedRun=-1;selectPage(3);
+            })).setNegativeButton("Abbrechen",null).show();
+    }
     private void removePlan() {
         if(service!=null && service.hasConnection()) {
             if(!ready()) throw new IllegalArgumentException("Aktuellen Gerätestand abwarten");
@@ -574,7 +612,7 @@ public final class MainActivity extends Activity {
         })));
         dialog.show();return dialog;
     }
-    private boolean ready() { return service!=null && service.fresh() && !service.uncertain && !service.recovering && !service.incident.needsAcknowledgement() && !service.busy && !service.abortingPlan && !service.jog.held && !service.jog.stopping; }
+    private boolean ready() { return service!=null && service.fresh() && !service.uncertain && !service.recovering && !service.incident.needsAcknowledgement() && !service.busy && !service.abortingPlan && !service.preparingRest && !service.jog.held && !service.jog.stopping; }
     private boolean manualReady() { return service!=null && service.navigationAllowed() && selectedPage!=3; }
     private void selectPage(int index) {
         selectedPage=Math.max(0,Math.min(4,index));
@@ -604,6 +642,19 @@ public final class MainActivity extends Activity {
         if (connection==null) return;
         if(recoveryAction!=null) recoveryAction.setVisibility(service!=null && (service.incident.needsAcknowledgement() || service.uncertain || service.recovering || service.state.state.equals("FAULT") || (service.hasConnection() && !service.fresh()))?View.VISIBLE:View.GONE);
         if(referenceReview!=null) referenceReview.setVisibility(service!=null && service.draftNeedsReview?View.VISIBLE:View.GONE);
+        if(restRecoveryAction!=null) restRecoveryAction.setVisibility(service!=null && service.canPrepareRest()?View.VISIBLE:View.GONE);
+        if(columnRetryAction!=null) columnRetryAction.setVisibility(service!=null && service.state.recoveryPauseSupported && service.state.state.equals("PAUSED")?View.VISIBLE:View.GONE);
+        if(captureStabilityActive!=null) {
+            CaptureStabilitySettings s=service==null?null:service.state.captureStability;
+            captureStabilityActive.setText(s==null?"Noch keine bestätigten Gerätewerte · Firmware 2.4.71 oder neuer erforderlich.":
+                String.format(Locale.GERMANY,"Aktiv im Gerät: Schwankung %.3f° · Pan %.3f° · Tilt %.3f°\nZusätzliche Wartezeit %.1f s · Geräte-Config %d",s.spanMdeg/1000.0,s.panDriftMdeg/1000.0,s.tiltDriftMdeg/1000.0,s.extraWaitMs/1000.0,s.revision));
+            String values=s==null?"":s.revision+"|"+s.spanMdeg+"|"+s.panDriftMdeg+"|"+s.tiltDriftMdeg+"|"+s.extraWaitMs;
+            if(s!=null && !values.equals(displayedCaptureStability)) {
+                displayedCaptureStability=values;
+                inputs.get("captureSpan").setText(""+(s.spanMdeg/1000.0));inputs.get("capturePanDrift").setText(""+(s.panDriftMdeg/1000.0));
+                inputs.get("captureTiltDrift").setText(""+(s.tiltDriftMdeg/1000.0));inputs.get("captureExtraWait").setText(""+(s.extraWaitMs/1000.0));
+            }
+        }
         EditText manualTempo=inputs.get("manualSpeed");
         if(manualTempo!=null) manualTempo.setEnabled(service==null || !service.connected || (service.state.profiledMotion && !service.jog.held && !service.jog.stopping));
         EditText panManualTempo=inputs.get("manualPanSpeed");
@@ -707,6 +758,17 @@ public final class MainActivity extends Activity {
         if(!service.endpointCaptureAllowed()) return "Position beruhigt sich … frische Istposition abwarten, dann Start oder Ende merken.";
         return "Pfeile halten: orangefarbenen Jetzt-Punkt bewegen. Loslassen → Start oder Ende merken. Alternativ Punkt antippen und anfahren.";
     }
+    private void showColumnRetry() {
+        if(service==null || !service.canRetryColumn()) return;
+        long run=service.state.runId,index=service.state.nextImageIndex;
+        int column=(int)(index/service.state.plan.rows)+1;
+        int[] choice={0};
+        restDialog=new AlertDialog.Builder(this).setTitle("Pausiertes Raster · Spalte "+column)
+            .setSingleChoiceItems(new String[]{"Betroffene Spalte wiederholen","Eine Spalte davor beginnen"},0,(d,which) -> choice[0]=which)
+            .setNegativeButton("Abbrechen",null)
+            .setPositiveButton("Wiederholung vorbereiten",(d,which) -> safely(() -> service.retryColumn(choice[0]==1,run,index))).create();
+        restDialog.show();
+    }
     private void showIncident() {
         if(service==null || !service.incident.needsAcknowledgement() || isFinishing()) return;
         long id=service.incident.id;
@@ -716,8 +778,9 @@ public final class MainActivity extends Activity {
         if(incidentDialog!=null) incidentDialog.dismiss();
         dialogIncidentId=id;
         PanoramaService owner=service;
-        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle("Aktion unterbrochen")
-            .setMessage(owner.incident.detail+"\n\nQuittieren prüft den Gerätestand. Alte Fahrten werden nicht wiederholt; Entwurf und gespeicherte Aufnahmen bleiben erhalten.")
+        boolean paused=RunRecoveryPause.active(owner.state);
+        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(paused?"Aufnahme pausiert":"Aktion unterbrochen")
+            .setMessage(owner.incident.detail+(paused?"\n\nQuittieren erhält den pausierten Auftrag und löst keine Fahrt aus.":"\n\nQuittieren prüft den Gerätestand. Bei einem Gerätefehler kann ein unterbrochenes Raster im Reiter Lauf ab der betroffenen oder vorherigen Spalte wiederaufgenommen werden. Laden und Starten bleiben getrennt. Entwurf und gespeicherte Aufnahmen bleiben erhalten."))
             .setCancelable(false).setPositiveButton("Quittieren",(dialog,which) -> safely(() -> owner.acknowledgeIncident(id)));
         builder.setNeutralButton("NOT-STOP",(dialog,which) -> safely(owner::emergencyStop));
         incidentDialog=builder.create(); incidentDialog.setCanceledOnTouchOutside(false);
@@ -855,9 +918,19 @@ public final class MainActivity extends Activity {
     private void refreshRuns() { if (service!=null) runPicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,service.captures.runs())); }
     private void exportCaptures(boolean xml) {
         CaptureStore.Run run=(CaptureStore.Run)runPicker.getSelectedItem(); if (run==null) throw new IllegalArgumentException("Keine Aufnahmen gespeichert; Läufe laden");
-        pendingExport=service.captures.export(run.key,xml);
+        if(service.captures.hasUncertainExposure(run.key)) {
+            confirm("Kameradateien abgleichen", "Ein Belichtungsfehler kann zusätzliche Fotos ohne gezählten Aufnahmeeintrag erzeugt haben. Der Export enthält gezählte Aufnahmen einschließlich wiederholter Spalten. Vor dem PTGui-Import zusätzliche Kameradateien anhand Zeitstempel und Unterbrechungs-CSV abgleichen.",() -> saveCaptureExport(run,xml));
+        } else saveCaptureExport(run,xml);
+    }
+    private void saveCaptureExport(CaptureStore.Run run,boolean xml) {
+        pendingExport=service.captures.exportLinked(run.key,xml);
         prepareExport();
         startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(xml?"application/xml":"text/csv").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Panorama-"+run.key+(xml?".xml":".csv")),60);
+    }
+    private void exportInterruptions() {
+        CaptureStore.Run run=(CaptureStore.Run)runPicker.getSelectedItem();if(run==null) throw new IllegalArgumentException("Zuerst gespeicherte Läufe laden");
+        pendingExport=service.captures.exportInterruptions(run.key);prepareExport();
+        startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/csv").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Panorama-Unterbrechungen-"+run.key+".csv"),60);
     }
     private void exportSupport() {
         try { pendingExport="PanoramaControl "+BuildConfig.VERSION_NAME+"\n"+statusText()+"\n"+service.diagnostics+"\n"+service.support.snapshot(); }

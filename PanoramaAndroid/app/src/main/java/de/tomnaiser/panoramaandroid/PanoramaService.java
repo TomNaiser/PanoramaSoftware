@@ -25,6 +25,8 @@ public final class PanoramaService extends Service {
     public String connection = "Nicht verbunden", message = "Bereit", diagnostics = "Noch keine Diagnose";
     public boolean connected, busy, manualMoving, manualTrigger, uncertain;
     public boolean abortingPlan;
+    public boolean preparingRest;
+    private RestPreparation restPreparation;
     private PlanAbort planAbort;
     private boolean discardDraftAfterAbort;
     public int draftRevision;
@@ -60,7 +62,12 @@ public final class PanoramaService extends Service {
     private RecoveryFlow recoveryFlow;
     private long nextRecoveryAttemptMs;
     private long nextDiagnosticMs, openedMs;
-    private long lastStatusLoggedMs;
+    private final StatusLogPolicy statusLogPolicy=new StatusLogPolicy();
+    private String savedFault="";
+    private String savedPause="";
+    private CaptureStabilitySettings pendingStability;
+    private final CaptureQualityGuard qualityGuard=new CaptureQualityGuard();
+    private CaptureQualityGuard.Issue pendingQuality;
     private android.media.ToneGenerator warningTone;
     public CaptureStore captures;
     public SupportLog support;
@@ -85,6 +92,7 @@ public final class PanoramaService extends Service {
                     nextDiagnosticMs = now + 1000;
                     execute("GET_DEBUG_LOG", new String[]{""+newestDebugSequence}, false, true);
                 }
+                pauseForQuality();
                 if((manualMoving && now>=manualDeadlineMs) || (manualTrigger && now>=triggerDeadlineMs)) {
                     raiseIncident("ACTION_COMPLETION", "Der Abschluss der manuellen Aktion wurde nicht bestätigt. Das alte Ziel wird verworfen.");
                     manualMoving=manualTrigger=targetKnown=false; uncertain=true;
@@ -99,6 +107,7 @@ public final class PanoramaService extends Service {
     @Override public void onCreate() {
         super.onCreate();
         captures = new CaptureStore(this); support = new SupportLog(getFilesDir());
+        support.append("APP_START version="+BuildConfig.VERSION_NAME);
         android.content.SharedPreferences settings=getSharedPreferences("settings",MODE_PRIVATE);
         for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) draftEndpoints.put(key,settings.getString(key,""));
         draftDevice=settings.getString("draftDevice",settings.getString("device",""));
@@ -141,6 +150,7 @@ public final class PanoramaService extends Service {
     private void notifyObservers() { for (Observer observer : new ArrayList<>(observers)) observer.changed(); }
     private void open() {
         if (device == null || session != null) return;
+        cancelRest();savedFault="";
         jog.finish(jog.token); ui.removeCallbacks(jogAlive);
         if(wakeLock!=null && !wakeLock.isHeld()) wakeLock.acquire();
         int id = ++generation; ++actionGeneration;
@@ -185,6 +195,7 @@ public final class PanoramaService extends Service {
                         boolean reset=deviceSession.accept(boot);
                         getSharedPreferences("settings",MODE_PRIVATE).edit().putLong("session."+device.getAddress(),boot).apply();
                         if(reset) {
+                            cancelRest();
                             message="Gerät neu gestartet · Entwurf erhalten, Gerätestand prüfen";
                             raiseIncident("DEVICE_RESTART","Das Gerät wurde neu gestartet. Alte Aktionen werden verworfen; der Entwurf bleibt erhalten.",false);
                             state.lastStatusMs=0; state.plan=null; targetKnown=false;
@@ -199,7 +210,14 @@ public final class PanoramaService extends Service {
                         sessionIdentityReceived=true;
                     }
                     if (frame.type.equals("STATUS")) { statusVersion++; if(!previousState.equals(state.state)) targetKnown=false; }
+                    if(frame.type.equals("CAPTURE_STABILITY_SETTINGS")) observeStabilitySettings();
                     boolean newWarning=captures.accept(device.getAddress(), state, frame);
+                    if(frame.type.equals("IMAGE_COMPLETED") && fresh() && frame.fields.length==12 && state.plan!=null && state.plan.mode==0 &&
+                        state.runId==Long.parseLong(frame.fields[1]) && (state.state.equals("RUNNING") || state.state.equals("PAUSE_PENDING")) &&
+                        getSharedPreferences("settings",MODE_PRIVATE).getBoolean("qualityPause",true)) {
+                        CaptureQualityGuard.Issue issue=qualityGuard.accept(frame.fields);
+                        if(issue!=null && pendingQuality==null) { pendingQuality=issue;support.append("QUALITY_DEVIATION "+issue.describe()); }
+                    }
                     if(newWarning) {
                         CaptureWarning warning=CaptureWarning.parse(frame.fields);
                         message="Warnung bei Aufnahme "+warning.ordinal+": "+CaptureWarning.describe(warning.flags)+" · Lauf wird fortgesetzt";
@@ -209,16 +227,18 @@ public final class PanoramaService extends Service {
                     if(frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") || frame.type.equals("CAPTURE_WARNING") ||
                         (frame.type.equals("STATUS") && (previousRun!=state.runId || previousCount!=state.completed || !previousState.equals(state.state))))
                         plot.captures=captures.plotCaptures(device.getAddress(),state.runId);
-                    if (frame.type.equals("STATUS") && SystemClock.elapsedRealtime()-lastStatusLoggedMs>=5000) {
-                        lastStatusLoggedMs=SystemClock.elapsedRealtime(); support.append("STATUS " + String.join("|",frame.fields));
+                    if (frame.type.equals("STATUS") && statusLogPolicy.log(frame.fields,SystemClock.elapsedRealtime())) {
+                        support.append("STATUS " + String.join("|",frame.fields));
                     }
                     if (!frame.type.equals("STATUS")) support.append("RX " + P2Codec.encode(Math.max(1, frame.sequence), frame.type, frame.fields).trim());
                     if (frame.type.equals("STATUS") && !targetKnown) { targetPan = state.pan; targetTilt = state.tilt; targetKnown = true; }
                     if (frame.type.equals("STATUS") && state.state.equals("FAULT")) {
+                        recordRunFault(frame.fields);
                         cancelPreparation(); manualProgress=null; manualAction=null; manualMoving=manualTrigger=false;
                         raiseIncident(state.lastError,faultDescription(state.lastError));
                         message="Gerätefehler: "+faultDescription(state.lastError);
                     }
+                    if(frame.type.equals("STATUS")) observeRecoveryPause(frame.fields);
                     if(frame.type.equals("STATUS") && (state.lastError.equals("STEP_TARGET_MISSED") || state.lastError.equals("STEP_MOVE_TIMEOUT")))
                         message="Aufnahmepunkt innerhalb der Fahrgrenze nicht genau erreicht · Beruhigung und Aufnahme an der Istposition; anschließend weiter.";
                     if (frame.type.equals("MANUAL_IMAGE_TRIGGERED") && !state.manualStatusSupported) { manualTrigger = false; message = "Manuelle Aufnahme abgeschlossen"; }
@@ -235,6 +255,8 @@ public final class PanoramaService extends Service {
             }
             @Override public void onDisconnected(String reason) {
                 if (id != generation) return;
+                cancelRest();
+                pendingStability=null;savedPause="";
                 pendingTiming=null;
                 jog.finish(jog.token); ui.removeCallbacks(jogAlive);
                 if(connected && !incident.active) raiseIncident("CONNECTION",reason+". Der Gerätestand wird nach Wiederverbindung geprüft; alte Fahrten werden nicht wiederholt.",manualMoving || manualTrigger || uncertain);
@@ -264,6 +286,107 @@ public final class PanoramaService extends Service {
         diagnostics = "Pan-Fehler: " + f[11] + " m° · Tilt-Fehler: " + f[12] + " m°\n" +
             (state.profiledMotion?"Ruhebestätigung: ":"Stabile Samples: ")
             + stable + "/" + required + " · RAM: " + f[19] + " / Minimum " + f[20];
+    }
+    private long currentBoot() {
+        return device==null?-1:getSharedPreferences("settings",MODE_PRIVATE).getLong("session."+device.getAddress(),-1);
+    }
+    private void pauseForQuality() {
+        CaptureQualityGuard.Issue issue=pendingQuality;
+        if(issue==null || busy || recovering || preparingRest || abortingPlan || !fresh() || incident.active) return;
+        if(issue.run!=state.runId || state.state.equals("FAULT") || state.state.equals("STOPPED") || state.state.equals("COMPLETED")) { pendingQuality=null;return; }
+        if(state.state.equals("PAUSED")) {
+            pendingQuality=null;raiseIncident("QUALITY_DEVIATION",issue.describe()+"Auftrag ist pausiert. Eine Spalte zurückgehen und bewusst fortsetzen.",false);return;
+        }
+        if(!state.state.equals("RUNNING")) return;
+        pendingQuality=null;int id=generation;
+        execute("PAUSE",new String[]{""+issue.run},false,true).whenComplete((reply,error) -> {
+            if(generation!=id || state.runId!=issue.run) return;
+            if(state.state.equals("FAULT") || incident.active) { support.append("QUALITY_PAUSE superseded by device incident");return; }
+            String detail=issue.describe()+(error==null && reply.accepted ?
+                "Pause nach dem aktuellen Bild angefordert. Danach eine Spalte zurückgehen und bewusst fortsetzen; die betroffene Aufnahme prüfen.":
+                "Pause nicht bestätigt. Aktuellen Gerätestand prüfen und gegebenenfalls stoppen.");
+            support.append("QUALITY_PAUSE "+detail);raiseIncident("QUALITY_DEVIATION",detail,false);notifyObservers();
+        });
+    }
+    private void recordRunFault(String[] fields) {
+        String identity=state.runId+"|"+state.nextImageIndex+"|"+state.revision+"|"+state.completed+"|"+state.lastError;
+        if(identity.equals(savedFault)) return;
+        if(captures.recordFault(device.getAddress(),currentBoot(),state,fields)) {
+            savedFault=identity;
+            support.append("FAULT_CONTEXT boot="+currentBoot()+" status="+String.join("|",fields));
+            int id=generation;long run=state.runId;
+            ui.post(() -> {
+                if(id==generation && run==state.runId && (state.state.equals("FAULT") || RunRecoveryPause.active(state)) && !busy && !recovering && !preparingRest)
+                    execute("GET_DIAGNOSTICS",new String[0],false,true);
+            });
+        }
+    }
+    void observeRecoveryPause(String[] fields) {
+        if(!RunRecoveryPause.active(state)) {savedPause="";return;}
+        recordRunFault(fields);
+        String key=state.runId+"|"+state.nextImageIndex+"|"+state.revision+"|"+state.completed+"|"+state.lastError;
+        if(key.equals(savedPause)) return;
+        savedPause=key;pendingQuality=null;
+        raiseIncident("RUN_PAUSE_"+state.lastError,RunRecoveryPause.detail(state),false);
+        message="Aufnahme pausiert · Auftrag erhalten · Ursache: "+state.lastError;
+        support.append("RUN_RECOVERY_PAUSE "+key);
+    }
+    public boolean canPrepareRest() {
+        if(device==null || !sessionIdentityReceived || !state.tiltCalibrationKnown || !fresh() || !(state.state.equals("STOPPED") || state.state.equals("IDLE")) || !state.positionSafe() ||
+            busy || uncertain || recovering || recoveryRequested || preparingRest || abortingPlan || manualMoving || manualTrigger ||
+            incident.needsAcknowledgement() || draftNeedsReview) return false;
+        CaptureStore.Checkpoint checkpoint=recoveryCheckpoint();
+        return navigationReason().isEmpty() && checkpoint!=null && checkpoint.boot>0 && checkpoint.boot==currentBoot() && checkpoint.tiltZero==state.tiltZeroOffset &&
+            (state.plan==null || checkpoint.raster.source.sameRecipe(state.plan));
+    }
+    CaptureStore.Checkpoint restCheckpoint() {
+        if(!canPrepareRest()) throw new IllegalArgumentException("Zuerst Fehler quittieren und unveränderten Gerätestand bestätigen");
+        return recoveryCheckpoint();
+    }
+    private CaptureStore.Checkpoint recoveryCheckpoint() {
+        return state.state.equals("IDLE")?captures.pendingCheckpoint(device.getAddress()):captures.checkpoint(device.getAddress(),state.runId);
+    }
+    private void cancelRest() { restPreparation=null;preparingRest=false;pendingQuality=null; }
+    /** Only prepare; the normal separately confirmed START remains the sole release for movement. */
+    public void prepareRest(boolean previousColumn,long expectedRun,long expectedIndex) {
+        requireReady();CaptureStore.Checkpoint source=restCheckpoint();
+        if(source.raster.source.runId!=expectedRun || source.raster.nextIndex!=expectedIndex)
+            throw new IllegalArgumentException("Unterbrochener Auftrag hat sich geändert; erneut auswählen");
+        long newId;
+        do { newId=java.util.concurrent.ThreadLocalRandom.current().nextLong(1,4294967296L); } while(newId==expectedRun);
+        PanoramaPlan rest=source.raster.remaining(newId,previousColumn);rest.validate(state);
+        captures.linkRest(source,rest,source.raster.startColumn(previousColumn));
+        RestPreparation flow=new RestPreparation(expectedRun,newId,state.state.equals("IDLE"));restPreparation=flow;preparingRest=true;
+        int id=generation;long boot=currentBoot();
+        support.append("REST_PREPARE source="+source.key+" index="+expectedIndex+" startColumn="+source.raster.startColumn(previousColumn)+" recipe="+String.join("|",rest.fields()));
+        Runnable advance=new Runnable() {
+            long deadline=SystemClock.elapsedRealtime()+5000;
+            public void run() {
+                if(restPreparation!=flow) return;
+                if(id!=generation || boot!=currentBoot() || SystemClock.elapsedRealtime()>=deadline || incident.needsAcknowledgement() || uncertain) {
+                    finish("Restauftrag nicht bestätigt · Gerätestand prüfen");return;
+                }
+                String next=flow.next(state.state,state.runId,statusVersion,fresh(),state.plan!=null && state.plan.runId==rest.runId && rest.sameRecipe(state.plan));
+                if(flow.failed()) { finish("Restauftrag abgelehnt · alter Lauf bleibt gespeichert");return; }
+                if(flow.done()) { finish("Restauftrag geladen · "+rest.total()+" Aufnahmen · zum Fahren separat Auftrag starten");return; }
+                if(next!=null) {
+                    execute(next,next.equals("LOAD_PLAN")?rest.fields():new String[0],false,true).whenComplete((reply,error) -> {
+                        if(restPreparation!=flow || generation!=id) return;
+                        flow.acknowledged(error==null && reply.accepted);deadline=SystemClock.elapsedRealtime()+5000;
+                        if(error==null && reply.accepted && next.equals("LOAD_PLAN")) {
+                            // A fresh support bundle confirms the exact recipe as well as PLAN_READY.
+                            execute("GET_SUPPORT_BUNDLE",new String[0],false,true).whenComplete((bundle,bundleError) -> {
+                                if(restPreparation==flow) ui.post(this);
+                            });
+                        } else ui.post(this);
+                    });
+                } else ui.postDelayed(this,100);
+            }
+            void finish(String detail) {
+                restPreparation=null;preparingRest=false;message=detail;support.append("REST_RESULT "+detail);notifyObservers();
+            }
+        };
+        advance.run();notifyObservers();
     }
     void acceptManualEvent(String[] fields) {
         if (!state.manualStatusSupported && manualMoving && manualProgress != null && manualProgress.accept(fields)) {
@@ -323,6 +446,7 @@ public final class PanoramaService extends Service {
         if(jog.stopping) return "Handfahrt wird gestoppt …";
         if(busy) return "Befehlsbestätigung wird abgewartet …";
         if(abortingPlan) return "Auftrag wird gestoppt und zurückgesetzt …";
+        if(preparingRest) return "Restauftrag wird geladen · noch keine Fahrfreigabe.";
         if(debugPending || manualPreparing) return "Fahrt wird vorbereitet; Diagnose hat eine begrenzte Wartezeit.";
         if(manualTrigger) return "Kameraauslösung wird abgeschlossen …";
         if(!state.navigation(SystemClock.elapsedRealtime())) return state.state.equals("RUNNING") || state.state.equals("PAUSE_PENDING")?
@@ -402,6 +526,7 @@ public final class PanoramaService extends Service {
     }
     public boolean hasConnection() { return device != null; }
     public void disconnect() {
+        cancelRest();
         pendingTiming=null;
         endJog(); jog.finish(jog.token); ui.removeCallbacks(jogAlive);
         recoveryFlow=null; recovering=recoveryRequested=false;
@@ -423,6 +548,7 @@ public final class PanoramaService extends Service {
         if(state.manualStatusSupported && (!state.manualStatusFresh(SystemClock.elapsedRealtime()) ||
             state.manualStatus.active() && !manualMoving && !manualTrigger)) throw new IllegalArgumentException(navigationReason());
         if (busy) throw new IllegalArgumentException("Befehl wird noch bestätigt");
+        if (preparingRest) throw new IllegalArgumentException("Restauftrag wird vorbereitet");
         if (abortingPlan) throw new IllegalArgumentException("Auftrag wird abgebrochen und zurückgesetzt");
         if (manualPreparing) throw new IllegalArgumentException("Fahrt wird vorbereitet");
         if (debugPending) throw new IllegalArgumentException("Gerätelog wird noch übertragen");
@@ -489,6 +615,9 @@ public final class PanoramaService extends Service {
             case "REWIND_COLUMNS": return "Spaltenrücksprung"; case "FORWARD_COLUMNS": return "Spaltenvorsprung";
             case "SET_TILT_LIMITS": return "Tilt-Grenzen";
             case "SET_CAPTURE_WARNING_TOLERANCE": return "Warnschwellen speichern";
+            case "SET_CAPTURE_STABILITY": return "Stabilitätsgrenzen speichern";
+            case "GET_CAPTURE_STABILITY": return "Stabilitätsgrenzen auslesen";
+            case "RETRY_COLUMN": return "Spaltenwiederholung vorbereiten";
             case "SET_TILT_ZERO": return "Tilt-Nullpunkt"; case "RESET_TILT_ZERO": return "Tilt-Werkreferenz";
             default: return "Geräteabfrage";
         }
@@ -508,6 +637,8 @@ public final class PanoramaService extends Service {
             case "STOPPED": return "Gestoppt"; case "CLEARED": return "Auftrag gelöscht";
             case "TIMING_UPDATED": return "Neue Zeiten übernommen"; case "TIMING_QUEUED": return "Neue Zeiten vorgemerkt";
             case "WARNING_TOLERANCE_SAVED": return "Warnschwellen dauerhaft im Gerät gespeichert";
+            case "STABILITY_SETTINGS_SAVED": return "Stabilitätsgrenzen gespeichert · Rücklesen abwarten";
+            case "COLUMN_RETRY_READY": return "Spalte vorbereitet · zum Fahren separat Fortsetzen drücken";
             case "INVALID_STATE": return "Im aktuellen Gerätezustand nicht möglich";
             case "MANUAL_ACTION_ACTIVE": return "Manuelle Aktion noch aktiv";
             case "SAFETY_UNCONFIRMED": return "Sicherheitsgrenzen nicht bestätigt";
@@ -521,6 +652,7 @@ public final class PanoramaService extends Service {
         }
     }
     public void emergencyStop() {
+        cancelRest();
         jog.finish(jog.token); ui.removeCallbacks(jogAlive);
         recoveryFlow=null; recovering=recoveryRequested=false;
         planAbort=null; abortingPlan=false; discardDraftAfterAbort=false;
@@ -702,8 +834,9 @@ public final class PanoramaService extends Service {
     }
     public void trigger(int pulse) {
         requireReady();
-        if (!manualAllowed() || !state.positionSafe() || manualMoving || pulse < 1 || pulse > 60000)
+        if (!manualAllowed() || !state.positionSafe() || manualMoving || pulse < 1 || pulse > 60000) {
             throw new IllegalArgumentException("Kamera-Test erst im Stillstand; Puls 1–60000 ms");
+        }
         manualTrigger = true;
         triggerDeadlineMs=SystemClock.elapsedRealtime()+pulse+5000;
         int id = generation;
@@ -790,7 +923,7 @@ public final class PanoramaService extends Service {
                 }
                 if(command!=null) {
                     execute(command,command.equals("STOP")?new String[]{""+run}:new String[0],false).whenComplete((reply,error) -> {
-                        if(planAbort!=progress) return;
+                        if(planAbort!=progress) { return; }
                         if(generation!=id) { planAbort=null; abortingPlan=false; notifyObservers(); return; }
                         progress.acknowledged(error==null && reply.accepted); deadline=SystemClock.elapsedRealtime()+5000;
                         ui.post(this);
@@ -828,6 +961,54 @@ public final class PanoramaService extends Service {
         if(!Double.isFinite(pan) || !Double.isFinite(tilt) || pan<.044 || pan>10 || tilt<.044 || tilt>10)
             throw new IllegalArgumentException("Warnschwelle: 0,044 bis 10 Grad");
         command("SET_CAPTURE_WARNING_TOLERANCE",""+Math.round(pan*1000),""+Math.round(tilt*1000),""+state.motionConfigRevision);
+    }
+    boolean canConfigureStability() {
+        boolean idle=state.runId==0 && (state.state.equals("IDLE") || state.state.equals("STOPPED"));
+        boolean paused=state.recoveryPauseSupported && state.state.equals("PAUSED");
+        return fresh() && state.captureStability!=null && !busy && !manualMoving && !manualTrigger &&
+            !jog.held && !jog.stopping && !uncertain && !incident.needsAcknowledgement() &&
+            (idle || paused);
+    }
+    void observeStabilitySettings() {
+        if(pendingStability!=null && pendingStability.sameValues(state.captureStability) &&
+            state.motionConfigRevision>=pendingStability.revision) {
+            pendingStability=null;message="Stabilitätsgrenzen dauerhaft gespeichert und zurückgelesen";
+        }
+    }
+    public void readCaptureStability() {
+        requireReady();
+        if(state.captureStability==null) throw new IllegalArgumentException("Diese Firmware bietet keine Stabilitätseinstellungen in der App");
+        command("GET_CAPTURE_STABILITY");
+    }
+    public void saveCaptureStability(double span,double pan,double tilt,double seconds) {
+        requireReady();
+        if(!canConfigureStability()) throw new IllegalArgumentException("Stabilitätsgrenzen bei stillstehendem Kopf ohne Auftrag oder in einer quittierten Pause speichern");
+        CaptureStabilitySettings request=CaptureStabilitySettings.fromUi(span,pan,tilt,seconds,state.motionConfigRevision);
+        pendingStability=request;int id=generation;
+        command("SET_CAPTURE_STABILITY",request.fields()).whenComplete((reply,error) -> {
+            if(id!=generation) return;
+            if(error!=null || !reply.accepted) {pendingStability=null;return;}
+            if(request.sameValues(state.captureStability) && state.motionConfigRevision>=request.revision) {
+                pendingStability=null;message="Stabilitätsgrenzen dauerhaft gespeichert und zurückgelesen";notifyObservers();
+            } else if(pendingStability==request) {
+                execute("GET_CAPTURE_STABILITY",new String[0],false,true);
+                ui.postDelayed(() -> {
+                    if(id==generation && pendingStability==request) {
+                        pendingStability=null;message="Speicherung bestätigt, Rücklesen fehlt · Stabilitätsgrenzen erneut auslesen";notifyObservers();
+                    }
+                },4000);
+            }
+        });
+    }
+    boolean canRetryColumn() {
+        return navigationReason().isEmpty() && state.recoveryPauseSupported && state.state.equals("PAUSED") &&
+            state.plan!=null && state.plan.mode==0 && state.nextImageIndex<state.plan.total() && !manualMoving && !manualTrigger;
+    }
+    public void retryColumn(boolean previous,long expectedRun,long expectedIndex) {
+        requireReady();
+        if(!canRetryColumn() || state.runId!=expectedRun || state.nextImageIndex!=expectedIndex)
+            throw new IllegalArgumentException("Pausierter Auftrag hat sich geändert · erneut auswählen");
+        command("RETRY_COLUMN",""+state.runId,previous?"1":"0");
     }
     public void updateTiming(int settle, int pulse, int exposure) {
         requireReady();

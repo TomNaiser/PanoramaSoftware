@@ -8,6 +8,8 @@ public final class DeviceState {
     int runMaximumTempo=1000, warningPanMdeg, warningTiltMdeg;
     long motionConfigRevision;
     boolean warningSettingsSupported;
+    CaptureStabilitySettings captureStability;
+    boolean recoveryPauseSupported;
     public String firmware = "—", hardware = "—", state = "UNKNOWN", phase = "NONE", lastError = "—";
     public long runId, completed, total, lastStatusMs;
     long nextImageIndex, timingRunId, timingImageIndex, moveMaximumMs;
@@ -77,6 +79,13 @@ public final class DeviceState {
                 int runTempoMaximum=Integer.parseInt(f[0]);
                 if(runTempoMaximum<1000 || runTempoMaximum>2000) throw new IllegalArgumentException("Lauftempo-Freigabe ungültig");
                 runMaximumTempo=runTempoMaximum;break;
+            case "CAPTURE_RECOVERY_CAPABILITIES":
+                if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException("Wiederholungsfreigabe ungültig");
+                recoveryPauseSupported=f[0].equals("1");break;
+            case "CAPTURE_STABILITY_SETTINGS":
+                CaptureStabilitySettings stability=CaptureStabilitySettings.parse(f);
+                captureStability=stability;motionConfigRevision=stability.revision;break;
             case "CAPTURE_WARNING_SETTINGS":
                 if(f.length!=3) throw new IllegalArgumentException("Warnschwellen unvollständig");
                 int wp=Integer.parseInt(f[0]),wt=Integer.parseInt(f[1]); long wr=unsigned(f[2]);
