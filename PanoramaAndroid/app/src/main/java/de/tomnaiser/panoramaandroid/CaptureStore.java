@@ -16,6 +16,24 @@ public final class CaptureStore extends SQLiteOpenHelper {
     }
     public CaptureStore(Context context) { super(context, "captures.db", null, 4); }
     CaptureStore(Context context, String name) { super(context, name, null, 4); }
+    private java.util.function.Consumer<String> exportChanged=key -> { };
+    synchronized void onExportChanged(java.util.function.Consumer<String> listener) { exportChanged=listener; }
+    /** Used only by the writer's separate database connection, so rendering never locks UI capture storage. */
+    synchronized List<String> liveRoots() {
+        List<String> roots=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT id FROM runs WHERE (plan IS NOT NULL OR EXISTS(SELECT 1 FROM captures WHERE run=runs.id)) AND NOT EXISTS(SELECT 1 FROM run_links WHERE child=runs.id) ORDER BY stamp",null)) {
+            while(c.moveToNext()) roots.add(c.getString(0));
+        }
+        return roots;
+    }
+    synchronized LivePapywizard.Snapshot liveSnapshot(String selected) {
+        String root=linkedKeys(selected).get(0);
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT run_id,stamp FROM runs WHERE id=?",new String[]{root})) {
+            if(!c.moveToFirst()) throw new IllegalArgumentException("Gespeicherter Lauf fehlt");
+            String filename="Panorama-"+c.getString(1).substring(0,10)+"-"+c.getString(0)+"-"+root+".xml";
+            return new LivePapywizard.Snapshot(filename,exportLinked(root,true));
+        }
+    }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE runs (id TEXT PRIMARY KEY,device TEXT,run_id TEXT,stamp TEXT,plan TEXT,segments TEXT,completed INTEGER DEFAULT 0)");
         db.execSQL("CREATE TABLE captures (run TEXT,capture_key TEXT,payload TEXT,ordinal INTEGER,manual INTEGER,logged TEXT,PRIMARY KEY(run,capture_key))");
@@ -47,12 +65,14 @@ public final class CaptureStore extends SQLiteOpenHelper {
     }
     /** Store only a complete device recipe; repeated FAULT status cannot duplicate an uncertain exposure. */
     synchronized boolean recordFault(String device,long boot,DeviceState state,String[] fields) {
-        if(!(state.state.equals("FAULT") || RunRecoveryPause.active(state)) || state.runId==0 || !state.tiltCalibrationKnown) return false;
+        if(!(state.state.equals("FAULT") || RunRecoveryPause.active(state) ||
+            state.state.equals("STOPPED") && RasterRecovery.recoverable(state.lastError)) || state.runId==0 || !state.tiltCalibrationKnown) return false;
         String key=group(device,state.runId);PanoramaPlan plan=state.plan;
         if(plan==null) try(Cursor c=getReadableDatabase().rawQuery("SELECT plan FROM runs WHERE id=?",new String[]{key})) {
             if(c.moveToFirst() && !c.isNull(0)) plan=PanoramaPlan.parse(c.getString(0).split("\\|",-1));
         }
         if(plan==null || plan.runId!=state.runId) return false;
+        if(state.nextImageIndex>=plan.total()) return false;
         ContentValues v=new ContentValues();v.put("run",key);v.put("boot",boot);v.put("image_index",state.nextImageIndex);
         v.put("tilt_zero",state.tiltZeroOffset);
         v.put("revision",state.revision);v.put("completed",state.completed);v.put("error",state.lastError);
@@ -107,8 +127,8 @@ public final class CaptureStore extends SQLiteOpenHelper {
         for(String child:children) collectChildren(child,result,seen);
     }
     synchronized boolean hasUncertainExposure(String selected) {
-        for(String key:linkedKeys(selected)) try(Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM run_faults WHERE run=? AND error='EXPOSURE_UNSTABLE' LIMIT 1",new String[]{key})) {
-            if(c.moveToFirst()) return true;
+        for(String key:linkedKeys(selected)) try(Cursor c=getReadableDatabase().rawQuery("SELECT error FROM run_faults WHERE run=?",new String[]{key})) {
+            while(c.moveToNext()) if(RasterRecovery.uncertainExposure(c.getString(0))) return true;
         }
         return false;
     }
@@ -118,7 +138,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
             while(c.moveToNext()) {
                 PanoramaPlan p=PanoramaPlan.parse(c.getString(7).split("\\|",-1));long index=c.getLong(5);
                 out.append(String.join(";",key,c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),""+index,
-                    p.mode==0?""+(index/p.rows):"",p.mode==0?""+(index%p.rows):"",c.getString(6),c.getString(4).equals("EXPOSURE_UNSTABLE")?"true":"false")).append('\n');
+                    index<p.total()?""+p.target((int)index)[2]:"",index<p.total()?""+p.target((int)index)[3]:"",c.getString(6),RasterRecovery.uncertainExposure(c.getString(4))?"true":"false")).append('\n');
             }
         }
         return out.toString();
@@ -149,9 +169,11 @@ public final class CaptureStore extends SQLiteOpenHelper {
             }
             long runId = DeviceState.unsigned(frame.type.equals("STATUS") || frame.type.equals("PLAN") || frame.type.equals("RUN_SEGMENT") ? f[0] : f[1]);
             String key = group(device, runId);
+            boolean changed=false;
             if (frame.type.equals("PLAN")) {
                 PanoramaPlan.parse(f);
                 ContentValues v = new ContentValues(); v.put("plan", String.join("|", f)); updateRun(key, v);
+                changed=true;
             } else if (frame.type.equals("RUN_SEGMENT")) {
                 if (f.length != 4) return false;
                 JSONArray segments = segments(key); int revision = Integer.parseInt(f[1]);
@@ -168,7 +190,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
                     if (state.plan!=null) { ContentValues recipe = new ContentValues(); recipe.put("plan",String.join("|",state.plan.fields())); updateRun(key,recipe); }
                 }
                 ContentValues v = new ContentValues(); v.put("completed", state.completed); updateRun(key, v);
-                if (state.total > 0 && state.completed > 0 && state.completed != previous) reconstruct(key, state);
+                if (state.total > 0 && state.completed > 0 && state.completed != previous) { reconstruct(key, state);changed=true; }
             } else {
                 boolean manual = frame.type.equals("MANUAL_IMAGE_TRIGGERED");
                 if ((!manual && f.length != 12) || (manual && f.length != 8)) return false;
@@ -176,8 +198,9 @@ public final class CaptureStore extends SQLiteOpenHelper {
                 int positionIndex = manual ? 4 : 9;
                 Integer.parseInt(f[positionIndex]); Integer.parseInt(f[positionIndex + 1]);
                 String identity = manual ? "M-"+runId+"-"+f[0]+"-"+f[6] : "R-"+runId+"-"+f[2];
-                insert(key, identity, frame.type + "|" + String.join("|", f), DeviceState.unsigned(manual ? f[3] : f[2]), manual, true);
+                changed=insert(key, identity, frame.type + "|" + String.join("|", f), DeviceState.unsigned(manual ? f[3] : f[2]), manual, true);
             }
+            if(changed) exportChanged.accept(key);
         } catch (RuntimeException | JSONException ex) { throw new IOException("Aufnahmedaten: " + ex.getMessage(), ex); }
         return false;
     }
@@ -225,16 +248,16 @@ public final class CaptureStore extends SQLiteOpenHelper {
         } finally { db.endTransaction(); }
     }
     private String lastStatusCount = "0";
-    private void insert(String run, String identity, String payload, long ordinal, boolean manual, boolean measured) {
+    private boolean insert(String run, String identity, String payload, long ordinal, boolean manual, boolean measured) {
         ContentValues v = new ContentValues(); v.put("run", run); v.put("capture_key", identity);
         v.put("payload", payload); v.put("ordinal", ordinal); v.put("manual", manual ? 1 : 0);
         v.put("logged", java.time.Instant.now().toString());
         if (measured) {
             try (Cursor c = getReadableDatabase().rawQuery("SELECT payload FROM captures WHERE run=? AND capture_key=?", new String[]{run, identity})) {
-                if (c.moveToFirst() && !c.getString(0).endsWith("|1")) return;
+                if (c.moveToFirst() && !c.getString(0).endsWith("|1")) return false;
             }
         }
-        getWritableDatabase().insertWithOnConflict("captures", null, v, measured ? SQLiteDatabase.CONFLICT_REPLACE : SQLiteDatabase.CONFLICT_IGNORE);
+        return getWritableDatabase().insertWithOnConflict("captures", null, v, measured ? SQLiteDatabase.CONFLICT_REPLACE : SQLiteDatabase.CONFLICT_IGNORE)!=-1;
     }
     public synchronized List<Run> runs() {
         List<Run> result = new ArrayList<>();

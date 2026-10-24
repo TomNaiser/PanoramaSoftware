@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<papywizard version="c">
+  <header/>
+  <shoot>
+    <pict id="0" bracket="1"><time>2000-01-01T00:00:00Z</time><position pitch="2.000" yaw="-1.000" roll="0"/></pict>
+    <pict id="1" bracket="1"><time>2000-01-01T00:00:01Z</time><position pitch="2.000" yaw="-1.500" roll="0"/></pict>
+  </shoot>
+</papywizard>

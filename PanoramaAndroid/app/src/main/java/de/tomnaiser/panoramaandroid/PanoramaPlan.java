@@ -119,7 +119,7 @@ public final class PanoramaPlan {
         long intervals = (span * cosine + denominator - 1) / denominator;
         return Math.toIntExact(span == 360000 ? Math.max(1, intervals) : intervals + 1);
     }
-    private static int interpolate(int start, int end, int index, int divisor) {
+    static int interpolate(int start, int end, int index, int divisor) {
         if (divisor == 0) return start;
         long v = ((long)end - start) * index;
         return Math.toIntExact(start + (v >= 0 ? v + divisor / 2 : v - divisor / 2) / divisor);

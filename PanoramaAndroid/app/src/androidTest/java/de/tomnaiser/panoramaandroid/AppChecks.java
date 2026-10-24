@@ -23,6 +23,8 @@ public final class AppChecks extends Instrumentation {
     private boolean connectionSecure=true;
     private String expectedFirmware="2.4.41";
     private boolean restRecoveryCheck;
+    private boolean liveExportCheck;
+    private int liveExportIterations=1000;
     private boolean stabilityHardwareCheck;
     private Bundle enduranceArguments;
     private boolean acknowledgedIncidentCheck;
@@ -40,6 +42,8 @@ public final class AppChecks extends Instrumentation {
         configureMotorStress=arguments!=null && "true".equals(arguments.getString("configureMotorStress"));
         if(arguments!=null && "true".equals(arguments.getString("acquisitionEndurance"))) enduranceArguments=new Bundle(arguments);
         restRecoveryCheck=arguments!=null && "true".equals(arguments.getString("restRecoveryCheck"));
+        liveExportCheck=arguments!=null && "true".equals(arguments.getString("liveExportCheck"));
+        if(arguments!=null && arguments.containsKey("liveExportIterations")) liveExportIterations=Integer.parseInt(arguments.getString("liveExportIterations"));
         stabilityHardwareCheck=arguments!=null && "true".equals(arguments.getString("stabilityHardwareCheck"));
         abortPlanCheck=arguments!=null && "true".equals(arguments.getString("abortPlanCheck"));
         recoveryCheck=arguments!=null && "true".equals(arguments.getString("recoveryCheck"));
@@ -67,6 +71,11 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(liveExportCheck) {
+                int checks=new LivePapywizardChecks().run(this,liveExportIterations);
+                report.putString("stream","\nPASS: "+checks+" live Papywizard checks; SQLite, external media, no hardware.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
             if(configureMotorStress) {
                 boolean previous=context.getSharedPreferences("settings",Context.MODE_PRIVATE).getBoolean("qualityPause",true);
                 if(!context.getSharedPreferences("settings",Context.MODE_PRIVATE).edit().putBoolean("qualityPause",false).commit()) throw new AssertionError("Settings not saved");

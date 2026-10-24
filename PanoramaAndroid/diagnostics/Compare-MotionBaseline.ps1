@@ -1,4 +1,7 @@
-param([string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path)
+param(
+    [string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
+    [string]$BaselineCommit = ''
+)
 $ErrorActionPreference = 'Stop'
 
 # Static differential check. It verifies source/parameter differences, not
@@ -23,7 +26,14 @@ function Number([string]$source, [string]$pattern) {
 
 $firmwareDirectory = Join-Path $RepositoryRoot 'PanoduinoControlGitRepo'
 $pcDirectory = Join-Path $RepositoryRoot 'PanoramaControlGitRepo'
-$initialCommit = '385493858c611833c56a160ba9425e9ac7c80ee6'
+if (!$BaselineCommit) {
+    $roots = @(& git -C $RepositoryRoot rev-list --max-parents=0 HEAD)
+    if ($LASTEXITCODE -ne 0 -or $roots.Count -ne 1) {
+        throw 'Kein eindeutiger Anfangsstand. -BaselineCommit explizit angeben.'
+    }
+    $BaselineCommit = $roots[0]
+}
+$initialCommit = $BaselineCommit
 $firmwareLink = & git -C $RepositoryRoot ls-tree $initialCommit PanoduinoControlGitRepo
 $pcLink = & git -C $RepositoryRoot ls-tree $initialCommit PanoramaControlGitRepo
 $firmwareRevision = ($firmwareLink -split '\s+')[2]

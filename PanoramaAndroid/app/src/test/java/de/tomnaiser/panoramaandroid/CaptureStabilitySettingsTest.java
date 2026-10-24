@@ -4,6 +4,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class CaptureStabilitySettingsTest {
+    @org.junit.Test public void notQuietPauseFromFirmware275IsRecognizedAsRetainedRun() {
+        DeviceState state=new DeviceState();state.recoveryPauseSupported=true;
+        state.state="PAUSED";state.runId=123;state.lastError="MOTION_NOT_QUIET";
+        org.junit.Assert.assertTrue(RunRecoveryPause.active(state));
+    }
     @Test public void parsesConfirmedDeviceValuesAndRevision() {
         CaptureStabilitySettings s=CaptureStabilitySettings.parse(new String[]{"250","300","400","15000","25"});
         assertEquals(250,s.spanMdeg);assertEquals(300,s.panDriftMdeg);assertEquals(400,s.tiltDriftMdeg);

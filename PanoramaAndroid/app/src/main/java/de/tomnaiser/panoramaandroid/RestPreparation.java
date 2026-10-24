@@ -12,10 +12,16 @@ final class RestPreparation {
         if(done() || failed() || !fresh) return null;
         if(phase.equals("START")) {
             if(clearedAlready && state.equals("IDLE") && run==0) { baseline=version;phase="LOAD_ACK";return "LOAD_PLAN"; }
+            if(state.equals("PAUSED") && run==sourceRun) { baseline=version;phase="STOP_ACK";return "STOP"; }
             if(!state.equals("STOPPED") || run!=sourceRun) { phase="FAILED";return null; }
             baseline=version;phase="CLEAR_ACK";return "CLEAR_RUN";
         }
         if(version<=baseline) return null;
+        if(phase.equals("STOP_STATUS")) {
+            if(state.equals("STOPPED") && run==sourceRun) {baseline=version;phase="CLEAR_ACK";return "CLEAR_RUN";}
+            if(run!=sourceRun || !state.equals("PAUSED")) phase="FAILED";
+            return null;
+        }
         if(phase.equals("IDLE_STATUS")) {
             if(state.equals("IDLE") && run==0) { baseline=version;phase="LOAD_ACK";return "LOAD_PLAN"; }
             if(run!=sourceRun || !state.equals("STOPPED")) phase="FAILED";
@@ -28,7 +34,8 @@ final class RestPreparation {
     void acknowledged(boolean accepted) {
         if(done() || failed()) return;
         if(!accepted) { phase="FAILED";return; }
-        if(phase.equals("CLEAR_ACK")) phase="IDLE_STATUS";
+        if(phase.equals("STOP_ACK")) phase="STOP_STATUS";
+        else if(phase.equals("CLEAR_ACK")) phase="IDLE_STATUS";
         else if(phase.equals("LOAD_ACK")) phase="PLAN_STATUS";
     }
     boolean done() { return phase.equals("DONE"); }

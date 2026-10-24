@@ -4,6 +4,17 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class RestPreparationTest {
+    @Test public void pausedBandMustBeStoppedAndConfirmedBeforeClearing() {
+        RestPreparation p=new RestPreparation(12,34);
+        assertEquals("STOP",p.next("PAUSED",12,4,true,false));
+        assertNull(p.next("STOPPED",12,5,true,false));
+        p.acknowledged(true);
+        assertNull(p.next("STOPPED",12,4,true,false));
+        assertEquals("CLEAR_RUN",p.next("STOPPED",12,5,true,false));
+        p.acknowledged(true);
+        assertEquals("LOAD_PLAN",p.next("IDLE",0,6,true,false));
+        p.acknowledged(true);p.next("PLAN_READY",34,7,true,true);assertTrue(p.done());
+    }
     @Test public void acknowledgementsAndFreshMatchingRecipeAreRequiredAndNeverStart() {
         RestPreparation p=new RestPreparation(12,34);
         assertEquals("CLEAR_RUN",p.next("STOPPED",12,10,true,false));

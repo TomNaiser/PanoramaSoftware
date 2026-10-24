@@ -1,0 +1,642 @@
+{
+  "documentationDate": "2026-10-24",
+  "firmware": "2.4.75",
+  "android": "0.6.25",
+  "windows": "27.4.4.0",
+  "motorParameters": 129,
+  "productionFiles": 105,
+  "lexicallyDetectedSignatures": 1393,
+  "sourceHashNormalization": "CRLF-to-LF",
+  "sources": [
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/BenchDrive.h",
+      "sha256": "be3b393673a6f337a9630b0ca948af04a15b9995d0014fbccbfeea98544d779f",
+      "signatures": 13
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/BufferedPanTrace.h",
+      "sha256": "869c568a9a9a13f1759367f766786ef8d2d6fbe67e752ef7912f834a94878de8",
+      "signatures": 11
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/DebugEventLog.h",
+      "sha256": "3342c3d39e8b249de8be364e6059f5febbe0cc3c7d7ade7b58bad4e56cccd27c",
+      "signatures": 7
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionConfigStore.cpp",
+      "sha256": "cf1a1b447aa04e1997a65c3a90d8183db62302568ce7b8a45a8d5ee763e16ba9",
+      "signatures": 4
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionConfigStore.h",
+      "sha256": "c0fb5a528d270e9b92840c2eecab87dd814a090ac50cf1aa21b8244f909e20d7",
+      "signatures": 8
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionConfiguration.h",
+      "sha256": "f7806b735d2ed5a562fbe9914064ba1a0a7bdd43b0ca14ab09d5f280bd278d0a",
+      "signatures": 2
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionController.cpp",
+      "sha256": "38a3fe20d917667214f0217f62100db84c066115a96a01078068966950c9e270",
+      "signatures": 43
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionController.h",
+      "sha256": "ee0e87ae1a71dde27c42cd526f23b7a99084cc61eff4a1e4853b2b26579a4451",
+      "signatures": 48
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionParameters.h",
+      "sha256": "bc0a7b2323aefbe9e2aced18c23a710eb6cd61e9a3145b3eeb0a00d0b304fccc",
+      "signatures": 0
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionSettings.cpp",
+      "sha256": "639e1eb5e1a267284586c4d55c113459759a6dd53eaf498d335e73cb6b38c797",
+      "signatures": 3
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/MotionSettings.h",
+      "sha256": "c7e9601b06ffaf2389e862d99e7fa63ef7c8dd9a9657fabef15c583f34fc6014",
+      "signatures": 8
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/PanoDuinoControl.ino",
+      "sha256": "a0015f2d1608588b6625e36fc73292d4d82f28dcf75b03627bd2f19a80e8fdcd",
+      "signatures": 62
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/PanoramaExecutor.cpp",
+      "sha256": "a5a26884e3a1e5596c59a82b871299e91424085e1c533b999d9f7bcb0fcd9f08",
+      "signatures": 23
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/PanoramaExecutor.h",
+      "sha256": "09f78621381841ed39ef57a6c772db4071264acd12ee61d53b3215344cd0533b",
+      "signatures": 85
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/PanoramaPlanV2.cpp",
+      "sha256": "13a7dbdb034a95fd2abfeaa15b014ea35d0754a6b07209ae080e4669de85fd28",
+      "signatures": 7
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/PanoramaPlanV2.h",
+      "sha256": "0f221813e81df5b46b0f9d239cbb32e454df9d229e19de25a7142de6e2f40204",
+      "signatures": 6
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/PanStopModel.h",
+      "sha256": "2f50cdccc931c2ed7b06e3f56d29cbf8fc1a5546d3b5b63d951a0a468e2307ee",
+      "signatures": 1
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/ProtocolMessages.cpp",
+      "sha256": "17635d1388d69cd36c2477e27050078631f996b4e4322085a6b17196dbd47bf7",
+      "signatures": 2
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/ProtocolMessages.h",
+      "sha256": "654a54650c47054444cb14679a874052ee97743baf39a44e7693985b72fdd4d4",
+      "signatures": 2
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/ProtocolV2.cpp",
+      "sha256": "0af5ac16efa0a5020a66db52a74c8af2fd85e7e9f348216bc76bb05bb0087224",
+      "signatures": 23
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/ProtocolV2.h",
+      "sha256": "907de3cb242983e3afc560f4d30072176d0c3669fb7837eb0e018abb244b9dcb",
+      "signatures": 27
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/SafetyConfiguration.h",
+      "sha256": "690958b359410ce39216d71b62d547adaecd5cb73e441f6c1a84f78dc1f66110",
+      "signatures": 0
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/SafetyController.cpp",
+      "sha256": "7d262b52a51e09b4e7bf6dc1c60b958bf11f4d52a00ca17f796508868b1808b3",
+      "signatures": 17
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/SafetyController.h",
+      "sha256": "22d1769b4156655d803a091bef3c8a75407570647f3a8212a5d0aa998e29d336",
+      "signatures": 20
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/SerialTransport.h",
+      "sha256": "66814be2c20e6d02caaca80237632e9c44ba9e25c8e1527b7dc5c00adfa9d765",
+      "signatures": 11
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/StackWatermark.h",
+      "sha256": "acb81734a7cadc07436c266db6fe1c6e5c1cc0d3ac1e3c7e36558d68efc6fab7",
+      "signatures": 6
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/TargetArrivalMonitor.h",
+      "sha256": "0b6529f1d6a937a4043b165f6861f57e7948292dd967ec29160621ce5aa77937",
+      "signatures": 10
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/V2Controller.cpp",
+      "sha256": "8020960d1eb0fb87c88960a707f27606ef6bdc76c6b49dcf7b5f9052f18f4fe1",
+      "signatures": 45
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/V2Controller.h",
+      "sha256": "9f43c09354475f4c43bff7186741511951376d092c557710f08f915462dfe23b",
+      "signatures": 50
+    },
+    {
+      "component": "Firmware",
+      "path": "PanoduinoControlGitRepo/PanoDuinoControl/VersionInfo.h",
+      "sha256": "75948a0dfa68541b8a5fe8336c1beecde5cdf8bf80d4c4ce52de0c42b844ce69",
+      "signatures": 0
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/BluetoothSession.java",
+      "sha256": "1ba346594970e3201697a073fc0eff45f5ccded0a8efc9c5faba2b39edee276b",
+      "signatures": 14
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CameraProfile.java",
+      "sha256": "df8f8a39d341b2fe2b378459c27da911c7b25924ad94043f9baf41966580b81d",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureQualityGuard.java",
+      "sha256": "35c7948ecf341f2500ddfe5abfd2f0aa6a71b3d4e7ef4d488ca401338a0a0708",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureStabilitySettings.java",
+      "sha256": "42d5b9eb3f0c7b53a6e881d793a29599af4be5bf4f5136ee3b1c4e2c62d96199",
+      "signatures": 5
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureStore.java",
+      "sha256": "dfe95b5c135d31c0e062cac96f3dc5e515b4ee3dfa179fd2e231d738f9ffed3c",
+      "signatures": 35
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureWarning.java",
+      "sha256": "ee2d144a6c414356f79f5370ae2e11ad1b3f0b14b3cd9874a4b687ff26f4ca9e",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CommandEffects.java",
+      "sha256": "fb2aaed4afa62b072a6c4e1bad803a57013fe4191cdd7895f77e103bd6dc7133",
+      "signatures": 1
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/DeviceLink.java",
+      "sha256": "62c1383f9dd83c7a4877d80207f8c6c129032ecafa1801b32006833e7c84565f",
+      "signatures": 5
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/DeviceSession.java",
+      "sha256": "fee45d69c6846ad4e14c9ca3e48ac6171b2970d58a4d9d5ab32682c78b71230c",
+      "signatures": 2
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/DeviceState.java",
+      "sha256": "36b9334143d412a34086c12aea8cd1d1ebd2721fe2013a0349f2d3026a9916fd",
+      "signatures": 14
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/EndpointSelection.java",
+      "sha256": "fbccaf7608a01e6785109f2656025f28a041bd612da1d094e1339922a7b57e12",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/FrameReader.java",
+      "sha256": "c92c64e39bfe4e0adc736767b38628c096c13fa1621d4aca373eaa057f729fdc",
+      "signatures": 1
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/IncidentTracker.java",
+      "sha256": "40227200f70b68b2e7c7b759897a5f9be7160cfb56d7994b16378309bd50e757",
+      "signatures": 4
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/JogHold.java",
+      "sha256": "62ec50dac9d2b2432f561c74db85eae617b9a123fa324c3fdfd7cce5a1e2f500",
+      "signatures": 4
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/LivePapywizard.java",
+      "sha256": "8b8d4eb05ad3fc2c7e7e7604e9b5865cf978e8bee4d75d0c3c74d6bd620c82e8",
+      "signatures": 14
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java",
+      "sha256": "cc80497c75c386b4359a2a327a53d6ca6dc8de1265b460655c91a91aeeea1a3b",
+      "signatures": 91
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionProgress.java",
+      "sha256": "1ccc57261395b390095a3a5edae904d21c9396d7b2292b237face18539bcf754",
+      "signatures": 2
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionStatus.java",
+      "sha256": "dec917c187dc8d145bc6996acad352fd758e17ab883646cd5e72c3ff35a589f2",
+      "signatures": 4
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualMotionOptions.java",
+      "sha256": "69de62810abc8b3a21497553e8c6f3e83da4f630f9e35f7b6755b45efc0427da",
+      "signatures": 2
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualMoveProgress.java",
+      "sha256": "c8f86f5ce295f1f45187e163a1699366231b6e0897567a7162d0d2a953030638",
+      "signatures": 2
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualTargets.java",
+      "sha256": "d0f305558774075390a1400044bed2176c4f71b6c9df44ded364960be5993fda",
+      "signatures": 2
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/P2Codec.java",
+      "sha256": "fbd96edaf727ec88b35f89bd2dd083c24124806e9a5687ebdf9eed51030e703d",
+      "signatures": 6
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaPlan.java",
+      "sha256": "db6e252c3bc23495cf49505e287745e98827938f5569e444f38803615a7cfbef",
+      "signatures": 11
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java",
+      "sha256": "05284f2d38d1993b9f91c8d21529c03eba47406fa4112b0bb03f46b0e9c6c1f9",
+      "signatures": 91
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanAbort.java",
+      "sha256": "b9e67f4dda912fbcfd2e1d4e2abefb2a8322b5c0489a7c68b401e5e6d86fa4e9",
+      "signatures": 6
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java",
+      "sha256": "becf9d3b24557a0e32e9b82993432fc4f02fd66ae72d083127ce62425e09e547",
+      "signatures": 40
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlotViewport.java",
+      "sha256": "9efd25944e306372a5c49d0a2e9c82f3229afe272a4c5e7ec61d02e5f4d38cd1",
+      "signatures": 8
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlotWorkspace.java",
+      "sha256": "2fa22ed55d20d1bd726e93db6649ac1c9cf85fb3912f47b22d57df984e7bbe29",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RasterRecovery.java",
+      "sha256": "745e057287f11484ef90ffbb77e1c2da82c12dc90ac3ec0ba367bd717e05039e",
+      "signatures": 6
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ReconnectPolicy.java",
+      "sha256": "b8938dd148ff798d12ada407e29c5dc33f27c62ecfc5cda21546f48d8fa5772d",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RecoveryFlow.java",
+      "sha256": "41337b2c054f782e15c968d7c54623307711b423461edc80fa897e2c8286d9c7",
+      "signatures": 5
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RestPreparation.java",
+      "sha256": "ccf836696c163ff4333ad418494465cee1eb9a5aab1ed3dcca1bdc187ffa49a8",
+      "signatures": 6
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RunPlotModel.java",
+      "sha256": "c1d61c9021999dd8660183175df244da1dcfa0c3b3077831ff330a330fb42707",
+      "signatures": 7
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RunRecoveryPause.java",
+      "sha256": "6c226d5f6f3b7d656cdcabc6bb2da4332eaab0deef5e8a83ac4cdb11fe82ebec",
+      "signatures": 3
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/StatusLogPolicy.java",
+      "sha256": "c7844642f4175d09918fc04fe70e517227c5b1d8cfde11f0351c66c3a3caf83a",
+      "signatures": 1
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/SupportLog.java",
+      "sha256": "9c11679cfb4375fd309b802a4e0a01d329f17c15ee25e8b21f1ce5a91f69c7c9",
+      "signatures": 5
+    },
+    {
+      "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/V2Client.java",
+      "sha256": "df20d489f399018a62fcdd6bb459e4bbf865b0bdc1ea4664004894e21ddeac90",
+      "signatures": 19
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/DiagnosticSessionLog.cs",
+      "sha256": "34496c29e78694b650805b7f814a52211e3c9f3adf767a62c69119079ab38006",
+      "signatures": 5
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/ManualMoveTargets.cs",
+      "sha256": "06257447a776dbf42344b6e82a2562b5f44bb95eda53ba23ea1cda361ab20d75",
+      "signatures": 6
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/PanoramaPlanFactory.cs",
+      "sha256": "c71b3dd512da504a5b0320607094a8cdaf376b223df6e6c2348e205396894159",
+      "signatures": 3
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.cs",
+      "sha256": "5041d7a3ec0e9745b671294fd2c6dcd4d6731270b6752e0cf2e2b8e76f7e014f",
+      "signatures": 71
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.Operations.cs",
+      "sha256": "e2024cae575ed5be5cd4cef2f768e5a15e73e217f2cdf1cd2b4532e1bb4c9b79",
+      "signatures": 28
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/PapyWizardRunExporter.cs",
+      "sha256": "1daafcc1e1adae2165e2abc1ae9866504f13e6cc232a5891ddd87d3977ac8715",
+      "signatures": 11
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunArchive.cs",
+      "sha256": "1944b6a19e25af9ab6a4931cbdd4d58d694127e4334d1dd80d9446fff7be2200",
+      "signatures": 19
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunTimingSettings.cs",
+      "sha256": "232594f7f6737cb31b234cc5ef6396da4b792eff34873c5af7a09c99c8ce683f",
+      "signatures": 3
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/CalculationsHelper.cs",
+      "sha256": "dae23b6f96970c1f8fd90966e3225f0ec688cc4ad4d5ddd464b452d2ea65a622",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Communication/BluetoothComTransport.cs",
+      "sha256": "e0369e5f574a2d038faf805e1bb31c99278396dfb8fdd56c37b9e0378b47fb7a",
+      "signatures": 9
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Communication/ConnectionState.cs",
+      "sha256": "c0fe07b32ad71dd0856c090d7992903099480d6c73d4ec9195d84ff323bb815f",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Communication/ISerialTransport.cs",
+      "sha256": "ed89a9334f725085c4539b68917b70383b37942401aa1f92bdb4dccb1c40da6a",
+      "signatures": 6
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/AngleMdeg.cs",
+      "sha256": "3f0ecac7cfa9af6405191e06bdcb85f0e3580d2d4fca5018fe0312b0aa3e11c6",
+      "signatures": 8
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/CoordinateContract.cs",
+      "sha256": "9f739c470c61b24995846781e4adf3b1def784cae7e3899daae9e03fabd7c7f3",
+      "signatures": 4
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/DeviceCapabilities.cs",
+      "sha256": "2f6aca0ee427ea800f7e9607ab7cff8d5c06cff624cbff519f154c012516c02a",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/DeviceDiagnostics.cs",
+      "sha256": "85d1860ea9f58c52bc2cad17dffac23a4f773ce9706c95cbcbef498a19a6ee6c",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/DeviceInfo.cs",
+      "sha256": "6242147dc90aece4664fc615eba7c3d2c0d5fe52c5fbaf64e0cd5fbb8397cd43",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/DeviceStatus.cs",
+      "sha256": "b73b44cccd0824e21c35ac9764892fbbf3cdead72f3992d5c3b669fafb497337",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/PanoramaPlan.cs",
+      "sha256": "9796afed521e376a16a5b88a24659c20e8517b7670516d3a9c86e07e9f007390",
+      "signatures": 7
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/RunEvent.cs",
+      "sha256": "b83618d4fc0656d094bc3f73fc8f6fc52c5a2671c18db042f7271a753ed9ba1c",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/RunSegment.cs",
+      "sha256": "c1898d317cb1af79d93dd44d9baa32416a7ba490cb669bb85b81586daec6d70a",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/RunSegmentResolver.cs",
+      "sha256": "6e4c102636976fa20459232413921df625411bc77ed57a648b3a9261351d5302",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/RunState.cs",
+      "sha256": "b0806422786fa536cedaf3a2a3f159fb3a82855a542380df34eb1b351895f243",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/SessionFeatures.cs",
+      "sha256": "997b65a6ee8f51591d6d677752fa984d7c086f193d7305c2c45039f20cc02b11",
+      "signatures": 14
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Domain/SphericalGeometry.cs",
+      "sha256": "2bf2c9dbb56f6a4db64324b55b4d96a5d01fc013d05460974b6e90822bd7d4a0",
+      "signatures": 4
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Form1.cs",
+      "sha256": "a6029cdc954b0c6228a7836fb03ae07be67ab014e45b26016cddad4ca864d94c",
+      "signatures": 96
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Form1.Current.cs",
+      "sha256": "451be375bf4fa1a31007003c3ace287652e3dcaefbddb5e4800456f33556f94a",
+      "signatures": 52
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/InterfaceClassAcquisition2UI.cs",
+      "sha256": "1e16d03ef93ce1628b69100af440e33e4320393d135445f08066a3a5e5621c90",
+      "signatures": 0
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/muControllerInterface.cs",
+      "sha256": "c3de3b2e7ed4cae7ee9d56501915498a9906c9a1da6a25c13283831927c7fe94",
+      "signatures": 19
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/PanoControlApp.cs",
+      "sha256": "da5f4e2f8655f13c8c5683b966e77634c8cd2d4032b2334926912073b3fe6f8d",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/PanoramaAcquisitionClass.cs",
+      "sha256": "b751c0894dedd807edf7b52fab57d991745678717458b5de27f5c67dfcf97efc",
+      "signatures": 11
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/PapyWizardHelper.cs",
+      "sha256": "a78f859044070a712682a8b0692abcdeeb319a1bff61e95fcef23f562c9e85dd",
+      "signatures": 5
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Params.cs",
+      "sha256": "dea612e3cb5bb2918ea231064941a8b217148daecc22a29cc3539c6ff4dc82d4",
+      "signatures": 4
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Protocol/V2/CommandResult.cs",
+      "sha256": "3dce0b2b0608c012aa52568d963c43b889dab5360b669aa61d1534d1d1e4bb45",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Protocol/V2/Crc16Ccitt.cs",
+      "sha256": "7136c14f59c297d590ef6b24d7556b2ef57a056870db739a42a4795555ee12ef",
+      "signatures": 2
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Protocol/V2/ProtocolFrame.cs",
+      "sha256": "3f7c6b3f130537043a505232debfb89de9a8b06f04f8f71c4f4840be5027eb62",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Protocol/V2/ProtocolFrameCodec.cs",
+      "sha256": "958e1d4fa7a40dd0a91d32e23fb923ffef3f185618b03c3cbad9ddac5584dacb",
+      "signatures": 4
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Protocol/V2/ProtocolV2Client.cs",
+      "sha256": "09f1b99f0ca8c18ff211aaa5e27e83421899f52a0396e69c22e7c50636ba9e25",
+      "signatures": 17
+    }
+  ]
+}

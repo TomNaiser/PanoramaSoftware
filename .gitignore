@@ -1,0 +1,52 @@
+# Local build and editor state
+**/__pycache__/
+*.py[cod]
+**/.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+.repo-maintenance/
+/tools/repository/
+
+# Phone/database snapshots and compiled deliverables are retained locally.
+# Sources, fixtures and sanitized validation summaries stay in Git.
+*.tar
+*.tar.gz
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.apk
+/analysis/**/*.bin
+/analysis/**/*.elf
+/analysis/**/*.hex
+
+# Loose exports belong to a dated analysis directory, never the project root.
+/CaptureManifest*.csv
+/PanoData*.xml
+/DataPanoData*.xml
+
+# Local development evidence, backups and original historical notes.
+# Public summaries live in docs/validation; examples use synthetic data.
+/analysis/
+/Sicherungen/
+/fallback/
+/docs/history/
+/PanoramaAndroid/abnahme/
+/PanoramaAndroid/docs/history/
+/local/
+/readme.txt
+
+# Earlier development notes are retained locally under docs/history/.
+/Ausgangsarchitektur.md
+/Fortschritt.md
+/Hardware-und-Sphaerisch.md
+/Inbetriebnahme-Debugging.md
+/Inbetriebnahme.md
+/MOTOR-ROBUSTHEIT-KONZEPT-2026-10-11.md
+/POSITIONSREGELUNG-KONZEPT.md
+/PanoBoard-V5-Nano-R4-Pruefung.md
+/Plan.md
+/Review-und-Implementierungsplan.md
+/WINDOWS-FUNKTIONSANGLEICH-PLAN-2026-10-17.md

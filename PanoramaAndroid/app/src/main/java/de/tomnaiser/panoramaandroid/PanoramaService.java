@@ -70,6 +70,10 @@ public final class PanoramaService extends Service {
     private CaptureQualityGuard.Issue pendingQuality;
     private android.media.ToneGenerator warningTone;
     public CaptureStore captures;
+    LivePapywizard livePapywizard;
+    private boolean exportServiceActive=true;
+    String papywizardStatus() { return livePapywizard==null?"Papywizard-Sicherung wird vorbereitet.":livePapywizard.status(); }
+    void rebuildPapywizard() { if(livePapywizard!=null) livePapywizard.rebuild(); }
     public SupportLog support;
     private final Runnable retry = () -> open();
     private final Runnable monitor = new Runnable() {
@@ -108,6 +112,19 @@ public final class PanoramaService extends Service {
         super.onCreate();
         captures = new CaptureStore(this); support = new SupportLog(getFilesDir());
         support.append("APP_START version="+BuildConfig.VERSION_NAME);
+        CaptureStore exportReader=new CaptureStore(this);
+        java.io.File[] media=getExternalMediaDirs();
+        java.io.File base=media.length>0 && media[0]!=null?media[0]:getFilesDir();
+        livePapywizard=new LivePapywizard(new LivePapywizard.Source() {
+            public List<String> roots() { return exportReader.liveRoots(); }
+            public LivePapywizard.Snapshot snapshot(String key) { return exportReader.liveSnapshot(key); }
+            public void close() { exportReader.close(); }
+        },new java.io.File(base,"Papywizard"),status -> {
+            // SupportLog and observers belong to the main thread, not the file writer.
+            if(status.startsWith("Papywizard-Sicherung fehlgeschlagen")) ui.post(() -> { if(exportServiceActive) support.append(status); });
+        });
+        captures.onExportChanged(livePapywizard::request);
+        livePapywizard.rebuild();
         android.content.SharedPreferences settings=getSharedPreferences("settings",MODE_PRIVATE);
         for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) draftEndpoints.put(key,settings.getString(key,""));
         draftDevice=settings.getString("draftDevice",settings.getString("device",""));
@@ -238,6 +255,8 @@ public final class PanoramaService extends Service {
                         raiseIncident(state.lastError,faultDescription(state.lastError));
                         message="Gerätefehler: "+faultDescription(state.lastError);
                     }
+                    if(frame.type.equals("STATUS") && state.state.equals("STOPPED") && RasterRecovery.recoverable(state.lastError))
+                        recordRunFault(frame.fields);
                     if(frame.type.equals("STATUS")) observeRecoveryPause(frame.fields);
                     if(frame.type.equals("STATUS") && (state.lastError.equals("STEP_TARGET_MISSED") || state.lastError.equals("STEP_MOVE_TIMEOUT")))
                         message="Aufnahmepunkt innerhalb der Fahrgrenze nicht genau erreicht · Beruhigung und Aufnahme an der Istposition; anschließend weiter.";
@@ -332,7 +351,7 @@ public final class PanoramaService extends Service {
         support.append("RUN_RECOVERY_PAUSE "+key);
     }
     public boolean canPrepareRest() {
-        if(device==null || !sessionIdentityReceived || !state.tiltCalibrationKnown || !fresh() || !(state.state.equals("STOPPED") || state.state.equals("IDLE")) || !state.positionSafe() ||
+        if(device==null || !sessionIdentityReceived || !state.tiltCalibrationKnown || !fresh() || !(state.state.equals("STOPPED") || state.state.equals("IDLE") || state.state.equals("PAUSED")) || !state.positionSafe() ||
             busy || uncertain || recovering || recoveryRequested || preparingRest || abortingPlan || manualMoving || manualTrigger ||
             incident.needsAcknowledgement() || draftNeedsReview) return false;
         CaptureStore.Checkpoint checkpoint=recoveryCheckpoint();
@@ -344,7 +363,25 @@ public final class PanoramaService extends Service {
         return recoveryCheckpoint();
     }
     private CaptureStore.Checkpoint recoveryCheckpoint() {
+        if(device==null) return null;
         return state.state.equals("IDLE")?captures.pendingCheckpoint(device.getAddress()):captures.checkpoint(device.getAddress(),state.runId);
+    }
+    boolean hasRecoveryCheckpoint() {
+        return (state.state.equals("FAULT") || state.state.equals("STOPPED") || state.state.equals("PAUSED") || state.state.equals("IDLE")) && recoveryCheckpoint()!=null;
+    }
+    boolean recoveryInProgress() { return recovering || recoveryRequested; }
+    String recoveryGuidance() {
+        CaptureStore.Checkpoint checkpoint=recoveryCheckpoint();
+        if(checkpoint==null) return "";
+        String retained="Aufnahmen und Originalauftrag bleiben erhalten. ";
+        if(incident.needsAcknowledgement()) return retained+"Zuerst Fehler quittieren und Gerät prüfen. Es wird keine Fahrt gestartet.";
+        if(recovering || recoveryRequested) return retained+"Gerätestand wird geprüft. Erst bei wieder gültiger Rückmeldung wird die Wiederaufnahme freigegeben.";
+        if(!fresh()) return retained+"Aktuelle Geräteverbindung abwarten, anschließend Gerät prüfen.";
+        if(currentBoot()!=checkpoint.boot) return retained+"Controller wurde neu gestartet. Die alte Positionsreferenz ist nicht bestätigt; keine automatische Übernahme. Originalauftrag und Unterbrechung bleiben im Export erhalten.";
+        if(state.tiltZeroOffset!=checkpoint.tiltZero || draftNeedsReview) return retained+"Die Positionsreferenz muss zuerst geprüft werden; alte Zielkoordinaten werden nicht ungeprüft freigegeben.";
+        if(canPrepareRest()) return retained+"Wiederaufnahme bereit: "+checkpoint.raster.unit()+" wählen, Restauftrag laden und anschließend separat starten. "+
+            (state.state.equals("PAUSED")?"Fortsetzen ohne Wiederholung ist über Fortsetzen möglich.":"");
+        return retained+(state.state.equals("FAULT")?faultDescription(state.lastError)+" Erst nach behobener Ursache erneut prüfen.":navigationReason());
     }
     private void cancelRest() { restPreparation=null;preparingRest=false;pendingQuality=null; }
     /** Only prepare; the normal separately confirmed START remains the sole release for movement. */
@@ -459,8 +496,8 @@ public final class PanoramaService extends Service {
         if(code.equals("MOTION_TARGET_MISSED") || code.equals("MOTION_TARGET_MISSE")) return "Die Fahrt ist beendet, aber die Zielposition liegt außerhalb der eingestellten Toleranz. Motoren sind abgeschaltet.";
         if(code.equals("EXPOSURE_UNSTABLE")) return "Während der Aufnahme wurde eine Positionsänderung erkannt. Die betroffene Aufnahme wurde nicht als erfolgreich gezählt; Motoren und Auslösung sind abgeschaltet.";
         if(code.equals("MOTION_NOT_QUIET") || code.equals("MOTION_SETTLE_TIMEOUT")) return "Die Achse wurde innerhalb der Zeitgrenze nicht ruhig. Motoren sind abgeschaltet.";
-        if(code.equals("FAULT_PAN_SENSOR")) return "Der Pan-Encoder liefert keine gültigen Werte.";
-        if(code.equals("FAULT_TILT_SENSOR")) return "Der Tilt-Encoder liefert keine gültigen Werte.";
+        if(code.equals("FAULT_PAN_SENSOR")) return "Die Pan-Encoder-Rückmeldung konnte nicht gültig gelesen werden. Motoren sind abgeschaltet. Nach wieder gültiger Rückmeldung ist eine Wiederaufnahme möglich.";
+        if(code.equals("FAULT_TILT_SENSOR")) return "Die Tilt-Encoder-Rückmeldung konnte nicht gültig gelesen werden. Motoren sind abgeschaltet. Nach wieder gültiger Rückmeldung ist eine Wiederaufnahme möglich.";
         if(code.equals("MANUAL_MOVE_TIMEOUT")) return "Die manuelle Fahrt hat ihre Zeitgrenze erreicht.";
         return "Gerätefehler "+code;
     }
@@ -1029,6 +1066,9 @@ public final class PanoramaService extends Service {
         command("START_TIMELAPSE", ""+id, ""+interval, ""+pulse);
     }
     @Override public void onDestroy() { jog.finish(jog.token); ui.removeCallbacks(jogAlive); ++generation; ++actionGeneration;
-        disconnect(); ui.removeCallbacksAndMessages(null); if(warningTone!=null) warningTone.release(); captures.close(); support.close(); observers.clear(); super.onDestroy();
+        disconnect(); ui.removeCallbacksAndMessages(null); if(warningTone!=null) warningTone.release();
+        exportServiceActive=false;
+        captures.onExportChanged(key -> { }); if(livePapywizard!=null) livePapywizard.close();
+        captures.close(); support.close(); observers.clear(); super.onDestroy();
     }
 }

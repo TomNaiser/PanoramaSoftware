@@ -60,10 +60,13 @@ public final class MainActivity extends Activity {
     private ProgressBar captureProgress;
     private static final int INK=Color.rgb(25,43,59), ACCENT=Color.rgb(18,105,116), MUTED=Color.rgb(83,103,119);
     private int tiltRange;
-    private TextView connection, live, message, planSummary, diagnostics;
+    private TextView connection, live, message, planSummary, diagnostics, papywizardStatus;
     private LinearLayout[] pages;
     private PlanPreview preview, runPreview;
     private TextView plotSelection, runLegend, runTitle, planDeviceStatus;
+    private TextView recoveryHint;
+    private Button recoveryCheck;
+    private long recoveryOfferRun;
     private Button warningPoints;
     private final Handler plotHandler=new Handler(Looper.getMainLooper());
     private long plottedRun=-1;
@@ -318,7 +321,12 @@ public final class MainActivity extends Activity {
         LinearLayout runActions=new LinearLayout(this); run.addView(runActions);
         primary(button(runActions,"Pause",() -> service.runCommand("PAUSE"),() -> savedPlot==null && ready() && service.state.state.equals("RUNNING")));
         primary(button(runActions,"Fortsetzen",() -> service.runCommand("RESUME"),() -> savedPlot==null && ready() && service.state.positionSafe() && service.state.state.equals("PAUSED") && !service.manualMoving && !service.manualTrigger));
-        restRecoveryAction=button(run,"Unterbrochenen Lauf wiederaufnehmen…",this::prepareRest,() -> savedPlot==null && service!=null && service.canPrepareRest());
+        recoveryHint=text("",14);recoveryHint.setTag("recoveryHint");run.addView(recoveryHint);
+        recoveryCheck=button(run,"Fehler quittieren / Gerät prüfen",() -> {
+            if(service.incident.needsAcknowledgement()) showIncident();else service.recoverDevice();
+        },() -> service!=null && !service.recoveryInProgress() && !service.busy);
+        recoveryCheck.setTag("recoveryCheck");
+        restRecoveryAction=button(run,"Panorama wiederaufnehmen…",this::prepareRest,() -> savedPlot==null && service!=null && service.canPrepareRest());
         restRecoveryAction.setTag("restRecovery");
         columnRetryAction=button(run,"Spalte wiederholen…",this::showColumnRetry,() -> savedPlot==null && service!=null && service.canRetryColumn());
         columnRetryAction.setTag("columnRetry");
@@ -346,6 +354,9 @@ public final class MainActivity extends Activity {
         button(extras,"Timelapse starten",() -> confirm("Timelapse starten?","Die Kamera wird autonom im eingestellten Intervall ausgelöst.",() -> service.timelapse(newRunId(),integer("interval"),integer("tlPulse"))),() -> ready() && service.state.state.equals("IDLE") && !service.manualMoving && !service.manualTrigger);
         button(extras,"Timelapse stoppen",() -> service.runCommand("STOP_TIMELAPSE"),() -> ready() && service.state.state.equals("TIMELAPSE"));
         extras.addView(text("Aufnahmen und Export",20));
+        papywizardStatus=text("",14);extras.addView(papywizardStatus);
+        extras.addView(text("Papywizard wird nach jeder gespeicherten Aufnahme automatisch im Hintergrund gesichert, auch bei Stop oder Fehler. Beim App-Start wird der Stand aus der Datenbank wiederhergestellt. Mit „PapyWizard XML speichern“ eine Kopie an einem frei wählbaren Ort ablegen.",14));
+        button(extras,"Automatische Papywizard-Dateien erneut sichern",() -> service.rebuildPapywizard(),() -> service!=null);
         runPicker=new Spinner(this); extras.addView(runPicker);
         button(extras,"Gespeicherte Läufe laden",this::refreshRuns,() -> service!=null);
         button(extras,"Gewählten Lauf grafisch anzeigen",() -> {
@@ -496,9 +507,13 @@ public final class MainActivity extends Activity {
     private void prepareRest() {
         CaptureStore.Checkpoint checkpoint=service.restCheckpoint();RasterRecovery raster=checkpoint.raster;
         long run=raster.source.runId;int index=raster.nextIndex;final int[] choice={0};
-        String[] choices={"Betroffene Spalte "+(raster.startColumn(false)+1)+" wiederholen · "+raster.remaining(newRunId(),false).total()+" Aufnahmen",
-            "Eine Spalte davor beginnen ("+(raster.startColumn(true)+1)+") · "+raster.remaining(newRunId(),true).total()+" Aufnahmen"};
-        restDialog=new AlertDialog.Builder(this).setTitle("Restauftrag aus Originalraster")
+        String[] choices={"Ab "+raster.unit()+" "+(raster.startColumn(false)+1)+" wiederholen · "+raster.remaining(newRunId(),false).total()+" Aufnahmen",
+            "Früher beginnen: "+raster.unit()+" "+(raster.startColumn(true)+1)+" · "+raster.remaining(newRunId(),true).total()+" Aufnahmen"};
+        TextView detail=text("Bisherige Aufnahmen bleiben erhalten. Laden startet keine Fahrt. Danach den geladenen Restauftrag ausdrücklich starten."+
+            (raster.source.mode==1?" Damit keine Lücken entstehen, wird ein vollständiges Tilt-Band wiederholt. Falls erforderlich, beginnt die Wiederholung früher; die angezeigte Bandnummer und alle ursprünglichen Bildpositionen bleiben erhalten.":""),13);
+        detail.setPadding(dp(24),dp(8),dp(24),0);
+        restDialog=new AlertDialog.Builder(this).setTitle("Panorama wiederaufnehmen")
+            .setView(detail)
             .setSingleChoiceItems(choices,0,(dialog,which) -> choice[0]=which)
             .setPositiveButton("Restauftrag laden",(dialog,which) -> safely(() -> {
                 service.prepareRest(choice[0]==1,run,index);savedPlot=null;savedPlotKey=null;plottedRun=-1;selectPage(3);
@@ -642,8 +657,15 @@ public final class MainActivity extends Activity {
         if (connection==null) return;
         if(recoveryAction!=null) recoveryAction.setVisibility(service!=null && (service.incident.needsAcknowledgement() || service.uncertain || service.recovering || service.state.state.equals("FAULT") || (service.hasConnection() && !service.fresh()))?View.VISIBLE:View.GONE);
         if(referenceReview!=null) referenceReview.setVisibility(service!=null && service.draftNeedsReview?View.VISIBLE:View.GONE);
-        if(restRecoveryAction!=null) restRecoveryAction.setVisibility(service!=null && service.canPrepareRest()?View.VISIBLE:View.GONE);
-        if(columnRetryAction!=null) columnRetryAction.setVisibility(service!=null && service.state.recoveryPauseSupported && service.state.state.equals("PAUSED")?View.VISIBLE:View.GONE);
+        boolean recoveryVisible=savedPlot==null && service!=null && service.hasRecoveryCheckpoint();
+        if(restRecoveryAction!=null) restRecoveryAction.setVisibility(recoveryVisible?View.VISIBLE:View.GONE);
+        if(recoveryHint!=null) {recoveryHint.setVisibility(recoveryVisible?View.VISIBLE:View.GONE);if(recoveryVisible) recoveryHint.setText(service.recoveryGuidance());}
+        if(recoveryCheck!=null) recoveryCheck.setVisibility(recoveryVisible && !service.canPrepareRest()?View.VISIBLE:View.GONE);
+        if(recoveryOfferRun!=0 && service!=null && service.state.runId==recoveryOfferRun && service.canPrepareRest()) {
+            recoveryOfferRun=0;
+            recoveryHint.post(() -> {if(!isFinishing() && service!=null && service.canPrepareRest() && (restDialog==null || !restDialog.isShowing())) prepareRest();});
+        }
+        if(columnRetryAction!=null) columnRetryAction.setVisibility(service!=null && service.state.recoveryPauseSupported && service.state.state.equals("PAUSED") && service.state.plan!=null && service.state.plan.mode==0?View.VISIBLE:View.GONE);
         if(captureStabilityActive!=null) {
             CaptureStabilitySettings s=service==null?null:service.state.captureStability;
             captureStabilityActive.setText(s==null?"Noch keine bestätigten Gerätewerte · Firmware 2.4.71 oder neuer erforderlich.":
@@ -698,6 +720,7 @@ public final class MainActivity extends Activity {
         live.setText(statusText());
         TextView runLive=pages[3].findViewWithTag("live"); if (runLive!=null) runLive.setText(statusText());
         diagnostics.setText(service==null ? "Noch keine Diagnose" : service.diagnostics);
+        papywizardStatus.setText(service==null?"Papywizard-Sicherung wird vorbereitet.":service.papywizardStatus());
         if(tiltReference!=null) {
             DeviceState s=service==null?null:service.state;
             tiltReference.setText(s==null || !service.fresh()?"Zum Einstellen mit dem Gerät verbinden.":!s.tiltCalibrationKnown?"Tilt-Nullpunkt benötigt Firmware 2.3.5 oder neuer.":String.format(Locale.GERMANY,"Aktueller Tilt: %.3f°\nNullpunkt: %s",s.tilt/1000.0,s.tiltZeroOffset==0?"Werkreferenz":"im Gerät gespeichert"));
@@ -779,9 +802,12 @@ public final class MainActivity extends Activity {
         dialogIncidentId=id;
         PanoramaService owner=service;
         boolean paused=RunRecoveryPause.active(owner.state);
-        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(paused?"Aufnahme pausiert":"Aktion unterbrochen")
-            .setMessage(owner.incident.detail+(paused?"\n\nQuittieren erhält den pausierten Auftrag und löst keine Fahrt aus.":"\n\nQuittieren prüft den Gerätestand. Bei einem Gerätefehler kann ein unterbrochenes Raster im Reiter Lauf ab der betroffenen oder vorherigen Spalte wiederaufgenommen werden. Laden und Starten bleiben getrennt. Entwurf und gespeicherte Aufnahmen bleiben erhalten."))
-            .setCancelable(false).setPositiveButton("Quittieren",(dialog,which) -> safely(() -> owner.acknowledgeIncident(id)));
+        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(paused || owner.hasRecoveryCheckpoint()?"Aufnahme unterbrochen · Auftrag erhalten":"Aktion unterbrochen")
+            .setMessage(owner.incident.detail+(paused?"\n\nQuittieren erhält den pausierten Auftrag und löst keine Fahrt aus.":"\n\nQuittieren prüft den Gerätestand. Danach kann das Panorama ab einer vollständigen Spalte bzw. einem Tilt-Band wiederaufgenommen werden. Laden und Starten bleiben getrennt. Entwurf und gespeicherte Aufnahmen bleiben erhalten."))
+            .setCancelable(false).setPositiveButton("Quittieren & prüfen",(dialog,which) -> safely(() -> {
+                if(owner.hasRecoveryCheckpoint()) {recoveryOfferRun=owner.state.runId;savedPlot=null;savedPlotKey=null;selectPage(3);}
+                owner.acknowledgeIncident(id);
+            }));
         builder.setNeutralButton("NOT-STOP",(dialog,which) -> safely(owner::emergencyStop));
         incidentDialog=builder.create(); incidentDialog.setCanceledOnTouchOutside(false);
         // Not-Stop remains reachable without dismissing the required acknowledgement.

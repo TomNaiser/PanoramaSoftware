@@ -1,0 +1,15 @@
+.tools/
+.validation/
+scripts/__pycache__/
+/history/
+
+# Local repository administration and generated check reports.
+/repository-cleanup.md
+/repository-layout.md
+/publication-history.md
+/github-comparison.md
+/repository-audit.json
+/publication-pruefbericht.json
+/github-pruefbericht.json
+/pruefbericht.json
+/mermaid-pruefbericht.json

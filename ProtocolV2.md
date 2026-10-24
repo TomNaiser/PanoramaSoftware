@@ -98,7 +98,7 @@ Die Motion-Phasen sind 0=AUS, 1=FAHREN, 2=UMKEHR, 3=HALTEN; HALTEN umfasst auch 
 
 Ruheverlust während Trigger oder Belichtungswartezeit erzeugt `EXPOSURE_UNSTABLE`; das Bild wird nicht als abgeschlossen gezählt. Ausbleibender Abtriebsfortschritt, überschrittenes Umkehrbudget, fehlende Sensorantworten, zu lange Regelzykluslücken oder TX-Pufferüberlauf schalten Bewegung und Kamera ab. Reconnect und erneute Freigabe starten kein vorheriges Ziel automatisch.
 
-GET_DEBUG_LOG / GET_SUPPORT_BUNDLE übertragen den Ereignisring als Snapshot schrittweise und enden mit DEBUG_LOG_END. Der Client wartet auf diese Endmeldung, nicht nur auf ACK. UART-Ausgaben werden gepuffert; der synchrone Nano-R4-UART sendet höchstens acht Bytes pro Transportdurchlauf. Prüfstand und vorläufige Parameter: [Implementierungsbericht](PanoramaAndroid/POSITIONSREGELUNG-IMPLEMENTIERUNG-2026-10-05.md).
+GET_DEBUG_LOG / GET_SUPPORT_BUNDLE übertragen den Ereignisring als Snapshot schrittweise und enden mit DEBUG_LOG_END. Der Client wartet auf diese Endmeldung, nicht nur auf ACK. UART-Ausgaben werden gepuffert; der synchrone Nano-R4-UART sendet höchstens acht Bytes pro Transportdurchlauf. Prüfstand und vorläufige Parameter: [Implementierungsbericht (Zusammenfassung)](docs/validation/README.md#offene-nachweise).
 
 ### Autonome Timelapse
 

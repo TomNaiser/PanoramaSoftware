@@ -175,6 +175,7 @@ final class RestRecoveryChecks {
                 try {service.saveCaptureStability(.3,.3,.4,15);throw new AssertionError("Loaded plan ignored");}
                 catch(IllegalArgumentException expected) {check(fake.commands.size()==count,"Loaded job prevents changing capture guards");}
             });
+            fieldRecovery(context,store,fake,screen);
             migration(context,name+"-v2");
         } finally {
             Activity screen=activity;
@@ -189,6 +190,72 @@ final class RestRecoveryChecks {
         catch(Exception ex) { throw new RuntimeException(ex); }
     }
     private Activity currentActivity;
+    private void fieldRecovery(Context context,CaptureStore store,FakeLink fake,Activity screen) throws Exception {
+        stage="field sensor failure";
+        PanoramaPlan p=PanoramaPlan.parse("749879197|1|0|13162|571|75|4|2062|-3083|500|30|300|1700|1700|1|5000".split("\\|"));
+        main(() -> {
+            service.state=faultState(p,"FAULT_TILT_SENSOR",264);fake.commands.clear();fake.allowRecovery=true;fake.sensorsHealthy=false;
+            try {
+                store.accept("00:06:66:EE:18:E4",service.state,new P2Codec.Frame(1,"PLAN",p.fields()));
+                for(int i=0;i<264;i++) capture(store,p,i);
+            } catch(Exception ex) {throw new RuntimeException(ex);}
+            store.recordFault("00:06:66:EE:18:E4",133,service.state,statusFields(service.state));
+            check(store.checkpoint("00:06:66:EE:18:E4",p.runId)!=null,"Actual 264/300 sensor interruption retains its checkpoint");
+            service.incident.observe("00:06:66:EE:18:E4|FAULT_TILT_SENSOR",PanoramaService.faultDescription("FAULT_TILT_SENSOR"));service.incident.requiresStop=true;
+            render(screen);
+            android.view.View recovery=screen.findViewById(android.R.id.content).findViewWithTag("restRecovery");
+            check(recovery.getVisibility()==android.view.View.VISIBLE && !recovery.isEnabled(),"Recovery stays visible with an explicit acknowledgement gate");
+            AlertDialog incident;
+            try {incident=(AlertDialog)field(MainActivity.class,"incidentDialog").get(screen);}catch(Exception ex){throw new RuntimeException(ex);}
+            check(incident!=null && incident.isShowing(),"Sensor interruption opens acknowledgement dialog");
+            incident.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        });
+        await(() -> service.recovering);
+        Thread.sleep(1200);
+        main(() -> check(!service.canPrepareRest() && !fake.commands.contains("CLEAR_RUN") && !fake.commands.contains("LOAD_PLAN"),"Persistent invalid feedback never releases loading or movement"));
+        await(() -> !service.recovering);
+        main(() -> {fake.sensorsHealthy=true;service.recoverDevice();});
+        await(() -> service.canPrepareRest());
+        await(() -> latestDialog()!=null && latestDialog().isShowing());
+        screenshot(context,"raster-recovery-dialog.png");
+        main(() -> {
+            AlertDialog dialog=latestDialog();
+            check(dialog.getListView().isShown(),"Recovery choices are actually visible alongside the explanation");
+            check(dialog.getListView().getAdapter().getItem(0).toString().contains("67"),"Field recovery offers the exact failed column 67");
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        });
+        await(() -> !service.preparingRest && service.state.state.equals("PLAN_READY"));
+        main(() -> {
+            check(service.state.plan.total()==36 && service.state.plan.startPan==149254,"Field recovery loads the remaining nine original columns");
+            check(!fake.commands.contains("START") && !fake.commands.contains("RESUME"),"Acknowledgement and loading never start the drive or shutter");
+            String key=store.checkpoint("00:06:66:EE:18:E4",p.runId).key;
+            check(store.export(key,false).split("\n").length==265,"All 264 field photographs retained unchanged");
+            check(store.hasUncertainExposure(key),"Sensor interruption conservatively marks possible uncommitted camera file");
+            PanoramaPlan sphere=PanoramaPlan.parse("749879198|2|1|-60000|-30000|5|3|30000|30000|500|30|300|1700|1700|1|5000|60000|30000".split("\\|"));
+            service.state=faultState(sphere,"CAPTURE_NOT_STABLE",7);service.state.state="PAUSED";service.state.recoveryPauseSupported=true;
+            try {store.accept("00:06:66:EE:18:E4",service.state,new P2Codec.Frame(1,"PLAN",sphere.fields()));}catch(Exception ex){throw new RuntimeException(ex);}
+            store.recordFault("00:06:66:EE:18:E4",133,service.state,statusFields(service.state));
+            fake.commands.clear();check(service.canPrepareRest(),"Spherical paused acquisition offers whole-band recovery");
+            render(screen);screen.findViewById(android.R.id.content).findViewWithTag("restRecovery").performClick();
+        });
+        screenshot(context,"spherical-recovery-dialog.png");
+        main(() -> {
+            AlertDialog dialog=latestDialog();
+            check(dialog.getListView().isShown() && dialog.getListView().getAdapter().getItem(0).toString().contains("Tilt-Band 2"),"Spherical UI offers the actual complete band");
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        });
+        await(() -> !service.preparingRest && service.state.state.equals("PLAN_READY"));
+        main(() -> {
+            check(fake.commands.equals(Arrays.asList("STOP","CLEAR_RUN","LOAD_PLAN","GET_SUPPORT_BUNDLE")),"Spherical recovery confirms stop before replacing the recipe, never starts");
+            check(service.state.plan.mode==1 && service.state.plan.rows==2 && service.state.plan.startTilt==0,"Spherical recovery retains exact remaining bands");
+        });
+    }
+    private void screenshot(Context context,String name) throws Exception {
+        // A host can capture the visible screen without attaching UiAutomation
+        // to this custom instrumentation runner. Keep the inspection bounded.
+        Thread.sleep(300);Bundle status=new Bundle();status.putString("stream","\nUI_REVIEW "+name+"\n");
+        runner.sendStatus(0,status);Thread.sleep(1500);
+    }
     private void migration(Context context,String name) throws Exception {
         try {
             CaptureStore old=new CaptureStore(context,name);
@@ -248,7 +315,7 @@ final class RestRecoveryChecks {
         throw new AssertionError("Rest preparation timed out: "+stage+"; "+service.state.state+"; "+service.message);
     }
     private final class FakeLink implements DeviceLink {
-        final List<String> commands=new ArrayList<>();boolean rejectClear,rejectLoad;
+        final List<String> commands=new ArrayList<>();boolean rejectClear,rejectLoad,allowRecovery,sensorsHealthy=true;
         void heartbeat() { fresh();ui.postDelayed(this::heartbeat,200); }
         public CompletableFuture<V2Client.Result> send(String type,String... f) {
             commands.add(type);
@@ -258,7 +325,8 @@ final class RestRecoveryChecks {
             } else if(type.equals("LOAD_PLAN")) {
                 if(rejectLoad) return CompletableFuture.completedFuture(new V2Client.Result(false,"REJECTED"));
                 service.state.plan=PanoramaPlan.parse(f);service.state.runId=service.state.plan.runId;service.state.state="PLAN_READY";fresh();
-            } else if(type.equals("GET_SUPPORT_BUNDLE")) fresh();
+            } else if(type.equals("GET_SUPPORT_BUNDLE") || type.equals("GET_STATUS")) fresh();
+            else if(type.equals("STOP") && allowRecovery) {service.state.state="STOPPED";fresh();}
             else if(type.equals("PAUSE")) { service.state.state="PAUSED";fresh(); }
             else if(type.equals("RETRY_COLUMN")) {
                 check(Long.parseLong(f[0])==service.state.runId,"Retry stays in original run");
@@ -274,7 +342,11 @@ final class RestRecoveryChecks {
             else throw new AssertionError("Forbidden command: "+type);
             return CompletableFuture.completedFuture(new V2Client.Result(true,"OK"));
         }
-        public CompletableFuture<V2Client.Result> emergencyStop(String run) { throw new AssertionError("Unexpected ESTOP"); }
+        public CompletableFuture<V2Client.Result> emergencyStop(String run) {
+            if(!allowRecovery) throw new AssertionError("Unexpected ESTOP");
+            commands.add("ESTOP");service.state.state=sensorsHealthy?"STOPPED":"FAULT";fresh();
+            return CompletableFuture.completedFuture(new V2Client.Result(true,"STOPPED"));
+        }
         public void fail(String reason) { throw new AssertionError(reason); }
         public void close() { ui.removeCallbacksAndMessages(null); }
     }
