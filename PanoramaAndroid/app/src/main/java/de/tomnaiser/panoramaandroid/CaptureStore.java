@@ -138,6 +138,8 @@ public final class CaptureStore extends SQLiteOpenHelper {
         String[] f = frame.fields;
         if (!(frame.type.equals("PLAN") || frame.type.equals("RUN_SEGMENT") || frame.type.equals("STATUS")
                 || frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") || frame.type.equals("CAPTURE_WARNING"))) return false;
+        // Empty recipes from older stopped firmware contain no capture history.
+        if(frame.type.equals("PLAN") && f.length==16 && f[0].equals("0")) return false;
         try {
             if(frame.type.equals("CAPTURE_WARNING")) {
                 CaptureWarning warning=CaptureWarning.parse(f);

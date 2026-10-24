@@ -292,7 +292,7 @@ public final class PanoramaService extends Service {
     }
     private void pauseForQuality() {
         CaptureQualityGuard.Issue issue=pendingQuality;
-        if(issue==null || busy || recovering || preparingRest || abortingPlan || !fresh() || incident.active) return;
+        if(issue==null || busy || uncertain || recovering || recoveryRequested || preparingRest || abortingPlan || !fresh() || incident.needsAcknowledgement()) return;
         if(issue.run!=state.runId || state.state.equals("FAULT") || state.state.equals("STOPPED") || state.state.equals("COMPLETED")) { pendingQuality=null;return; }
         if(state.state.equals("PAUSED")) {
             pendingQuality=null;raiseIncident("QUALITY_DEVIATION",issue.describe()+"Auftrag ist pausiert. Eine Spalte zurückgehen und bewusst fortsetzen.",false);return;
@@ -301,7 +301,7 @@ public final class PanoramaService extends Service {
         pendingQuality=null;int id=generation;
         execute("PAUSE",new String[]{""+issue.run},false,true).whenComplete((reply,error) -> {
             if(generation!=id || state.runId!=issue.run) return;
-            if(state.state.equals("FAULT") || incident.active) { support.append("QUALITY_PAUSE superseded by device incident");return; }
+            if(state.state.equals("FAULT") || incident.needsAcknowledgement()) { support.append("QUALITY_PAUSE superseded by device incident");return; }
             String detail=issue.describe()+(error==null && reply.accepted ?
                 "Pause nach dem aktuellen Bild angefordert. Danach eine Spalte zurückgehen und bewusst fortsetzen; die betroffene Aufnahme prüfen.":
                 "Pause nicht bestätigt. Aktuellen Gerätestand prüfen und gegebenenfalls stoppen.");
@@ -475,7 +475,7 @@ public final class PanoramaService extends Service {
     private void raiseIncident(String code,String detail,boolean requiresStop) {
         String key=(device==null?"":device.getAddress())+"|"+code;
         if(incident.active && incident.key.equals(key) && incident.detail.equals(detail)) return;
-        if(incident.active) { incident.detail=detail; incident.requiresStop|=requiresStop; }
+        if(incident.active && incident.key.equals(key)) { incident.detail=detail; incident.requiresStop|=requiresStop; }
         else { incident.observe(key,detail); incident.requiresStop=requiresStop; }
         saveIncident(); support.append("INCIDENT "+incident.id+" "+key+" "+detail);
     }

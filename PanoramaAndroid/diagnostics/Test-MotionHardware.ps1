@@ -1,6 +1,7 @@
 param(
     [string]$Port = 'COM4',
-    [ValidateSet('Monitor','Move','Jog','Stop','ClearTestStop','Pulse','Cruise','CaptureSteps')][string]$Action = 'Monitor',
+    [ValidateSet('Monitor','Move','Jog','Stop','ClearTestStop','ClearStoppedAcquisition','Pulse','Cruise','CaptureSteps')][string]$Action = 'Monitor',
+    [long]$ExpectedStoppedRunId = 0,
     [ValidateSet(-1,1)][int]$JogDirection = -1,
     [ValidateRange(500,15000)][int]$JogHoldMs = 2000,
     [ValidateRange(0,10)][double]$JogSpeedDps = 0,
@@ -188,6 +189,18 @@ try {
     while ((!$state.status -or !$state.capabilities -or !$state.firmware -or ($Action -in @('Pulse','Cruise') -and !$state.benchCapabilities)) -and $timer.ElapsedMilliseconds -lt $deadline) { Read-Frames; Start-Sleep -Milliseconds 10 }
     if (!$state.status -or !$state.capabilities -or !$state.firmware) { throw 'Firmware, Grenzen oder Status fehlen.' }
     if ($Action -eq 'Stop') { $null = Wait-Response (Send-Frame 'ESTOP' @($state.status[0],'PC_TEST_STOP')) }
+    if ($Action -eq 'ClearStoppedAcquisition') {
+        if($ExpectedStoppedRunId -le 0 -or $state.status[0] -ne "$ExpectedStoppedRunId" -or
+           $state.status[1] -ne 'STOPPED' -or $state.status[13] -ne 'ANDROID_ESTOP' -or
+           $timer.ElapsedMilliseconds-$state.latestStatus -gt 1000) {
+            throw 'Nur den explizit benannten, frisch bestaetigten Android-Testhalt entfernen.'
+        }
+        $null = Wait-Response (Send-Frame 'CLEAR_RUN')
+        $null = Wait-Response (Send-Frame 'GET_STATUS')
+        if($state.status[0] -ne '0' -or $state.status[1] -ne 'IDLE') {
+            throw 'Leerer Bereitschaftszustand nach Aufnahme-Testhalt nicht bestaetigt.'
+        }
+    }
     if ($Action -eq 'ClearTestStop') {
         if($state.status[0] -ne '0' -or $state.status[1] -ne 'STOPPED' -or
            ($state.status[13] -notin @('PC_TEST_END','PC_TEST_STOP') -and

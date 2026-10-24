@@ -53,7 +53,13 @@ public final class DeviceState {
                 if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
                     throw new IllegalArgumentException("Navigationsfreigabe ungültig");
                 inactiveNavigation=f[0].equals("1"); break;
-            case "PLAN": plan = PanoramaPlan.parse(f); break;
+            case "PLAN":
+                // Older firmware publishes an empty recipe after ESTOP without a run.
+                if(f.length==16 && f[0].equals("0") && f[1].equals("1") && f[2].equals("0")) {
+                    for(int i=3;i<f.length;i++) Integer.parseInt(f[i]);
+                    plan=null;
+                } else plan=PanoramaPlan.parse(f);
+                break;
             case "MOTION_CAPABILITIES":
                 if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
                     throw new IllegalArgumentException("Bewegungsprofil-Freigabe ungültig");

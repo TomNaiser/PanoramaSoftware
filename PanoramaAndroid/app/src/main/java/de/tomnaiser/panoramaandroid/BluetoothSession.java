@@ -61,8 +61,11 @@ public final class BluetoothSession implements DeviceLink {
             java.io.OutputStream output = current.getOutputStream();
             synchronized (this) {
                 if (closed) return;
-                client = new V2Client(wire -> {
-                    output.write(wire.getBytes(StandardCharsets.US_ASCII)); output.flush();
+                client = new V2Client(new V2Client.Transport() {
+                    @Override public void write(String wire) throws IOException {
+                        output.write(wire.getBytes(StandardCharsets.US_ASCII)); output.flush();
+                    }
+                    @Override public void abort() { fail("Bluetooth-Schreiben fehlgeschlagen; Verbindung wird neu aufgebaut"); }
                 }, worker, new SecureRandom().nextInt(65535) + 1, 750, 3);
             }
             client.send("HELLO", "PanoramaAndroid").whenComplete((result, error) -> {

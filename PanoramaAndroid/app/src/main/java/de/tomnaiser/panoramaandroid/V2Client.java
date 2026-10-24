@@ -4,10 +4,16 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /** One pending request. Emergency stop replaces it before any further retry can be sent. */
 public final class V2Client implements AutoCloseable {
-    public interface Transport { void write(String frame) throws IOException; }
+    public interface Transport {
+        void write(String frame) throws IOException;
+        /** Must release a blocked write by closing this transport, never a replacement session. */
+        default void abort() { }
+    }
     public static final class Result {
         public final boolean accepted;
         public final String code;
@@ -21,6 +27,11 @@ public final class V2Client implements AutoCloseable {
     private final ScheduledExecutorService worker;
     private final long timeoutMs;
     private final int retries;
+    // A blocked RFCOMM writer cannot run its own deadline on the serial worker.
+    private final ScheduledThreadPoolExecutor watchdog = new ScheduledThreadPoolExecutor(1, task -> {
+        Thread thread = new Thread(task, "Panorama-WriteDeadline"); thread.setDaemon(true); return thread;
+    });
+    private Object activeWrite;
     private int sequence;
     private Pending pending;
     private boolean closed, uncertain;
@@ -31,6 +42,7 @@ public final class V2Client implements AutoCloseable {
             throw new IllegalArgumentException("V2-Konfiguration");
         this.transport = transport; this.worker = worker; this.sequence = firstSequence;
         this.timeoutMs = timeoutMs; this.retries = retries;
+        watchdog.setRemoveOnCancelPolicy(true);
     }
 
     public synchronized CompletableFuture<Result> send(String type, String... fields) {
@@ -61,23 +73,57 @@ public final class V2Client implements AutoCloseable {
         return request.completion;
     }
 
-    private synchronized void transmit(Pending request) {
-        if (closed || pending != request) return;
-        if (request.attempts > retries) {
-            uncertain = !CommandEffects.readOnly(request.type);
-            pending = null;
-            request.completion.completeExceptionally(new IOException(
-                "Keine Bestätigung für " + request.type + (uncertain?"; Wirkung unklar. Gerätestand prüfen.":"; Abfrage unvollständig.")));
-            return;
+    private void transmit(Pending request) {
+        synchronized (this) {
+            if (closed || pending != request) return;
+            if (request.attempts > retries) {
+                uncertain = !CommandEffects.readOnly(request.type);
+                pending = null;
+                request.completion.completeExceptionally(new IOException(
+                    "Keine Bestätigung für " + request.type + (uncertain?"; Wirkung unklar. Gerätestand prüfen.":"; Abfrage unvollständig.")));
+                return;
+            }
+            request.attempts++;
         }
-        request.attempts++;
+        if (write(request.wire, request)) {
+            synchronized (this) {
+                if (!closed && pending == request)
+                    worker.schedule(() -> transmit(request), timeoutMs, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    private boolean write(String wire, Pending request) {
+        Object token = new Object();
+        ScheduledFuture<?> deadline;
+        synchronized (this) {
+            if (closed || (request != null && pending != request)) return false;
+            activeWrite = token;
+            deadline = watchdog.schedule(() -> failWrite(token,
+                new IOException("Bluetooth-Schreibzeit überschritten; Verbindung neu aufbauen")), timeoutMs, TimeUnit.MILLISECONDS);
+        }
         try {
-            transport.write(request.wire);
-            worker.schedule(() -> transmit(request), timeoutMs, TimeUnit.MILLISECONDS);
+            // Never hold the client monitor while invoking blocking platform I/O.
+            transport.write(wire);
+            synchronized (this) { return !closed && activeWrite == token; }
         } catch (IOException ex) {
-            uncertain = !CommandEffects.readOnly(request.type); pending = null;
-            request.completion.completeExceptionally(ex);
+            failWrite(token, ex); return false;
+        } finally {
+            synchronized (this) { if (activeWrite == token) activeWrite = null; }
+            deadline.cancel(false);
         }
+    }
+
+    private void failWrite(Object token, IOException error) {
+        Pending old;
+        synchronized (this) {
+            if (closed || activeWrite != token) return;
+            closed = true; activeWrite = null;
+            old = pending; pending = null;
+        }
+        watchdog.shutdown();
+        if (old != null) old.completion.completeExceptionally(error);
+        transport.abort();
     }
 
     public synchronized void receive(P2Codec.Frame frame) {
@@ -94,12 +140,7 @@ public final class V2Client implements AutoCloseable {
     public synchronized void heartbeat(String runId) {
         if (closed) return;
         String wire = P2Codec.encode(nextSequence(), "HEARTBEAT", runId);
-        worker.execute(() -> {
-            synchronized (V2Client.this) {
-                if (closed) return;
-                try { transport.write(wire); } catch (IOException ex) { close(); }
-            }
-        });
+        worker.execute(() -> write(wire, null));
     }
 
     public synchronized boolean busy() { return pending != null; }
@@ -112,7 +153,11 @@ public final class V2Client implements AutoCloseable {
         Pending old = pending; pending = null;
         if (old != null) old.completion.completeExceptionally(new IOException(reason));
     }
-    @Override public synchronized void close() { closed = true; cancelPending("Verbindung beendet; Befehl nicht wiederholen"); }
+    @Override public synchronized void close() {
+        closed = true; activeWrite = null;
+        watchdog.shutdownNow();
+        cancelPending("Verbindung beendet; Befehl nicht wiederholen");
+    }
     private static final class Pending {
         final int sequence; final String wire, type;
         final CompletableFuture<Result> completion = new CompletableFuture<>();

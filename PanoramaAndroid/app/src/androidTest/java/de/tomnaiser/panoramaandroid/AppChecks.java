@@ -24,8 +24,11 @@ public final class AppChecks extends Instrumentation {
     private String expectedFirmware="2.4.41";
     private boolean restRecoveryCheck;
     private boolean stabilityHardwareCheck;
+    private Bundle enduranceArguments;
+    private boolean acknowledgedIncidentCheck;
+    private boolean configureMotorStress;
     @Override public void callActivityOnCreate(android.app.Activity activity,Bundle state) {
-        if(restRecoveryCheck) {
+        if(restRecoveryCheck || enduranceArguments!=null) {
             activity.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if(android.os.Build.VERSION.SDK_INT>=27) { activity.setShowWhenLocked(true);activity.setTurnScreenOn(true); }
         }
@@ -33,6 +36,9 @@ public final class AppChecks extends Instrumentation {
     }
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments); connectionCheck=arguments!=null && "true".equals(arguments.getString("connectionCheck"));
+        acknowledgedIncidentCheck=arguments!=null && "true".equals(arguments.getString("acknowledgedIncidentCheck"));
+        configureMotorStress=arguments!=null && "true".equals(arguments.getString("configureMotorStress"));
+        if(arguments!=null && "true".equals(arguments.getString("acquisitionEndurance"))) enduranceArguments=new Bundle(arguments);
         restRecoveryCheck=arguments!=null && "true".equals(arguments.getString("restRecoveryCheck"));
         stabilityHardwareCheck=arguments!=null && "true".equals(arguments.getString("stabilityHardwareCheck"));
         abortPlanCheck=arguments!=null && "true".equals(arguments.getString("abortPlanCheck"));
@@ -61,6 +67,24 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(configureMotorStress) {
+                boolean previous=context.getSharedPreferences("settings",Context.MODE_PRIVATE).getBoolean("qualityPause",true);
+                if(!context.getSharedPreferences("settings",Context.MODE_PRIVATE).edit().putBoolean("qualityPause",false).commit()) throw new AssertionError("Settings not saved");
+                report.putString("stream","\nPASS: Optional 1-degree image-quality pause disabled for requested motor stress test; previous="+previous+". No hardware connection.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
+            if(acknowledgedIncidentCheck) {
+                int checks=new AcknowledgedIncidentChecks().run(this);
+                report.putString("stream","\nPASS: "+checks+" acknowledged-incident checks on production service with fake transport; no hardware.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
+            if(enduranceArguments!=null) {
+                new AcquisitionEnduranceChecks().run(this,enduranceArguments,expectedFirmware);
+                report.putString("stream",enduranceArguments.containsKey("stopAfterCaptures")?
+                    "\nPASS: Bounded real acquisition diagnostic reached its explicit partial limit; inspect saved summary.\n":
+                    "\nPASS: Real acquisition endurance completed through production service and visible Run page.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
             if(stabilityHardwareCheck) {
                 int checks=new CaptureStabilityHardwareChecks().run(this,expectedFirmware);
                 report.putString("stream","\nPASS: "+checks+" real Bluetooth stability-setting checks; saved/read/restored, no movement or shutter commands.\n");
