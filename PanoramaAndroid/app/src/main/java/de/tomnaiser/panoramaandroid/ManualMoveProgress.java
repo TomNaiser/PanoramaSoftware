@@ -8,7 +8,7 @@ final class ManualMoveProgress {
         this.baseline = baseline; this.pan = pan; this.tilt = tilt;
     }
     boolean accept(String[] fields) {
-        if (fields.length < 14) throw new IllegalArgumentException("Debug-Ereignis unvollständig");
+        if (fields.length < 14) throw new IllegalArgumentException(UiText.INCOMPLETE_DEBUG_EVENT.text());
         int seq = Integer.parseInt(fields[0]), code = Integer.parseInt(fields[2]);
         int distance = (seq - baseline) & 65535;
         if (seq < 1 || seq > 65535 || distance == 0 || distance >= 32768) return false;

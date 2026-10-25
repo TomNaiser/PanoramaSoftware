@@ -5,7 +5,7 @@ final class PlanAbort {
     private String stage="START";
     private final boolean stopFirst;
     PlanAbort(String state) {
-        if(!allowed(state)) throw new IllegalArgumentException("Kein abbrechbarer Panoramaauftrag");
+        if(!allowed(state)) throw new IllegalArgumentException(UiText.NO_PANORAMA_JOB_TO_ABORT.text());
         stopFirst=!(state.equals("STOPPED") || state.equals("COMPLETED") || state.equals("FAULT"));
     }
     static boolean allowed(String state) {

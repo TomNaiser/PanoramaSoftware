@@ -9,7 +9,7 @@ Steuerung eines motorisierten Pan-/Tilt-Panoramakopfes: Arduino-Firmware, Androi
 | Komponente | Dokumentierter Quellstand am 24.10.2026 |
 |---|---|
 | Firmware PanoDuinoControl | 2.4.75, regulärer Nano-R4-Bluetooth-Build |
-| Android PanoramaControl | 0.6.25, VersionCode 38 |
+| Android PanoramaControl | 0.6.26, VersionCode 39 |
 | Windows PanoramaControl | 27.4.4, WinForms / .NET Framework 4.8 |
 | Drahtprotokoll | V2; Rasterrezept Version 1, sphärisches Rezept Version 2 |
 

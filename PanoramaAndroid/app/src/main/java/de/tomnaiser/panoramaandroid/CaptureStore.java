@@ -29,7 +29,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
     synchronized LivePapywizard.Snapshot liveSnapshot(String selected) {
         String root=linkedKeys(selected).get(0);
         try(Cursor c=getReadableDatabase().rawQuery("SELECT run_id,stamp FROM runs WHERE id=?",new String[]{root})) {
-            if(!c.moveToFirst()) throw new IllegalArgumentException("Gespeicherter Lauf fehlt");
+            if(!c.moveToFirst()) throw new IllegalArgumentException(UiText.SAVED_RUN_MISSING.text());
             String filename="Panorama-"+c.getString(1).substring(0,10)+"-"+c.getString(0)+"-"+root+".xml";
             return new LivePapywizard.Snapshot(filename,exportLinked(root,true));
         }
@@ -45,7 +45,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE capture_warnings (run TEXT,ordinal INTEGER,flags INTEGER NOT NULL,PRIMARY KEY(run,ordinal))");
     }
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if(oldVersion<1 || oldVersion>3 || newVersion!=4) throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion<1 || oldVersion>3 || newVersion!=4) throw new IllegalStateException(UiText.UNKNOWN_DATABASE_VERSION.text());
         if(oldVersion<2) createWarnings(db);
         if(oldVersion<3) createRecovery(db);
         if(oldVersion==3) db.execSQL("ALTER TABLE run_faults ADD COLUMN tilt_zero INTEGER");
@@ -98,9 +98,9 @@ public final class CaptureStore extends SQLiteOpenHelper {
         try {
             if((startColumn!=source.raster.startColumn(false) && startColumn!=source.raster.startColumn(true)) ||
                 !source.raster.remaining(rest.runId,startColumn<source.raster.startColumn(false)).sameRecipe(rest))
-                throw new IllegalArgumentException("Restauftrag passt nicht zum gespeicherten Raster");
+                throw new IllegalArgumentException(UiText.RECOVERY_JOB_DOES_NOT_MATCH_THE_SAVED_GRID.text());
             try(Cursor c=db.rawQuery("SELECT id FROM runs WHERE device=? AND run_id=?",new String[]{source.device,""+rest.runId})) {
-                if(c.moveToFirst()) throw new IllegalArgumentException("Laufnummer bereits gespeichert");
+                if(c.moveToFirst()) throw new IllegalArgumentException(UiText.RUN_NUMBER_ALREADY_SAVED.text());
             }
             String child=newGroup(source.device,rest.runId);
             ContentValues recipe=new ContentValues();recipe.put("plan",String.join("|",rest.fields()));updateRun(child,recipe);
@@ -118,7 +118,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
         List<String> result=new ArrayList<>();collectChildren(root,result,new HashSet<>());return result;
     }
     private void collectChildren(String key,List<String> result,Set<String> seen) {
-        if(!seen.add(key)) throw new IllegalStateException("Zyklische Laufverknüpfung");
+        if(!seen.add(key)) throw new IllegalStateException(UiText.CYCLIC_RUN_LINK.text());
         result.add(key);
         List<String> children=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery("SELECT l.child FROM run_links l JOIN runs r ON r.id=l.child WHERE l.parent=? ORDER BY r.stamp,r.id",new String[]{key})) {
@@ -201,7 +201,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
                 changed=insert(key, identity, frame.type + "|" + String.join("|", f), DeviceState.unsigned(manual ? f[3] : f[2]), manual, true);
             }
             if(changed) exportChanged.accept(key);
-        } catch (RuntimeException | JSONException ex) { throw new IOException("Aufnahmedaten: " + ex.getMessage(), ex); }
+        } catch (RuntimeException | JSONException ex) { throw new IOException(UiText.CAPTURE_DATA.text() + ex.getMessage(), ex); }
         return false;
     }
     private void updateRun(String key, ContentValues values) { getWritableDatabase().update("runs", values, "id=?", new String[]{key}); }
@@ -262,7 +262,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
     public synchronized List<Run> runs() {
         List<Run> result = new ArrayList<>();
         try (Cursor c = getReadableDatabase().rawQuery("SELECT id,run_id,stamp,device,completed,(SELECT count(*) FROM captures WHERE run=runs.id AND manual=0) FROM runs WHERE id IN (SELECT run FROM captures) ORDER BY stamp DESC", null)) {
-            while (c.moveToNext()) result.add(new Run(c.getString(0), "Lauf " + c.getString(1) + " · " + c.getString(2) + " · " + c.getString(3) + " · Raster " + c.getLong(5) + "/" + c.getLong(4)));
+            while (c.moveToNext()) result.add(new Run(c.getString(0), UiText.RUN.text() + c.getString(1) + " · " + c.getString(2) + " · " + c.getString(3) + UiText.GRID.text() + c.getLong(5) + "/" + c.getLong(4)));
         }
         return result;
     }
@@ -286,7 +286,7 @@ public final class CaptureStore extends SQLiteOpenHelper {
     synchronized PlotSnapshot plotSnapshot(String key) {
         PanoramaPlan plan=null; RunPlotModel model=new RunPlotModel();String device;
         try(Cursor c=getReadableDatabase().rawQuery("SELECT run_id,plan,device FROM runs WHERE id=?",new String[]{key})) {
-            if(!c.moveToFirst()) throw new IllegalArgumentException("Gespeicherter Lauf fehlt");
+            if(!c.moveToFirst()) throw new IllegalArgumentException(UiText.SAVED_RUN_MISSING.text());
             model.runId=Long.parseLong(c.getString(0));
             device=c.getString(2);
             if(!c.isNull(1)) plan=PanoramaPlan.parse(c.getString(1).split("\\|",-1));

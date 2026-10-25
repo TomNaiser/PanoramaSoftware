@@ -33,8 +33,8 @@ public final class BluetoothSession implements DeviceLink {
     private volatile String failure;
     private volatile String runId = "0";
     private final Runnable deadline = () -> fail(transportConnected
-        ? "Bluetooth verbunden, aber keine V2-Antwort vom Panoramagerät"
-        : "Zeitüberschreitung beim Bluetooth-Aufbau");
+        ? UiText.BLUETOOTH_CONNECTED_BUT_NO_V2_RESPONSE_FROM_THE.text()
+        : UiText.BLUETOOTH_CONNECTION_TIMED_OUT.text());
 
     public BluetoothSession(Listener listener) { this(listener, true); }
     BluetoothSession(Listener listener, boolean secure) { this.listener = listener; this.secure = secure; }
@@ -43,7 +43,7 @@ public final class BluetoothSession implements DeviceLink {
         new Thread(() -> run(device), "Panorama-Bluetooth").start();
     }
     private void run(BluetoothDevice device) {
-        String reason = "Bluetooth-Verbindung beendet";
+        String reason = UiText.BLUETOOTH_CONNECTION_ENDED.text();
         try {
             BluetoothSocket current = secure ? device.createRfcommSocketToServiceRecord(SPP)
                 : device.createInsecureRfcommSocketToServiceRecord(SPP);
@@ -65,13 +65,13 @@ public final class BluetoothSession implements DeviceLink {
                     @Override public void write(String wire) throws IOException {
                         output.write(wire.getBytes(StandardCharsets.US_ASCII)); output.flush();
                     }
-                    @Override public void abort() { fail("Bluetooth-Schreiben fehlgeschlagen; Verbindung wird neu aufgebaut"); }
+                    @Override public void abort() { fail(UiText.BLUETOOTH_WRITE_FAILED_RECONNECTING.text()); }
                 }, worker, new SecureRandom().nextInt(65535) + 1, 750, 3);
             }
             client.send("HELLO", "PanoramaAndroid").whenComplete((result, error) -> {
                 if (closed) return;
                 if (error != null || !result.accepted || !result.code.equals("HELLO_ACK")) {
-                    fail("V2-Handschlag fehlgeschlagen"); return;
+                    fail(UiText.V2_HANDSHAKE_FAILED.text()); return;
                 }
                 protocolReady = true;
                 ui.post(() -> {
@@ -85,9 +85,9 @@ public final class BluetoothSession implements DeviceLink {
             });
             readFrames(current.getInputStream());
         } catch (IOException | SecurityException ex) {
-            if (ex instanceof SecurityException) reason = "Bluetooth-Berechtigung fehlt";
-            else if (!transportConnected) reason = "Gerät nicht erreichbar. Stromversorgung, Reichweite und PC-Verbindung prüfen.";
-            else reason = "Bluetooth-Verbindung abgebrochen";
+            if (ex instanceof SecurityException) reason = UiText.BLUETOOTH_PERMISSION_MISSING.text();
+            else if (!transportConnected) reason = UiText.DEVICE_UNREACHABLE_CHECK_POWER_RANGE_AND_THE_PC.text();
+            else reason = UiText.BLUETOOTH_CONNECTION_INTERRUPTED.text();
         } finally {
             close();
             String finalReason = failure == null ? reason : failure;
@@ -119,7 +119,7 @@ public final class BluetoothSession implements DeviceLink {
     }
     private static CompletableFuture<V2Client.Result> unavailable() {
         CompletableFuture<V2Client.Result> result = new CompletableFuture<>();
-        result.completeExceptionally(new IOException("Keine V2-Verbindung")); return result;
+        result.completeExceptionally(new IOException(UiText.NO_V2_CONNECTION.text())); return result;
     }
     public CompletableFuture<V2Client.Result> stopJog(String token) {
         V2Client active=client;

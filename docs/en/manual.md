@@ -2,7 +2,9 @@
 
 [Overview and features](../../README.md) · [Detailed German handbook](../README.md)
 
-This guide covers firmware **2.4.75**, Android **0.6.25** and Windows **27.4.4**. Use matching V2 versions; the old projects are not a description of the current workflow.
+This guide covers firmware **2.4.75**, Android **0.6.26** and Windows **27.4.4**. Use matching V2 versions; the old projects are not a description of the current workflow.
+
+On Android, select **Extras → Sprache / Language → English** for the English interface. The app remembers this choice after reopening. You can switch back to **Deutsch** in the same menu. Switching language retains the connection, device job, form values and chart view. Historical logs and error details saved before 0.6.26 retain their original language.
 
 ## What you need
 

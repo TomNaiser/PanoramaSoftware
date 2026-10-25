@@ -6,7 +6,7 @@ final class DeviceSession {
     private boolean received;
     DeviceSession(long previousBootId) { bootId=previousBootId; }
     boolean accept(long nextBootId) {
-        if(nextBootId<0 || nextBootId>4294967295L) throw new IllegalArgumentException("Ungültige Gerätesitzung");
+        if(nextBootId<0 || nextBootId>4294967295L) throw new IllegalArgumentException(UiText.INVALID_DEVICE_SESSION.text());
         boolean reset=(nextBootId==0 && !received) || (bootId>=0 && bootId!=nextBootId);
         bootId=nextBootId; received=true; return reset;
     }

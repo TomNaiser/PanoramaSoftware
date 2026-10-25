@@ -7,7 +7,7 @@ final class JogHold {
     long token;
     boolean begin(int axis,int direction,long now) {
         if(held || stopping) return false;
-        if((axis!=0 && axis!=1) || (direction!=1 && direction!=-1)) throw new IllegalArgumentException("Fahrtrichtung");
+        if((axis!=0 && axis!=1) || (direction!=1 && direction!=-1)) throw new IllegalArgumentException(UiText.MOVEMENT_DIRECTION.text());
         token=Math.max(token+1,now&0x7fffffffL);
         this.axis=axis; this.direction=direction; held=true; sequence=0; return true;
     }

@@ -7,7 +7,7 @@ final class ManualActionProgress {
     private final String kind;
     private final long baseline;
     ManualActionProgress(int commandSequence,String kind,int pan,int tilt,long baseline) {
-        if(commandSequence<1 || commandSequence>65535) throw new IllegalArgumentException("Fahrbestätigung ohne Befehlsnummer");
+        if(commandSequence<1 || commandSequence>65535) throw new IllegalArgumentException(UiText.MOVEMENT_ACKNOWLEDGEMENT_WITHOUT_COMMAND_NUMBER.text());
         this.commandSequence=commandSequence; this.kind=kind; this.pan=pan; this.tilt=tilt; this.baseline=baseline;
     }
     Outcome accept(ManualActionStatus status,long version) {

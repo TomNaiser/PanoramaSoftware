@@ -11,7 +11,7 @@ final class CaptureQualityGuard {
             tiltError=Math.abs(Long.parseLong(f[10])-Long.parseLong(f[8]));
         }
         String describe() {
-            return String.format(java.util.Locale.GERMANY,"Aufnahme %d: Zielabweichung Pan %.3f° / Tilt %.3f°. ",ordinal,panError/1000.0,tiltError/1000.0);
+            return String.format(UiText.locale(),UiText.CAPTURE_D_TARGET_DEVIATION_PAN_3F_TILT_3F.text(),ordinal,panError/1000.0,tiltError/1000.0);
         }
     }
     Issue accept(String[] f) {

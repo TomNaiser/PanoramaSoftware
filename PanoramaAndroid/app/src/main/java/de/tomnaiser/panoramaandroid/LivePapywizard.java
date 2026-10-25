@@ -31,7 +31,7 @@ final class LivePapywizard implements AutoCloseable {
     private final Set<String> pending=new LinkedHashSet<>();
     private final Map<String,String> failures=new LinkedHashMap<>(); // writer thread only
     private boolean scheduled,closed;
-    private volatile String status="Automatische Papywizard-Sicherung wird vorbereitet.";
+    private volatile UiText.Message status=UiText.capture(UiText.PREPARING_AUTOMATIC_PAPYWIZARD_BACKUP::text);
 
     LivePapywizard(Source source,File directory,Listener listener) {
         this(source,directory,LivePapywizard::atomicPublish,listener);
@@ -39,7 +39,7 @@ final class LivePapywizard implements AutoCloseable {
     LivePapywizard(Source source,File directory,Publisher publisher,Listener listener) {
         this.source=source;this.directory=directory;this.publisher=publisher;this.listener=listener;
     }
-    String status() { return status+"\n"+directory.getAbsolutePath(); }
+    String status() { return status.text()+"\n"+directory.getAbsolutePath(); }
     /** Rebuild every logical panorama, including empty plans and recovered partial runs. */
     synchronized void rebuild() {
         if(closed) return;
@@ -70,17 +70,17 @@ final class LivePapywizard implements AutoCloseable {
                 failureKey=snapshot.filename;
                 publisher.publish(directory,snapshot);
                 failures.remove(key);failures.remove(snapshot.filename);
-                status=failures.isEmpty()?"Papywizard gesichert: "+snapshot.filename:failureSummary();
+                status=UiText.capture(() -> failures.isEmpty()?UiText.PAPYWIZARD_SAVED.text()+snapshot.filename:failureSummary());
                 listener.changed(status());
             } catch(IOException | RuntimeException ex) { failed(failureKey,ex); }
         }
     }
     private String failureSummary() {
-        return "Papywizard-Sicherung fehlgeschlagen ("+failures.size()+"): "+failures.values().iterator().next()+
-            ". Aufnahmedaten bleiben in der Datenbank. Unter Extras erneut sichern.";
+        return UiText.PAPYWIZARD_BACKUP_FAILED.text()+failures.size()+"): "+failures.values().iterator().next()+
+            UiText.CAPTURE_DATA_REMAINS_IN_THE_DATABASE_RETRY_BACKUP.text();
     }
     private void failed(String key,Exception ex) {
-        failures.put(key,ex.getMessage());status=failureSummary();
+        failures.put(key,ex.getMessage());status=UiText.capture(this::failureSummary);
         listener.changed(status());
     }
     static void atomicPublish(File directory,Snapshot snapshot) throws IOException {

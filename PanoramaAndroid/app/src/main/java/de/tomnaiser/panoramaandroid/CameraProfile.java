@@ -7,7 +7,7 @@ public final class CameraProfile {
     public CameraProfile(String name, double focal, double width, double height, int settle, int exposure) {
         if (name.trim().isEmpty() || !Double.isFinite(focal) || !Double.isFinite(width) || !Double.isFinite(height)
                 || focal <= 0 || width <= 0 || height <= 0 || settle < 0 || settle > 600000
-                || exposure < 0 || exposure > 3600000) throw new IllegalArgumentException("Ungültiges Kameraprofil");
+                || exposure < 0 || exposure > 3600000) throw new IllegalArgumentException(UiText.INVALID_CAMERA_PROFILE.text());
         this.name = name; this.focal = focal; this.width = width; this.height = height;
         settleMs = settle; exposureMs = exposure;
     }

@@ -7,7 +7,7 @@ final class ManualMotionOptions {
     }
     static String[] fields(DeviceState state,int pan,int tilt,int panTempo,int tiltTempo) {
         if (!state.profiledMotion) return new String[]{""+pan,""+tilt};
-        if (panTempo<1 || panTempo>1000 || tiltTempo<1 || tiltTempo>1000) throw new IllegalArgumentException("Fahrtempo muss 1–1000 ‰ betragen");
+        if (panTempo<1 || panTempo>1000 || tiltTempo<1 || tiltTempo>1000) throw new IllegalArgumentException(UiText.MOVEMENT_SPEED_MUST_BE_1_1000.text());
         return new String[]{""+pan,""+tilt,""+panTempo,""+tiltTempo};
     }
 }

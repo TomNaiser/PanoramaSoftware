@@ -78,7 +78,7 @@ public final class MainActivity extends Activity {
     private int observedDraftRevision=-1;
     private final Runnable recalculatePlot=() -> {
         try { calculate(); }
-        catch(RuntimeException ex) { pendingPlan=null; preview.setPlan(null); planSummary.setText(!endpointSet("start") || !endpointSet("end")?"Noch kein Plan · Start und Ende ausrichten und merken.":"Plan ungültig: "+ex.getMessage()); render(); }
+        catch(RuntimeException ex) { pendingPlan=null; preview.setPlan(null); planSummary.setText(!endpointSet("start") || !endpointSet("end")?UiText.NO_PLAN_YET_ALIGN_AND_REMEMBER_START_AND.text():UiText.INVALID_PLAN.text()+ex.getMessage()); render(); }
     };
     private PanoramaPlan pendingPlan;
     private CheckBox stopOnLoss;
@@ -101,6 +101,12 @@ public final class MainActivity extends Activity {
         }
         @Override public void onServiceDisconnected(ComponentName name) { service = null; render(); }
     };
+    @Override protected void attachBaseContext(Context base) {
+        UiText.select(base.getSharedPreferences("settings",MODE_PRIVATE).getString(UiText.PREFERENCE,"de"));
+        android.content.res.Configuration config=new android.content.res.Configuration(base.getResources().getConfiguration());
+        config.setLocale(UiText.locale());
+        super.attachBaseContext(base.createConfigurationContext(config));
+    }
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
@@ -137,6 +143,23 @@ public final class MainActivity extends Activity {
         super.onWindowFocusChanged(focused); if(!focused && service!=null) service.endJog();
     }
     @Override protected void onSaveInstanceState(Bundle state) { state.putLong("processToken",PROCESS_TOKEN); state.putInt("page",selectedPage); state.putBoolean("planPlotExpanded",planWorkspace.expanded()); state.putBoolean("runPlotExpanded",runWorkspace.expanded()); state.putInt("draftRevision",observedDraftRevision); state.putBoolean("limitsKnown",service!=null && service.state.limitsKnown); state.putString("exportName",pendingExportName); state.putString("savedPlotKey",savedPlotKey); state.putLong("plottedRun",plottedRun); preview.save(state,"planViewport"); runPreview.save(state,"runViewport"); saveInputs(); super.onSaveInstanceState(state); }
+    private AlertDialog chooseLanguage() {
+        UiText.Language[] languages=UiText.Language.values();
+        String[] labels=new String[languages.length];
+        for(int i=0;i<labels.length;i++) labels[i]=languages[i].label;
+        AlertDialog picker=new AlertDialog.Builder(this).setTitle(UiText.LANGUAGE_SPRACHE.text())
+            .setSingleChoiceItems(labels,UiText.language().ordinal(),(dialog,index) -> {
+                dialog.dismiss();
+                UiText.Language language=languages[index];
+                if(language==UiText.language()) return;
+                saveInputs();
+                preferences.edit().putString(UiText.PREFERENCE,language.tag).apply();
+                UiText.select(language.tag);
+                if(service!=null) service.languageChanged();
+                recreate();
+            }).setNegativeButton(UiText.CANCEL.text(),null).create();
+        picker.show();return picker;
+    }
     private int dp(int value) { return (int)(value*getResources().getDisplayMetrics().density+.5f); }
     private TextView text(String value,int size) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(size>=20?INK:MUTED); view.setPadding(0,dp(6),0,dp(6));
@@ -165,14 +188,14 @@ public final class MainActivity extends Activity {
         LinearLayout header=new LinearLayout(this); headerBar=header; root.addView(header);
         LinearLayout identity=vertical(); header.addView(identity,new LinearLayout.LayoutParams(0,-2,1));
         TextView heading=text("PanoramaControl",landscape?16:20); identity.addView(heading);
-        heading.setContentDescription("PanoramaControl Version "+BuildConfig.VERSION_NAME);
-        connection = text("Nicht verbunden",15);
-        message = text("Bereit",14);
+        heading.setContentDescription(UiText.PANORAMACONTROL_VERSION.text()+BuildConfig.VERSION_NAME);
+        connection = text(UiText.NOT_CONNECTED.text(),15);
+        message = text(UiText.READY.text(),14);
         connection.setTextSize(12); connection.setPadding(0,0,0,dp(4)); identity.addView(connection);
         message.setMaxLines(landscape?1:2); message.setTextSize(13);
-        Button emergency = button(header,"NOT-STOP",() -> service.emergencyStop(),() -> service != null && service.connected);
+        Button emergency = button(header,UiText.E_STOP.text(),() -> service.emergencyStop(),() -> service != null && service.connected);
         emergencyButton=emergency;
-        recoveryAction=button(root,"Gerätestand prüfen / Fehler quittieren",() -> {
+        recoveryAction=button(root,UiText.CHECK_DEVICE_STATE_ACKNOWLEDGE_ERROR.text(),() -> {
             if(service.incident.needsAcknowledgement()) showIncident(); else service.recoverDevice();
         },() -> service!=null && !service.recovering);
         recoveryAction.setVisibility(View.GONE);
@@ -183,7 +206,7 @@ public final class MainActivity extends Activity {
         else root.addView(nav);
         emergencyHome=(android.view.ViewGroup)emergency.getParent(); emergencyHomeIndex=emergencyHome.indexOfChild(emergency); emergencyHomeParams=emergency.getLayoutParams();
         root.addView(message);
-        String[] names = {"Gerät","Manuell","Plan","Lauf","Extras"};
+        String[] names = {UiText.DEVICE.text(),UiText.MANUAL.text(),"Plan",UiText.RUN_2.text(),"Extras"};
         for (int i=0;i<names.length;i++) {
             final int index=i; Button tab = new Button(this); tab.setText(names[i]); tab.setTextSize(12); tab.setAllCaps(false); tab.setMinWidth(0); tab.setMinimumWidth(0); tab.setPadding(0,0,0,0); tabs.add(tab);
             tab.setOnClickListener(v -> selectPage(index)); nav.addView(tab,new LinearLayout.LayoutParams(0,dp(48),1));
@@ -194,49 +217,49 @@ public final class MainActivity extends Activity {
             ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true); pages[i]=vertical(); scroll.addView(pages[i]);
             container.addView(scroll); scroll.setTag(i); pageViews[i]=scroll;
         }
-        LinearLayout device = pages[0]; device.addView(text("Verbindung",20));
+        LinearLayout device = pages[0]; device.addView(text(UiText.CONNECTION.text(),20));
         devicePicker = new Spinner(this); device.addView(devicePicker);
-        button(device,"Geräte laden",this::refreshDevices,() -> service==null || !service.hasConnection());
-        button(device,"Verbinden",this::connect,() -> service!=null && !service.hasConnection() && !devices.isEmpty());
-        button(device,"Trennen",() -> service.disconnect(),() -> service!=null && service.hasConnection());
-        device.addView(text("RNBT zuerst in Android koppeln. Eine bestehende PC-Verbindung vorher trennen.",14));
-        live = text("Noch keine Statusdaten",16); device.addView(live);
-        primary(button(device,"Weiter zum Panorama",() -> selectPage(2),() -> true));
-        LinearLayout manual=pages[1]; manual.addView(text("Manuelle Bedienung",20));
-        manual.addView(text("Pfeil gedrückt halten: langsam anfahren. Loslassen stoppt die Motoransteuerung.",14));
+        button(device,UiText.LOAD_DEVICES.text(),this::refreshDevices,() -> service==null || !service.hasConnection());
+        button(device,UiText.CONNECT.text(),this::connect,() -> service!=null && !service.hasConnection() && !devices.isEmpty());
+        button(device,UiText.DISCONNECT.text(),() -> service.disconnect(),() -> service!=null && service.hasConnection());
+        device.addView(text(UiText.PAIR_RNBT_IN_ANDROID_FIRST_DISCONNECT_ANY_EXISTING.text(),14));
+        live = text(UiText.NO_STATUS_DATA_YET.text(),16); device.addView(live);
+        primary(button(device,UiText.CONTINUE_TO_PANORAMA.text(),() -> selectPage(2),() -> true));
+        LinearLayout manual=pages[1]; manual.addView(text(UiText.MANUAL_CONTROL.text(),20));
+        manual.addView(text(UiText.HOLD_AN_ARROW_TO_MOVE_SLOWLY_RELEASE_TO.text(),14));
         TextView manualHint=text("",14); manualHint.setTag("alignmentHint"); manual.addView(manualHint);
-        button(manual,"Gestoppten Auftrag zurücksetzen",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
-        input(manual,"pulse","Kamera-Puls (ms)","30");
-        input(manual,"manualPanSpeed","Pan-Zielfahrten: Fahrtempo (‰, 1–1000)","500");
-        manual.addView(text("Pan: 500 ‰ für die getestete kontinuierliche Fahrt (ca. 4°/s auf diesem Aufbau). Sehr langsames Tempo kann pulsieren.",14));
-        input(manual,"manualSpeed","Tilt-Zielfahrten: Fahrtempo (‰, 1–1000)","500");
-        input(manual,"jogSpeed","Tilt-Haltefahrt: Höchsttempo (°/s)","5");
-        input(manual,"panJogSpeed","Pan-Haltefahrt: Höchsttempo (°/s)","10");
-        input(manual,"rememberSettleMs","Beruhigung vor Positionmerken (ms, 0–5000)","1000");
-        button(manual,"Kamera einmal auslösen",() -> service.trigger(integer("pulse")),() -> service!=null && service.manualAllowed() && !service.manualMoving && service.state.positionSafe());
-        button(manual,"Bewegungsdiagnose",() -> service.command("GET_DIAGNOSTICS"),this::ready);
-        button(pages[2],"Plan entfernen",this::removePlan,() -> service==null || !service.hasConnection() || (ready() && !service.manualMoving && !service.manualTrigger && (service.state.state.equals("IDLE") || PlanAbort.allowed(service.state.state))));
-        LinearLayout camera=card(pages[2],"1 · Kamera wählen");
-        referenceReview=button(pages[2],"Entwurfreferenz prüfen und bestätigen",() -> confirm("Entwurfreferenz geprüft?",
-            "Start und Ende wurden nach Geräte-/Nullpunktwechsel geprüft. Die Werte bleiben erhalten. Eine Fahrt wird dadurch nicht gestartet.",
+        button(manual,UiText.RESET_STOPPED_JOB.text(),this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
+        input(manual,"pulse",UiText.CAMERA_PULSE_MS.text(),"30");
+        input(manual,"manualPanSpeed",UiText.PAN_TARGET_MOVES_SPEED_1_1000.text(),"500");
+        manual.addView(text(UiText.PAN_500_FOR_THE_TESTED_CONTINUOUS_MOVEMENT_APPROX.text(),14));
+        input(manual,"manualSpeed",UiText.TILT_TARGET_MOVES_SPEED_1_1000.text(),"500");
+        input(manual,"jogSpeed",UiText.TILT_JOG_MAXIMUM_SPEED_S.text(),"5");
+        input(manual,"panJogSpeed",UiText.PAN_JOG_MAXIMUM_SPEED_S.text(),"10");
+        input(manual,"rememberSettleMs",UiText.SETTLING_BEFORE_REMEMBERING_POSITION_MS_0_5000.text(),"1000");
+        button(manual,UiText.TRIGGER_CAMERA_ONCE.text(),() -> service.trigger(integer("pulse")),() -> service!=null && service.manualAllowed() && !service.manualMoving && service.state.positionSafe());
+        button(manual,UiText.MOTION_DIAGNOSTICS.text(),() -> service.command("GET_DIAGNOSTICS"),this::ready);
+        button(pages[2],UiText.REMOVE_PLAN.text(),this::removePlan,() -> service==null || !service.hasConnection() || (ready() && !service.manualMoving && !service.manualTrigger && (service.state.state.equals("IDLE") || PlanAbort.allowed(service.state.state))));
+        LinearLayout camera=card(pages[2],UiText.TEXT_1_CHOOSE_CAMERA.text());
+        referenceReview=button(pages[2],UiText.CHECK_AND_CONFIRM_DRAFT_REFERENCE.text(),() -> confirm(UiText.DRAFT_REFERENCE_CHECKED.text(),
+            UiText.START_AND_END_POSITIONS_HAVE_BEEN_CHECKED_AFTER.text(),
             () -> service.confirmDraftReference()),() -> service!=null && service.fresh());
         referenceReview.setVisibility(View.GONE);
         profilePicker=new Spinner(this); camera.addView(profilePicker); updateProfilePicker();
-        primary(button(camera,"Kameraprofil verwenden",this::applyProfile,() -> true));
+        primary(button(camera,UiText.USE_CAMERA_PROFILE.text(),this::applyProfile,() -> true));
         activeProfile=text("",13); camera.addView(activeProfile);
-        LinearLayout profileDetails=details(camera,"Profil bearbeiten / importieren");
-        input(profileDetails,"profileName","Profilname","Sony A7RII 400 mm");
-        input(profileDetails,"focal","Brennweite (mm)","400"); input(profileDetails,"width","Sensorbreite (mm)","24"); input(profileDetails,"height","Sensorhöhe (mm)","35.9");
-        button(profileDetails,"Profil speichern",this::saveProfile,() -> true);
-        button(profileDetails,"Windows-Konfiguration importieren",this::importConfig,() -> true);
-        LinearLayout plan=card(pages[2],"Ausrichtung & Endpunkte");
-        alignmentHint=text("Punkt wählen → anfahren → Kamera prüfen → Start/Ende merken.",13); plan.addView(alignmentHint);
-        alignmentReset=button(plan,"Auftrag zurücksetzen & Endpunkte ändern",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
+        LinearLayout profileDetails=details(camera,UiText.EDIT_IMPORT_PROFILE.text());
+        input(profileDetails,"profileName",UiText.PROFILE_NAME.text(),"Sony A7RII 400 mm");
+        input(profileDetails,"focal",UiText.FOCAL_LENGTH_MM.text(),"400"); input(profileDetails,"width",UiText.SENSOR_WIDTH_MM.text(),"24"); input(profileDetails,"height",UiText.SENSOR_HEIGHT_MM.text(),"35.9");
+        button(profileDetails,UiText.SAVE_PROFILE.text(),this::saveProfile,() -> true);
+        button(profileDetails,UiText.IMPORT_WINDOWS_CONFIGURATION.text(),this::importConfig,() -> true);
+        LinearLayout plan=card(pages[2],UiText.ALIGNMENT_ENDPOINTS.text());
+        alignmentHint=text(UiText.SELECT_POINT_MOVE_CHECK_CAMERA_REMEMBER_START_END.text(),13); plan.addView(alignmentHint);
+        alignmentReset=button(plan,UiText.RESET_JOB_CHANGE_ENDPOINTS.text(),this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         alignmentReset.setVisibility(View.GONE);
         LinearLayout graph=vertical(), steering=plan;
         graph.setBackground(surface(Color.WHITE)); graph.setPadding(dp(4),0,dp(4),0);
         LinearLayout selectionRow=new LinearLayout(this); graph.addView(selectionRow);
-        plotSelection=text("Ansicht verschieben",14); selectionRow.addView(plotSelection,new LinearLayout.LayoutParams(0,-2,1));
+        plotSelection=text(UiText.PAN_VIEW.text(),14); selectionRow.addView(plotSelection,new LinearLayout.LayoutParams(0,-2,1));
         plotSelection.setTextSize(12); plotSelection.setSingleLine(true); plotSelection.setEllipsize(android.text.TextUtils.TruncateAt.END);
         tiltRangeButton=button(selectionRow,"Tilt ±25°",this::chooseTiltRange,() -> true);
         tiltRangeButton.setTextSize(12); tiltRangeButton.setLayoutParams(new LinearLayout.LayoutParams(dp(106),dp(48)));
@@ -250,12 +273,12 @@ public final class MainActivity extends Activity {
             refreshEndpoints(); schedulePlot();
         });
         LinearLayout remember=new LinearLayout(this); steering.addView(remember);
-        button(remember,"Start merken",() -> takePosition("start"),() -> positionReady() && service.state.positionSafe() && service.endpointCaptureAllowed());
-        button(remember,"Ende merken",() -> takePosition("end"),() -> positionReady() && service.state.positionSafe() && service.endpointCaptureAllowed());
+        button(remember,UiText.REMEMBER_START.text(),() -> takePosition("start"),() -> positionReady() && service.state.positionSafe() && service.endpointCaptureAllowed());
+        button(remember,UiText.REMEMBER_END.text(),() -> takePosition("end"),() -> positionReady() && service.state.positionSafe() && service.endpointCaptureAllowed());
         endpointSummary=text("",14); plan.addView(endpointSummary);
         LinearLayout revisit=new LinearLayout(this); plan.addView(revisit);
-        button(revisit,"Start anfahren",() -> driveEndpoint("start"),() -> positionReady() && endpointSet("start"));
-        button(revisit,"Ende anfahren",() -> driveEndpoint("end"),() -> positionReady() && endpointSet("end"));
+        button(revisit,UiText.MOVE_TO_START.text(),() -> driveEndpoint("start"),() -> positionReady() && endpointSet("start"));
+        button(revisit,UiText.MOVE_TO_END.text(),() -> driveEndpoint("end"),() -> positionReady() && endpointSet("end"));
         if(landscape) {
             for(int rowIndex=0;rowIndex<steering.getChildCount();rowIndex++) {
                 View row=steering.getChildAt(rowIndex);
@@ -265,127 +288,129 @@ public final class MainActivity extends Activity {
                 }
             }
         }
-        LinearLayout plotOptions=details(plan,"Grafikansicht & Zoom");
+        LinearLayout plotOptions=details(plan,UiText.CHART_VIEW_ZOOM.text());
         LinearLayout graphMode=new LinearLayout(this); plotOptions.addView(graphMode);
-        button(graphMode,"Punkt wählen",() -> preview.setEditMode(3),() -> true);
-        button(graphMode,"Verschieben",() -> preview.setEditMode(0),() -> true);
-        button(plotOptions,"Ganzer Pan-/Tilt-Bereich",() -> { tiltRange=2; applyTiltRange(); },() -> true);
-        plotOptions.addView(text("Tippen: Fahrziel wählen · Ziehen: Ansicht verschieben · Zwei Finger: Zoom. Pan ±180° stellt die Übersicht wieder her.",13));
-        LinearLayout capture=card(pages[2],"3 · Prüfen & aufnehmen");
-        planSummary=text("Noch kein Plan berechnet",15); capture.addView(planSummary);
-        planDeviceStatus=text("Zum Übertragen mit dem Gerät verbinden",13); capture.addView(planDeviceStatus);
-        primary(button(capture,"Plan übertragen",this::loadPlan,() -> !preview.selection.pending && pendingPlan!=null && positionReady() && service.state.positionSafe() && service.state.state.equals("IDLE")));
-        primary(button(capture,"Aufnahme starten",this::startLoadedPlan,this::canStartLocalPlan));
-        LinearLayout settings=details(capture,"Aufnahmeparameter & Endpunkte");
-        input(settings,"overlap","Überlappung (%)","20");
-        modePicker=new Spinner(this); modePicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Raster · Spaltenrücklauf","Sphärisch · Tilt-Bänder"}));
+        button(graphMode,UiText.SELECT_POINT.text(),() -> preview.setEditMode(3),() -> true);
+        button(graphMode,UiText.PAN_VIEW_2.text(),() -> preview.setEditMode(0),() -> true);
+        button(plotOptions,UiText.FULL_PAN_TILT_RANGE.text(),() -> { tiltRange=2; applyTiltRange(); },() -> true);
+        plotOptions.addView(text(UiText.TAP_SELECT_TARGET_DRAG_PAN_VIEW_TWO_FINGERS.text(),13));
+        LinearLayout capture=card(pages[2],UiText.TEXT_3_CHECK_CAPTURE.text());
+        planSummary=text(UiText.NO_PLAN_CALCULATED_YET.text(),15); capture.addView(planSummary);
+        planDeviceStatus=text(UiText.CONNECT_TO_THE_DEVICE_TO_UPLOAD.text(),13); capture.addView(planDeviceStatus);
+        primary(button(capture,UiText.UPLOAD_PLAN.text(),this::loadPlan,() -> !preview.selection.pending && pendingPlan!=null && positionReady() && service.state.positionSafe() && service.state.state.equals("IDLE")));
+        primary(button(capture,UiText.START_CAPTURE.text(),this::startLoadedPlan,this::canStartLocalPlan));
+        LinearLayout settings=details(capture,UiText.CAPTURE_SETTINGS_ENDPOINTS.text());
+        input(settings,"overlap",UiText.OVERLAP.text(),"20");
+        modePicker=new Spinner(this); modePicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{UiText.GRID_COLUMN_RETURN.text(),UiText.SPHERICAL_TILT_BANDS.text()}));
         modePicker.setSelection(preferences.getInt("mode",0)); settings.addView(modePicker);
-        input(settings,"startPan","Start Pan (°)",""); input(settings,"startTilt","Start Tilt (°)","");
-        button(settings,"Start im Plan grafisch bearbeiten",() -> preview.setEditMode(1),() -> true);
-        input(settings,"endPan","Ende Pan (°)",""); input(settings,"endTilt","Ende Tilt (°)","");
-        button(settings,"Ende im Plan grafisch bearbeiten",() -> preview.setEditMode(2),() -> true);
-        button(settings,"Grafische Planänderung übernehmen",preview::commitSelection,() -> preview.selection.pending && (preview.editMode()==1 || preview.editMode()==2));
-        button(settings,"Zurück zum Ausrichten",() -> preview.setEditMode(3),() -> true);
-        input(settings,"settle","Beruhigungszeit (ms)","700"); input(settings,"planPulse","Triggerdauer (ms)","30"); input(settings,"exposure","Belichtungswartezeit (ms)","500");
-        input(settings,"speed","Fahrtempo im Aufnahmelauf (‰, 1–2000)","500");
-        settings.addView(text("1000 = bisheriges Volltempo, 1500 = 150 %, 2000 = 200 %. Absolute Pan-/Tilt-Grenzen stehen in der Motor-Config. Höhere Werte gelten für den nächsten übertragenen Plan.",13));
-        input(settings,"warningPan","Pan-Warnschwelle (°, 0,044–10)","0.5");
-        input(settings,"warningTilt","Tilt-Warnschwelle (°, 0,044–10)","0.5");
-        button(settings,"Warnschwellen im Gerät speichern",() -> service.saveWarningTolerances(number("warningPan"),number("warningTilt")),
+        input(settings,"startPan",UiText.START_PAN.text(),""); input(settings,"startTilt",UiText.START_TILT.text(),"");
+        button(settings,UiText.EDIT_START_POINT_ON_CHART.text(),() -> preview.setEditMode(1),() -> true);
+        input(settings,"endPan",UiText.END_PAN.text(),""); input(settings,"endTilt",UiText.END_TILT.text(),"");
+        button(settings,UiText.EDIT_END_POINT_ON_CHART.text(),() -> preview.setEditMode(2),() -> true);
+        button(settings,UiText.APPLY_GRAPHICAL_PLAN_CHANGES.text(),preview::commitSelection,() -> preview.selection.pending && (preview.editMode()==1 || preview.editMode()==2));
+        button(settings,UiText.BACK_TO_ALIGNMENT.text(),() -> preview.setEditMode(3),() -> true);
+        input(settings,"settle",UiText.SETTLING_TIME_MS.text(),"700"); input(settings,"planPulse",UiText.TRIGGER_DURATION_MS.text(),"30"); input(settings,"exposure",UiText.EXPOSURE_WAIT_MS.text(),"500");
+        input(settings,"speed",UiText.CAPTURE_RUN_SPEED_1_2000.text(),"500");
+        settings.addView(text(UiText.TEXT_1000_PREVIOUS_FULL_SPEED_1500_150_2000_200.text(),13));
+        input(settings,"warningPan",UiText.PAN_WARNING_THRESHOLD_0_044_10.text(),"0.5");
+        input(settings,"warningTilt",UiText.TILT_WARNING_THRESHOLD_0_044_10.text(),"0.5");
+        button(settings,UiText.SAVE_WARNING_THRESHOLDS_TO_DEVICE.text(),() -> service.saveWarningTolerances(number("warningPan"),number("warningTilt")),
             () -> ready() && service.state.warningSettingsSupported && !service.manualMoving && !service.manualTrigger &&
                 (service.state.state.equals("IDLE") || service.state.state.equals("STOPPED")));
-        settings.addView(text("Warnschwellen betreffen nur die Markierung und den Signalton. Zielregelung und Ruheprüfung bleiben unabhängig. Gespeichert werden beide Werte dauerhaft im Gerät; erst dessen Bestätigung macht sie aktiv.",13));
-        LinearLayout stability=details(settings,"Positionsüberwachung bei Aufnahme");
-        captureStabilityActive=text("Zum Auslesen mit Firmware 2.4.71 oder neuer verbinden.",13);stability.addView(captureStabilityActive);
-        input(stability,"captureSpan","Maximale Winkelschwankung beider Achsen (°, 0,044–1)","0.25");
-        input(stability,"capturePanDrift","Zulässige Pan-Verschiebung während Aufnahme (°, 0,044–1)","0.25");
-        input(stability,"captureTiltDrift","Zulässige Tilt-Verschiebung während Aufnahme (°, 0,044–1,5)","0.4");
-        input(stability,"captureExtraWait","Maximale zusätzliche Wartezeit auf Ruhe (s, 1–120)","15");
-        button(stability,"Stabilitätsgrenzen auslesen",() -> service.readCaptureStability(),
+        settings.addView(text(UiText.WARNING_THRESHOLDS_ONLY_AFFECT_MARKERS_AND_THE_ALERT.text(),13));
+        LinearLayout stability=details(settings,UiText.POSITION_MONITORING_DURING_CAPTURE.text());
+        captureStabilityActive=text(UiText.CONNECT_WITH_FIRMWARE_2_4_71_OR_LATER.text(),13);stability.addView(captureStabilityActive);
+        input(stability,"captureSpan",UiText.MAXIMUM_ANGULAR_VARIATION_OF_BOTH_AXES_0_044.text(),"0.25");
+        input(stability,"capturePanDrift",UiText.ALLOWED_PAN_DRIFT_DURING_CAPTURE_0_044_1.text(),"0.25");
+        input(stability,"captureTiltDrift",UiText.ALLOWED_TILT_DRIFT_DURING_CAPTURE_0_044_1.text(),"0.4");
+        input(stability,"captureExtraWait",UiText.MAXIMUM_EXTRA_WAIT_FOR_STABILITY_S_1_120.text(),"15");
+        button(stability,UiText.READ_STABILITY_LIMITS.text(),() -> service.readCaptureStability(),
             () -> ready() && service.state.captureStability!=null);
-        button(stability,"Stabilitätsgrenzen im Gerät speichern",() -> service.saveCaptureStability(number("captureSpan"),number("capturePanDrift"),number("captureTiltDrift"),number("captureExtraWait")),
+        button(stability,UiText.SAVE_STABILITY_LIMITS_TO_DEVICE.text(),() -> service.saveCaptureStability(number("captureSpan"),number("capturePanDrift"),number("captureTiltDrift"),number("captureExtraWait")),
             () -> service!=null && service.canConfigureStability());
-        stability.addView(text("Vor und während der Aufnahme gelten dieselben Grenzen. Unruhe verlängert zunächst die Wartezeit; danach pausiert der Auftrag. Die zusätzliche Wartezeit verlängert keine Motorfahrt. Größere Winkelgrenzen können Bewegung während der Aufnahme zulassen. Speichern ist ohne Auftrag oder in einer quittierten Pause möglich; der pausierte Auftrag bleibt erhalten.",13));
-        CheckBox qualityPause=new CheckBox(this);qualityPause.setText("Bei mehr als 1° Zielabweichung nach aktuellem Bild pausieren");
+        stability.addView(text(UiText.THE_SAME_LIMITS_APPLY_BEFORE_AND_DURING_CAPTURE.text(),13));
+        CheckBox qualityPause=new CheckBox(this);qualityPause.setText(UiText.PAUSE_AFTER_THE_CURRENT_IMAGE_IF_TARGET_DEVIATION.text());
         qualityPause.setChecked(preferences.getBoolean("qualityPause",true));
         qualityPause.setOnCheckedChangeListener((button,checked) -> preferences.edit().putBoolean("qualityPause",checked).apply());settings.addView(qualityPause);
-        settings.addView(text("Die App fordert bei großer gemessener Abweichung eine quittierbare Pause an. Danach eine Spalte zurück und Fortsetzen. Dafür muss die Bluetooth-Verbindung bestehen; Geräteschutz und Nano-Warnschwellen gelten unabhängig.",13));
-        stopOnLoss=new CheckBox(this); stopOnLoss.setText("Bei Verbindungsverlust nach 5 s stoppen");
+        settings.addView(text(UiText.THE_APP_REQUESTS_A_PAUSE_REQUIRING_ACKNOWLEDGEMENT_WHEN.text(),13));
+        stopOnLoss=new CheckBox(this); stopOnLoss.setText(UiText.STOP_AFTER_5_S_IF_CONNECTION_IS_LOST.text());
         stopOnLoss.setChecked(preferences.getBoolean("stopOnLoss",false)); settings.addView(stopOnLoss);
-        settings.addView(text("Ohne Häkchen führt der Arduino den Auftrag auch bei getrennter Handy-Verbindung weiter aus.",14));
-        button(settings,"Vorschau berechnen",this::calculate,() -> true);
+        settings.addView(text(UiText.WHEN_UNCHECKED_THE_ARDUINO_CONTINUES_THE_JOB_EVEN.text(),14));
+        button(settings,UiText.CALCULATE_PREVIEW.text(),this::calculate,() -> true);
         LinearLayout run=card(pages[3],null),runGraph=vertical(); runGraph.setBackground(surface(Color.WHITE)); runGraph.setPadding(dp(4),0,dp(4),0);
-        runTitle=text("Aktueller Auftrag",14); runTitle.setSingleLine(true); runTitle.setPadding(0,0,0,0); runGraph.addView(runTitle);
-        runProgress=text("Noch keine Aufnahme gestartet",13); runProgress.setSingleLine(true); runProgress.setPadding(0,0,0,dp(4)); runGraph.addView(runProgress);
+        runTitle=text(UiText.CURRENT_JOB.text(),14); runTitle.setSingleLine(true); runTitle.setPadding(0,0,0,0); runGraph.addView(runTitle);
+        runProgress=text(UiText.NO_CAPTURE_STARTED_YET.text(),13); runProgress.setSingleLine(true); runProgress.setPadding(0,0,0,dp(4)); runGraph.addView(runProgress);
         captureProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal); runGraph.addView(captureProgress,new LinearLayout.LayoutParams(-1,dp(8)));
         LinearLayout runActions=new LinearLayout(this); run.addView(runActions);
         primary(button(runActions,"Pause",() -> service.runCommand("PAUSE"),() -> savedPlot==null && ready() && service.state.state.equals("RUNNING")));
-        primary(button(runActions,"Fortsetzen",() -> service.runCommand("RESUME"),() -> savedPlot==null && ready() && service.state.positionSafe() && service.state.state.equals("PAUSED") && !service.manualMoving && !service.manualTrigger));
+        primary(button(runActions,UiText.RESUME.text(),() -> service.runCommand("RESUME"),() -> savedPlot==null && ready() && service.state.positionSafe() && service.state.state.equals("PAUSED") && !service.manualMoving && !service.manualTrigger));
         recoveryHint=text("",14);recoveryHint.setTag("recoveryHint");run.addView(recoveryHint);
-        recoveryCheck=button(run,"Fehler quittieren / Gerät prüfen",() -> {
+        recoveryCheck=button(run,UiText.ACKNOWLEDGE_ERROR_CHECK_DEVICE.text(),() -> {
             if(service.incident.needsAcknowledgement()) showIncident();else service.recoverDevice();
         },() -> service!=null && !service.recoveryInProgress() && !service.busy);
         recoveryCheck.setTag("recoveryCheck");
-        restRecoveryAction=button(run,"Panorama wiederaufnehmen…",this::prepareRest,() -> savedPlot==null && service!=null && service.canPrepareRest());
+        restRecoveryAction=button(run,UiText.RECOVER_PANORAMA.text(),this::prepareRest,() -> savedPlot==null && service!=null && service.canPrepareRest());
         restRecoveryAction.setTag("restRecovery");
-        columnRetryAction=button(run,"Spalte wiederholen…",this::showColumnRetry,() -> savedPlot==null && service!=null && service.canRetryColumn());
+        columnRetryAction=button(run,UiText.REPEAT_COLUMN.text(),this::showColumnRetry,() -> savedPlot==null && service!=null && service.canRetryColumn());
         columnRetryAction.setTag("columnRetry");
-        button(run,"Stoppen & Endpunkte ändern",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
-        button(runActions,"Stop",() -> confirm("Auftrag stoppen?","Motoren und Kameraausgänge werden abgeschaltet. Es gibt keine Parkfahrt.",() -> service.runCommand("STOP")),() -> ready() && !service.state.state.equals("IDLE") && !service.state.state.startsWith("TIMELAPSE"));
+        button(run,UiText.STOP_CHANGE_ENDPOINTS.text(),this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
+        button(runActions,"Stop",() -> confirm(UiText.STOP_JOB.text(),UiText.MOTORS_AND_CAMERA_OUTPUTS_WILL_BE_SWITCHED_OFF.text(),() -> service.runCommand("STOP")),() -> ready() && !service.state.state.equals("IDLE") && !service.state.state.startsWith("TIMELAPSE"));
         runPreview=new PlanPreview(this); plotControls(runGraph,runPreview);
         runPreview.setWarningListener(this::reviewCaptureWarning);
         warningPoints=new Button(this);warningPoints.setTag("warningPoints");warningPoints.setAllCaps(false);warningPoints.setTextSize(13);
         warningPoints.setMinHeight(0);warningPoints.setMinimumHeight(0);warningPoints.setPadding(dp(6),0,dp(6),0);
         warningPoints.setOnClickListener(v -> showCaptureWarnings());runGraph.addView(warningPoints,new LinearLayout.LayoutParams(-1,dp(36)));
         runGraph.addView(runPreview,new LinearLayout.LayoutParams(-1,0,1));
-        runLegend=text("Blau: Sollpunkte · Violett: Fahrziel · Orange: Istposition\nGrün: gemessene Aufnahme · ×: rekonstruiertes Soll\nLetzte 512 Aufnahmen / Statuspunkte; graue Linie: empfangener Verlauf",13); run.addView(runLegend);
-        button(run,"Aktuellen Gerätelauf anzeigen",() -> { savedPlotKey=null; savedPlot=null; plottedRun=-1; render(); },() -> service!=null);
-        button(run,"Auftrag starten",this::startLoadedPlan,() -> savedPlot==null && canStartLoadedPlan());
-        button(run,"Eine Spalte zurück",() -> service.columns(false),() -> savedPlot==null && ready());
-        button(run,"Eine Spalte vor",() -> service.columns(true),() -> savedPlot==null && ready());
-        button(runActions,"Zeiten…",this::editRunTiming,() -> savedPlot==null && timingReady());
-        button(run,"Gerätestand neu einlesen",() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
-        button(run,"Vorhandenen Auftrag löschen",() -> confirm("Auftrag löschen?","Der gespeicherte Geräteauftrag wird zurückgesetzt. Lokale Aufnahmedaten bleiben erhalten.",() -> service.runCommand("CLEAR_RUN")),this::ready);
-        button(run,"Plan abbrechen / Neuer Plan",this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
+        runLegend=text(UiText.BLUE_TARGETS_PURPLE_MOVEMENT_TARGET_ORANGE_ACTUAL_POSITION.text(),13); run.addView(runLegend);
+        button(run,UiText.SHOW_CURRENT_DEVICE_RUN.text(),() -> { savedPlotKey=null; savedPlot=null; plottedRun=-1; render(); },() -> service!=null);
+        button(run,UiText.START_JOB.text(),this::startLoadedPlan,() -> savedPlot==null && canStartLoadedPlan());
+        button(run,UiText.BACK_ONE_COLUMN.text(),() -> service.columns(false),() -> savedPlot==null && ready());
+        button(run,UiText.FORWARD_ONE_COLUMN.text(),() -> service.columns(true),() -> savedPlot==null && ready());
+        button(runActions,UiText.TIMING.text(),this::editRunTiming,() -> savedPlot==null && timingReady());
+        button(run,UiText.REFRESH_DEVICE_STATE.text(),() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
+        button(run,UiText.CLEAR_EXISTING_JOB.text(),() -> confirm(UiText.CLEAR_JOB.text(),UiText.THE_STORED_DEVICE_JOB_WILL_BE_RESET_LOCAL.text(),() -> service.runCommand("CLEAR_RUN")),this::ready);
+        button(run,UiText.ABORT_PLAN_NEW_PLAN.text(),this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         TextView runLive=text("",16); run.addView(runLive); runLive.setTag("live");
-        LinearLayout extras=pages[4]; extras.addView(text("Timelapse",20));
-        input(extras,"interval","Timelapse-Intervall (ms)","5000");
-        input(extras,"tlPulse","Timelapse-Pulsdauer (ms)","30");
-        button(extras,"Timelapse starten",() -> confirm("Timelapse starten?","Die Kamera wird autonom im eingestellten Intervall ausgelöst.",() -> service.timelapse(newRunId(),integer("interval"),integer("tlPulse"))),() -> ready() && service.state.state.equals("IDLE") && !service.manualMoving && !service.manualTrigger);
-        button(extras,"Timelapse stoppen",() -> service.runCommand("STOP_TIMELAPSE"),() -> ready() && service.state.state.equals("TIMELAPSE"));
-        extras.addView(text("Aufnahmen und Export",20));
+        LinearLayout extras=pages[4];
+        button(extras,UiText.LANGUAGE_SPRACHE.text()+": "+UiText.language().label,this::chooseLanguage,() -> true).setTag("appLanguage");
+        extras.addView(text("Timelapse",20));
+        input(extras,"interval",UiText.TIMELAPSE_INTERVAL_MS.text(),"5000");
+        input(extras,"tlPulse",UiText.TIMELAPSE_PULSE_DURATION_MS.text(),"30");
+        button(extras,UiText.START_TIMELAPSE_2.text(),() -> confirm(UiText.START_TIMELAPSE.text(),UiText.THE_CAMERA_WILL_TRIGGER_AUTONOMOUSLY_AT_THE_CONFIGURED.text(),() -> service.timelapse(newRunId(),integer("interval"),integer("tlPulse"))),() -> ready() && service.state.state.equals("IDLE") && !service.manualMoving && !service.manualTrigger);
+        button(extras,UiText.STOP_TIMELAPSE.text(),() -> service.runCommand("STOP_TIMELAPSE"),() -> ready() && service.state.state.equals("TIMELAPSE"));
+        extras.addView(text(UiText.CAPTURES_AND_EXPORT.text(),20));
         papywizardStatus=text("",14);extras.addView(papywizardStatus);
-        extras.addView(text("Papywizard wird nach jeder gespeicherten Aufnahme automatisch im Hintergrund gesichert, auch bei Stop oder Fehler. Beim App-Start wird der Stand aus der Datenbank wiederhergestellt. Mit „PapyWizard XML speichern“ eine Kopie an einem frei wählbaren Ort ablegen.",14));
-        button(extras,"Automatische Papywizard-Dateien erneut sichern",() -> service.rebuildPapywizard(),() -> service!=null);
+        extras.addView(text(UiText.PAPYWIZARD_IS_BACKED_UP_AUTOMATICALLY_IN_THE_BACKGROUND.text(),14));
+        button(extras,UiText.RETRY_AUTOMATIC_PAPYWIZARD_BACKUPS.text(),() -> service.rebuildPapywizard(),() -> service!=null);
         runPicker=new Spinner(this); extras.addView(runPicker);
-        button(extras,"Gespeicherte Läufe laden",this::refreshRuns,() -> service!=null);
-        button(extras,"Gewählten Lauf grafisch anzeigen",() -> {
+        button(extras,UiText.LOAD_SAVED_RUNS.text(),this::refreshRuns,() -> service!=null);
+        button(extras,UiText.SHOW_SELECTED_RUN_ON_CHART.text(),() -> {
             CaptureStore.Run selected=(CaptureStore.Run)runPicker.getSelectedItem();
-            if(selected==null) throw new IllegalArgumentException("Keine Aufnahmen gespeichert");
+            if(selected==null) throw new IllegalArgumentException(UiText.NO_CAPTURES_SAVED.text());
             savedPlotKey=selected.key; savedPlot=service.captures.plotSnapshot(selected.key);
             selectPage(3); render(); runPreview.wholeRange();
         },() -> service!=null);
-        button(extras,"PapyWizard XML speichern",() -> exportCaptures(true),() -> service!=null);
-        button(extras,"Capture-Manifest CSV speichern",() -> exportCaptures(false),() -> service!=null);
-        button(extras,"Unterbrechungen CSV speichern",this::exportInterruptions,() -> service!=null);
-        extras.addView(text("Wiederaufgenommene Teilaufträge werden gemeinsam exportiert. Wiederholte Zielpunkte bleiben erhalten und sind im CSV markiert. Nach einem Belichtungsfehler mögliche zusätzliche Kameradateien vor dem PTGui-Import abgleichen.",14));
-        extras.addView(text("CSV kennzeichnet rekonstruierte Sollpositionen und fehlende historische Istwerte. XML verwendet bei rekonstruierten Bildern die Sollpositionen. Bei Verbindungslücken können manuelle Aufnahmen fehlen.",14));
-        extras.addView(text("Diagnose und Grenzen",20));
-        CheckBox warningSound=new CheckBox(this);warningSound.setText("Signalton bei Ziel-/Aufnahmewarnung");
+        button(extras,UiText.SAVE_PAPYWIZARD_XML.text(),() -> exportCaptures(true),() -> service!=null);
+        button(extras,UiText.SAVE_CAPTURE_MANIFEST_CSV.text(),() -> exportCaptures(false),() -> service!=null);
+        button(extras,UiText.SAVE_INTERRUPTIONS_CSV.text(),this::exportInterruptions,() -> service!=null);
+        extras.addView(text(UiText.RECOVERED_PARTIAL_JOBS_ARE_EXPORTED_TOGETHER_REPEATED_TARGETS.text(),14));
+        extras.addView(text(UiText.CSV_IDENTIFIES_RECONSTRUCTED_TARGET_POSITIONS_AND_MISSING_HISTORICAL.text(),14));
+        extras.addView(text(UiText.DIAGNOSTICS_AND_LIMITS.text(),20));
+        CheckBox warningSound=new CheckBox(this);warningSound.setText(UiText.SOUND_ALERT_FOR_TARGET_CAPTURE_WARNINGS.text());
         warningSound.setChecked(preferences.getBoolean("captureWarningSound",true));
         warningSound.setOnCheckedChangeListener((button,checked) -> preferences.edit().putBoolean("captureWarningSound",checked).apply());extras.addView(warningSound);
-        diagnostics=text("Noch keine Diagnose",15); extras.addView(diagnostics);
-        button(extras,"Support-Bundle abfragen",() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
-        button(extras,"Diagnose speichern",this::exportSupport,() -> service!=null);
-        LinearLayout tiltSetup=card(extras,"Tilt-Nullpunkt & Limits");
-        tiltReference=text("Zum Einstellen mit dem Gerät verbinden.",15); tiltSetup.addView(tiltReference);
-        tiltSetup.addView(text("Kamera waagerecht ausrichten und diese Position als 0° setzen. Die Limits bleiben an denselben physischen Stellen; ihre angezeigten Winkel passen sich an.",14));
-        button(tiltSetup,"Aktuelle Position als Tilt 0° setzen",() -> setTiltZero(false),this::tiltCalibrationReady);
-        button(tiltSetup,"Tilt-Nullpunkt zurücksetzen",() -> setTiltZero(true),this::tiltCalibrationReady);
-        input(tiltSetup,"tiltMin","Tilt-Untergrenze (°)","-45");
-        input(tiltSetup,"tiltMax","Tilt-Obergrenze (°)","50");
-        button(tiltSetup,"Vermessene Tilt-Grenzen speichern",this::setTiltLimits,this::tiltCalibrationReady);
-        tiltSetup.addView(text("Grenzen erst nach mechanischer Vermessung mit montiertem Objektiv und Steckern ändern.",14));
+        diagnostics=text(UiText.NO_DIAGNOSTICS_YET.text(),15); extras.addView(diagnostics);
+        button(extras,UiText.REQUEST_SUPPORT_BUNDLE.text(),() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
+        button(extras,UiText.SAVE_DIAGNOSTICS.text(),this::exportSupport,() -> service!=null);
+        LinearLayout tiltSetup=card(extras,UiText.TILT_ZERO_POINT_LIMITS.text());
+        tiltReference=text(UiText.CONNECT_TO_THE_DEVICE_TO_CONFIGURE.text(),15); tiltSetup.addView(tiltReference);
+        tiltSetup.addView(text(UiText.LEVEL_THE_CAMERA_AND_SET_THIS_POSITION_AS.text(),14));
+        button(tiltSetup,UiText.SET_CURRENT_POSITION_AS_TILT_0.text(),() -> setTiltZero(false),this::tiltCalibrationReady);
+        button(tiltSetup,UiText.RESET_TILT_ZERO_POINT.text(),() -> setTiltZero(true),this::tiltCalibrationReady);
+        input(tiltSetup,"tiltMin",UiText.TILT_LOWER_LIMIT.text(),"-45");
+        input(tiltSetup,"tiltMax",UiText.TILT_UPPER_LIMIT.text(),"50");
+        button(tiltSetup,UiText.SAVE_MEASURED_TILT_LIMITS.text(),this::setTiltLimits,this::tiltCalibrationReady);
+        tiltSetup.addView(text(UiText.CHANGE_LIMITS_ONLY_AFTER_MECHANICAL_MEASUREMENT_WITH_THE.text(),14));
         // Keep endpoint capture beside the persistent arrows, even when the
         // camera profile or large plot has pushed alignment controls offscreen.
         steering.removeView(remember); endpointBar=remember;
@@ -394,12 +419,12 @@ public final class MainActivity extends Activity {
         if(steering.getChildCount()==0 && steering.getParent()!=null) ((android.view.ViewGroup)steering.getParent()).removeView(steering);
         navigationBar=new LinearLayout(this); navigationBar.setTag("navigationBar");
         navigationBar.setPadding(0,dp(4),0,dp(4)); footer.addView(navigationBar,new LinearLayout.LayoutParams(landscape?0:-1,-2,landscape?4:0));
-        jogTempoLabel=text("Halten\n5°/s",12);
+        jogTempoLabel=text(UiText.HOLD_5_S.text(),12);
         navigationBar.addView(jogTempoLabel,new LinearLayout.LayoutParams(0,dp(48),1.3f));
-        arrowButton(navigationBar,"←","Pan nach links",0,-1);
-        arrowButton(navigationBar,"→","Pan nach rechts",0,1);
-        arrowButton(navigationBar,"↑","Tilt erhöhen",1,1);
-        arrowButton(navigationBar,"↓","Tilt verringern",1,-1);
+        arrowButton(navigationBar,"←",UiText.PAN_LEFT.text(),0,-1);
+        arrowButton(navigationBar,"→",UiText.PAN_RIGHT.text(),0,1);
+        arrowButton(navigationBar,"↑",UiText.INCREASE_TILT.text(),1,1);
+        arrowButton(navigationBar,"↓",UiText.DECREASE_TILT.text(),1,-1);
         run.removeView(runActions); runActionBar=runActions;
         footer.addView(runActionBar,new LinearLayout.LayoutParams(landscape?0:-1,-2,landscape?1:0));
         planWorkspace=installPlotWorkspace(container,2,graph);
@@ -432,11 +457,11 @@ public final class MainActivity extends Activity {
     }
     private void plotControls(LinearLayout parent,PlanPreview view) {
         LinearLayout row=new LinearLayout(this); row.setTag("plotTools"); parent.addView(row,0);
-        Button reset=button(row,"Pan ±180°",() -> { if(view==preview) applyTiltRange(); else view.wholeRange(); },() -> true); reset.setTag("plotReset"); reset.setContentDescription("Standardansicht: Pan minus 180 bis plus 180 Grad");
-        Button fit=button(row,"Einpassen",view::fit,() -> true); fit.setTag("plotFit"); fit.setContentDescription("Auf Plan und Aufnahmen einpassen");
-        button(row,"−",() -> view.zoom(2),() -> true).setContentDescription("Grafik herauszoomen");
-        button(row,"+",() -> view.zoom(.5),() -> true).setContentDescription("Grafik hineinzoomen");
-        Button large=button(row,"Groß",() -> togglePlotWorkspace(view),() -> true); large.setTag("plotLarge"); large.setContentDescription("Koordinatensystem vergrößern oder zur normalen Ansicht zurückkehren");
+        Button reset=button(row,"Pan ±180°",() -> { if(view==preview) applyTiltRange(); else view.wholeRange(); },() -> true); reset.setTag("plotReset"); reset.setContentDescription(UiText.DEFAULT_VIEW_PAN_MINUS_180_TO_PLUS_180.text());
+        Button fit=button(row,UiText.FIT.text(),view::fit,() -> true); fit.setTag("plotFit"); fit.setContentDescription(UiText.FIT_TO_PLAN_AND_CAPTURES.text());
+        button(row,"−",() -> view.zoom(2),() -> true).setContentDescription(UiText.ZOOM_CHART_OUT.text());
+        button(row,"+",() -> view.zoom(.5),() -> true).setContentDescription(UiText.ZOOM_CHART_IN.text());
+        Button large=button(row,UiText.LARGE.text(),() -> togglePlotWorkspace(view),() -> true); large.setTag("plotLarge"); large.setContentDescription(UiText.ENLARGE_CHART_OR_RETURN_TO_NORMAL_VIEW.text());
         for(int i=0;i<row.getChildCount();i++) { Button control=(Button)row.getChildAt(i); control.setTextSize(12); control.setPadding(dp(2),0,dp(2),0); control.setMaxLines(2); }
     }
     private void togglePlotWorkspace(PlanPreview view) {
@@ -444,8 +469,8 @@ public final class MainActivity extends Activity {
         workspace.setExpanded(!workspace.expanded()); updatePlotSizeLabels();
     }
     private void updatePlotSizeLabels() {
-        if(planWorkspace!=null) ((Button)planWorkspace.findViewWithTag("plotLarge")).setText(planWorkspace.expanded()?"Normal":"Groß");
-        if(runWorkspace!=null) ((Button)runWorkspace.findViewWithTag("plotLarge")).setText(runWorkspace.expanded()?"Normal":"Groß");
+        if(planWorkspace!=null) ((Button)planWorkspace.findViewWithTag("plotLarge")).setText(planWorkspace.expanded()?"Normal":UiText.LARGE.text());
+        if(runWorkspace!=null) ((Button)runWorkspace.findViewWithTag("plotLarge")).setText(runWorkspace.expanded()?"Normal":UiText.LARGE.text());
         syncPlotChrome();
     }
     private void syncPlotChrome() {
@@ -467,14 +492,14 @@ public final class MainActivity extends Activity {
         super.onBackPressed();
     }
     private void chooseTiltRange() {
-        new AlertDialog.Builder(this).setTitle("Tilt-Ausschnitt der Grafik")
-            .setSingleChoiceItems(new String[]{"±25° · übliche Panoramen","±45° · größerer Tilt-Bereich","Gesamter Bereich · z. B. sphärisch"},tiltRange,(dialog,which) -> {
+        new AlertDialog.Builder(this).setTitle(UiText.CHART_TILT_RANGE.text())
+            .setSingleChoiceItems(new String[]{UiText.TEXT_25_TYPICAL_PANORAMAS.text(),UiText.TEXT_45_WIDER_TILT_RANGE.text(),UiText.FULL_RANGE_E_G_SPHERICAL.text()},tiltRange,(dialog,which) -> {
                 tiltRange=which; applyTiltRange(); dialog.dismiss();
-            }).setNegativeButton("Abbrechen",null).show();
+            }).setNegativeButton(UiText.CANCEL.text(),null).show();
     }
     private void applyTiltRange() {
         preview.alignmentRange(tiltRange==0?25:tiltRange==1?45:0);
-        tiltRangeButton.setText(tiltRange==0?"Tilt ±25°":tiltRange==1?"Tilt ±45°":"Tilt gesamt");
+        tiltRangeButton.setText(tiltRange==0?"Tilt ±25°":tiltRange==1?"Tilt ±45°":UiText.FULL_TILT.text());
         preferences.edit().putInt("tiltRange",tiltRange).apply();
     }
     private void schedulePlot() { if(!plotReady) return; plotHandler.removeCallbacks(recalculatePlot); plotHandler.postDelayed(recalculatePlot,180); }
@@ -485,63 +510,63 @@ public final class MainActivity extends Activity {
     }
     private String proposalText() {
         EndpointSelection p=preview.selection;
-        if(p.pending) return String.format(Locale.GERMANY,"%s · Pan %.3f° · Tilt %.3f°\nTilt-Änderung %+.3f°%s",preview.editMode()==3?"Fahrziel":preview.editMode()==1?"Start-Vorschlag":"Ende-Vorschlag",p.pan,p.tilt,p.tilt-(service!=null && service.fresh()?service.state.tilt/1000.0:p.baseTilt),p.limited?" · Gerätegrenze":"");
-        if(service!=null && service.fresh()) return String.format(Locale.GERMANY,"Aktuell · Pan %.3f° · Tilt %.3f°\n%s",-service.state.pan/1000.0,service.state.tilt/1000.0,preview.editMode()==0?"Ansicht verschieben":"Punkt im Diagramm wählen");
-        return "Punkt wählen · Start S blau / Ende E rot\nZum Anfahren mit dem Gerät verbinden";
+        if(p.pending) return String.format(UiText.locale(),UiText.S_PAN_3F_TILT_3F_TILT_CHANGE_3F.text(),preview.editMode()==3?UiText.MOVEMENT_TARGET.text():preview.editMode()==1?UiText.START_PROPOSAL.text():UiText.END_PROPOSAL.text(),p.pan,p.tilt,p.tilt-(service!=null && service.fresh()?service.state.tilt/1000.0:p.baseTilt),p.limited?UiText.DEVICE_LIMIT.text():"");
+        if(service!=null && service.fresh()) return String.format(UiText.locale(),UiText.CURRENT_PAN_3F_TILT_3F_S.text(),-service.state.pan/1000.0,service.state.tilt/1000.0,preview.editMode()==0?UiText.PAN_VIEW.text():UiText.SELECT_POINT_ON_CHART.text());
+        return UiText.SELECT_POINT_START_S_BLUE_END_E_RED.text();
     }
     private boolean positionReady() { return manualReady() && !service.manualMoving && !service.manualTrigger; }
     private boolean canStartLoadedPlan() { return ready() && !service.manualMoving && !service.manualTrigger && service.state.positionSafe() && service.state.state.equals("PLAN_READY") && service.state.plan!=null; }
     private boolean canStartLocalPlan() { return canStartLoadedPlan() && !preview.selection.pending && pendingPlan!=null && pendingPlan.sameRecipe(service.state.plan); }
     private void startLoadedPlan() {
-        if(!canStartLoadedPlan()) throw new IllegalArgumentException("Zuerst einen Plan übertragen und dessen Bestätigung abwarten");
-        if(selectedPage==2) { calculate(); if(!canStartLocalPlan()) throw new IllegalArgumentException("Plan geändert: Geräteauftrag zurücksetzen und aktuellen Plan erneut übertragen"); }
+        if(!canStartLoadedPlan()) throw new IllegalArgumentException(UiText.FIRST_UPLOAD_A_PLAN_AND_WAIT_FOR_CONFIRMATION.text());
+        if(selectedPage==2) { calculate(); if(!canStartLocalPlan()) throw new IllegalArgumentException(UiText.PLAN_CHANGED_RESET_DEVICE_JOB_AND_UPLOAD_THE.text()); }
         long run=service.state.runId;
-        confirm("Geladenen Auftrag starten?",service.state.plan.total()+" Aufnahmen · Geräteauftrag "+run+". Das Gerät fährt und löst die Kamera aus. Gestartet wird der bereits übertragene Plan; spätere lokale Änderungen müssen zuvor neu übertragen werden.",() -> {
-            if(!canStartLoadedPlan() || service.state.runId!=run) throw new IllegalArgumentException("Geladener Auftrag hat sich geändert · erneut prüfen");
+        confirm(UiText.START_LOADED_JOB.text(),service.state.plan.total()+UiText.CAPTURES_DEVICE_JOB.text()+run+UiText.THE_DEVICE_WILL_MOVE_AND_TRIGGER_THE_CAMERA.text(),() -> {
+            if(!canStartLoadedPlan() || service.state.runId!=run) throw new IllegalArgumentException(UiText.LOADED_JOB_HAS_CHANGED_CHECK_AGAIN.text());
             service.runCommand("START"); selectPage(3);
         });
     }
     private void abortLoadedPlan() {
-        confirm("Auftrag stoppen & Endpunkte ändern?","Das Gerät stoppt. Danach wird der Geräteauftrag zurückgesetzt und das Ausrichten freigegeben. Start, Ende und bisherige Aufnahmen bleiben auf dem Handy erhalten. Anschließend den geänderten Plan übertragen und separat starten.",() -> { service.abortPlan(); preview.setEditMode(3); selectPage(2); ((ScrollView)pages[2].getParent()).smoothScrollTo(0,0); });
+        confirm(UiText.STOP_JOB_CHANGE_ENDPOINTS.text(),UiText.THE_DEVICE_WILL_STOP_THE_DEVICE_JOB_IS.text(),() -> { service.abortPlan(); preview.setEditMode(3); selectPage(2); ((ScrollView)pages[2].getParent()).smoothScrollTo(0,0); });
     }
     private void prepareRest() {
         CaptureStore.Checkpoint checkpoint=service.restCheckpoint();RasterRecovery raster=checkpoint.raster;
         long run=raster.source.runId;int index=raster.nextIndex;final int[] choice={0};
-        String[] choices={"Ab "+raster.unit()+" "+(raster.startColumn(false)+1)+" wiederholen · "+raster.remaining(newRunId(),false).total()+" Aufnahmen",
-            "Früher beginnen: "+raster.unit()+" "+(raster.startColumn(true)+1)+" · "+raster.remaining(newRunId(),true).total()+" Aufnahmen"};
-        TextView detail=text("Bisherige Aufnahmen bleiben erhalten. Laden startet keine Fahrt. Danach den geladenen Restauftrag ausdrücklich starten."+
-            (raster.source.mode==1?" Damit keine Lücken entstehen, wird ein vollständiges Tilt-Band wiederholt. Falls erforderlich, beginnt die Wiederholung früher; die angezeigte Bandnummer und alle ursprünglichen Bildpositionen bleiben erhalten.":""),13);
+        String[] choices={UiText.FROM.text()+raster.unit()+" "+(raster.startColumn(false)+1)+UiText.REPEAT.text()+raster.remaining(newRunId(),false).total()+UiText.CAPTURES.text(),
+            UiText.START_EARLIER.text()+raster.unit()+" "+(raster.startColumn(true)+1)+" · "+raster.remaining(newRunId(),true).total()+UiText.CAPTURES.text()};
+        TextView detail=text(UiText.EXISTING_CAPTURES_ARE_RETAINED_LOADING_DOES_NOT_START.text()+
+            (raster.source.mode==1?UiText.A_COMPLETE_TILT_BAND_IS_REPEATED_TO_AVOID.text():""),13);
         detail.setPadding(dp(24),dp(8),dp(24),0);
-        restDialog=new AlertDialog.Builder(this).setTitle("Panorama wiederaufnehmen")
+        restDialog=new AlertDialog.Builder(this).setTitle(UiText.RECOVER_PANORAMA_2.text())
             .setView(detail)
             .setSingleChoiceItems(choices,0,(dialog,which) -> choice[0]=which)
-            .setPositiveButton("Restauftrag laden",(dialog,which) -> safely(() -> {
+            .setPositiveButton(UiText.LOAD_RECOVERY_JOB.text(),(dialog,which) -> safely(() -> {
                 service.prepareRest(choice[0]==1,run,index);savedPlot=null;savedPlotKey=null;plottedRun=-1;selectPage(3);
-            })).setNegativeButton("Abbrechen",null).show();
+            })).setNegativeButton(UiText.CANCEL.text(),null).show();
     }
     private void removePlan() {
         if(service!=null && service.hasConnection()) {
-            if(!ready()) throw new IllegalArgumentException("Aktuellen Gerätestand abwarten");
+            if(!ready()) throw new IllegalArgumentException(UiText.WAIT_FOR_CURRENT_DEVICE_STATE.text());
             if(!service.state.state.equals("IDLE")) { service.abortPlan(true); return; }
             service.discardDraft(); observedDraftRevision=service.draftRevision;
         }
-        clearLocalPlan(); Toast.makeText(this,"Plan entfernt",Toast.LENGTH_SHORT).show();
+        clearLocalPlan(); Toast.makeText(this,UiText.PLAN_REMOVED.text(),Toast.LENGTH_SHORT).show();
     }
     private void clearLocalPlan() {
         for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) inputs.get(key).setText("");
         pendingPlan=null; preview.setPlan(null); preview.setEndpointAvailability(false,false); preview.setEditMode(3);
-        planSummary.setText("Noch kein Plan · Start und Ende ausrichten und merken."); saveInputs();
+        planSummary.setText(UiText.NO_PLAN_YET_ALIGN_AND_REMEMBER_START_AND.text()); saveInputs();
     }
     private boolean endpointSet(String prefix) {
         try { number(prefix+"Pan"); number(prefix+"Tilt"); return true; } catch(RuntimeException ex) { return false; }
     }
     private void driveSelection() {
-        if(!preview.selection.pending || preview.editMode()!=3) throw new IllegalArgumentException("Zuerst einen Fahrpunkt wählen");
+        if(!preview.selection.pending || preview.editMode()!=3) throw new IllegalArgumentException(UiText.SELECT_A_MOVEMENT_TARGET_FIRST.text());
         driveUiPoint(preview.selection.pan,preview.selection.tilt);
     }
     private void driveEndpoint(String prefix) { driveUiPoint(number(prefix+"Pan"),number(prefix+"Tilt")); }
     private void driveUiPoint(double pan,double tilt) {
-        if(!positionReady()) throw new IllegalArgumentException("Zuerst aktuelle Zielankunft abwarten");
+        if(!positionReady()) throw new IllegalArgumentException(UiText.WAIT_FOR_CURRENT_TARGET_ARRIVAL_FIRST.text());
         service.setManualTempos(integer("manualPanSpeed"),integer("manualSpeed")); service.moveToUi(pan,tilt); preview.discardSelection();
     }
     private void refreshEndpoints() {
@@ -572,7 +597,7 @@ public final class MainActivity extends Activity {
             plotHandler.postDelayed(() -> { if(service!=null && service.jog.token==token) stop.run(); },1000);
         },
             () -> service!=null && (service.jogHeldFor(axis,direction) || service.jogAllowed()));
-        arrow.setTextSize(24); arrow.setContentDescription(description+" · halten, loslassen stoppt");
+        arrow.setTextSize(24); arrow.setContentDescription(description+UiText.HOLD_RELEASE_TO_STOP.text());
         arrow.setOnTouchListener((view,event) -> {
             int action=event.getActionMasked();
             if(action==android.view.MotionEvent.ACTION_DOWN) { view.setPressed(true); start.run(); }
@@ -607,19 +632,19 @@ public final class MainActivity extends Activity {
         return ready() && service.state.plan!=null && Arrays.asList("PLAN_READY","RUNNING","PAUSE_PENDING","PAUSED").contains(service.state.state);
     }
     private AlertDialog editRunTiming() {
-        if(!timingReady()) throw new IllegalArgumentException("Aktueller Geräteplan fehlt oder Aktion noch nicht bestätigt");
+        if(!timingReady()) throw new IllegalArgumentException(UiText.CURRENT_DEVICE_PLAN_MISSING_OR_ACTION_NOT_YET.text());
         long run=service.state.runId; PanoramaPlan p=service.state.plan;
         int[] values=service.pendingTiming!=null && service.pendingTimingRun==run ? service.pendingTiming : new int[]{p.settleMs,p.pulseMs,p.exposureMs};
         LinearLayout body=vertical();body.setPadding(dp(20),dp(8),dp(20),dp(8));
-        body.addView(text(service.timingSummary()+"\nÄnderungen gelten nach dem aktuellen Bild, bei Pause vor dem nächsten Bild. Die laufende Belichtung bleibt vollständig.",14));
-        String[] labels={"Beruhigungsdauer (ms)","Triggerdauer (ms)","Belichtungswartezeit (ms)"};
+        body.addView(text(service.timingSummary()+UiText.CHANGES_APPLY_AFTER_THE_CURRENT_IMAGE_OR_BEFORE.text(),14));
+        String[] labels={UiText.SETTLING_DURATION_MS.text(),UiText.TRIGGER_DURATION_MS.text(),UiText.EXPOSURE_WAIT_MS.text()};
         EditText[] fields=new EditText[3];
         for(int i=0;i<3;i++) { body.addView(text(labels[i],14));fields[i]=new EditText(this);fields[i].setSingleLine(true);
             fields[i].setInputType(InputType.TYPE_CLASS_NUMBER);fields[i].setTag("runTiming"+i);fields[i].setText(""+values[i]);body.addView(fields[i]); }
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Zeiten im Lauf ändern").setView(body)
-            .setNegativeButton("Abbrechen",null).setPositiveButton("Übernehmen",null).create();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(UiText.CHANGE_RUN_TIMING.text()).setView(body)
+            .setNegativeButton(UiText.CANCEL.text(),null).setPositiveButton(UiText.APPLY.text(),null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> safely(() -> {
-            if(service==null || service.state.runId!=run) throw new IllegalArgumentException("Gerätelauf inzwischen geändert");
+            if(service==null || service.state.runId!=run) throw new IllegalArgumentException(UiText.DEVICE_RUN_HAS_CHANGED.text());
             int settle=Integer.parseInt(fields[0].getText().toString()),pulse=Integer.parseInt(fields[1].getText().toString()),exposure=Integer.parseInt(fields[2].getText().toString());
             service.updateTiming(settle,pulse,exposure);
             inputs.get("settle").setText(""+settle);inputs.get("planPulse").setText(""+pulse);inputs.get("exposure").setText(""+exposure);
@@ -640,17 +665,17 @@ public final class MainActivity extends Activity {
         syncPlotChrome(); render();
     }
     private String statusText() {
-        if (service==null) return "Keine Geräteverbindung";
+        if (service==null) return UiText.NO_DEVICE_CONNECTION.text();
         DeviceState s=service.state;
-        String result=String.format(Locale.GERMANY,"Firmware: %s · %s\nStatus: %s · %s\nPosition Pan %.3f° · Tilt %.3f°\nAufnahmen: %d / %d · Spalte %d · Zeile %d\nLauf: %d · Revision %d\n",s.firmware,s.hardware,s.state,s.phase,-s.pan/1000.0,s.tilt/1000.0,s.completed,s.total,s.column,s.row,s.runId,s.revision);
-        if(s.currentMoveMaximumMs()>0) result+=String.format(Locale.GERMANY,"Fahrzeitgrenze dieses Schritts: %.2f s\n",s.currentMoveMaximumMs()/1000.0);
-        if (!service.fresh()) result+="Statusdaten fehlen oder sind veraltet.\n";
-        if (s.limitsKnown) result+=String.format(Locale.GERMANY,"Grenzen %s\nPan %.3f° bis %.3f° · Tilt %.3f° bis %.3f°\n",s.confirmed ? "bestätigt" : "NICHT bestätigt",-s.panMax/1000.0,-s.panMin/1000.0,s.tiltMin/1000.0,s.tiltMax/1000.0);
-        if (s.limitsKnown && s.confirmed && !s.positionSafe()) result+="Istposition außerhalb der Grenze: betroffene Achse in Richtung des erlaubten Bereichs zurückfahren.\n";
-        if (service.manualMoving) result+="Manuelle Fahrt aktiv\n";
-        if (service.manualTrigger) result+="Kameraauslösung aktiv/noch nicht abgeschlossen\n";
-        if (s.plan!=null) result+="Geräteplan: "+s.plan.total()+" Bilder · "+service.timingSummary()+"\n";
-        if(s.warningSettingsSupported) result+=String.format(Locale.GERMANY,"Aktive Warnschwellen: Pan %.3f° · Tilt %.3f° (Geräte-Config %d)\n",s.warningPanMdeg/1000.0,s.warningTiltMdeg/1000.0,s.motionConfigRevision);
+        String result=String.format(UiText.locale(),UiText.FIRMWARE_S_S_STATUS_S_S_POSITION_PAN.text(),s.firmware,s.hardware,s.state,s.phase,-s.pan/1000.0,s.tilt/1000.0,s.completed,s.total,s.column,s.row,s.runId,s.revision);
+        if(s.currentMoveMaximumMs()>0) result+=String.format(UiText.locale(),UiText.MOVEMENT_TIME_LIMIT_FOR_THIS_STEP_2F_S.text(),s.currentMoveMaximumMs()/1000.0);
+        if (!service.fresh()) result+=UiText.STATUS_DATA_IS_MISSING_OR_STALE.text();
+        if (s.limitsKnown) result+=String.format(UiText.locale(),UiText.LIMITS_S_PAN_3F_TO_3F_TILT_3F.text(),s.confirmed ? UiText.CONFIRMED.text() : UiText.NOT_CONFIRMED.text(),-s.panMax/1000.0,-s.panMin/1000.0,s.tiltMin/1000.0,s.tiltMax/1000.0);
+        if (s.limitsKnown && s.confirmed && !s.positionSafe()) result+=UiText.ACTUAL_POSITION_OUTSIDE_LIMIT_MOVE_THE_AFFECTED_AXIS.text();
+        if (service.manualMoving) result+=UiText.MANUAL_MOVEMENT_ACTIVE.text();
+        if (service.manualTrigger) result+=UiText.CAMERA_TRIGGER_ACTIVE_NOT_YET_COMPLETED.text();
+        if (s.plan!=null) result+=UiText.DEVICE_PLAN.text()+s.plan.total()+UiText.IMAGES.text()+service.timingSummary()+"\n";
+        if(s.warningSettingsSupported) result+=String.format(UiText.locale(),UiText.ACTIVE_WARNING_THRESHOLDS_PAN_3F_TILT_3F_DEVICE.text(),s.warningPanMdeg/1000.0,s.warningTiltMdeg/1000.0,s.motionConfigRevision);
         return result;
     }
     private void render() {
@@ -668,8 +693,8 @@ public final class MainActivity extends Activity {
         if(columnRetryAction!=null) columnRetryAction.setVisibility(service!=null && service.state.recoveryPauseSupported && service.state.state.equals("PAUSED") && service.state.plan!=null && service.state.plan.mode==0?View.VISIBLE:View.GONE);
         if(captureStabilityActive!=null) {
             CaptureStabilitySettings s=service==null?null:service.state.captureStability;
-            captureStabilityActive.setText(s==null?"Noch keine bestätigten Gerätewerte · Firmware 2.4.71 oder neuer erforderlich.":
-                String.format(Locale.GERMANY,"Aktiv im Gerät: Schwankung %.3f° · Pan %.3f° · Tilt %.3f°\nZusätzliche Wartezeit %.1f s · Geräte-Config %d",s.spanMdeg/1000.0,s.panDriftMdeg/1000.0,s.tiltDriftMdeg/1000.0,s.extraWaitMs/1000.0,s.revision));
+            captureStabilityActive.setText(s==null?UiText.NO_CONFIRMED_DEVICE_VALUES_YET_FIRMWARE_2_4.text():
+                String.format(UiText.locale(),UiText.ACTIVE_ON_DEVICE_VARIATION_3F_PAN_3F_TILT.text(),s.spanMdeg/1000.0,s.panDriftMdeg/1000.0,s.tiltDriftMdeg/1000.0,s.extraWaitMs/1000.0,s.revision));
             String values=s==null?"":s.revision+"|"+s.spanMdeg+"|"+s.panDriftMdeg+"|"+s.tiltDriftMdeg+"|"+s.extraWaitMs;
             if(s!=null && !values.equals(displayedCaptureStability)) {
                 displayedCaptureStability=values;
@@ -689,41 +714,41 @@ public final class MainActivity extends Activity {
         if(panJogTempo!=null) panJogTempo.setEnabled(service==null || !service.connected || (service.state.jogMaximumVelocityMdeg>0 && !service.jog.held && !service.jog.stopping));
         if(jogTempoLabel!=null && jogTempo!=null) {
             String tempo=service!=null && service.connected && service.state.jogMaximumVelocityMdeg==0 ? manualTempo.getText()+"‰" : "P"+panJogTempo.getText()+" · T"+jogTempo.getText()+"°/s";
-            String label="Halten\n"+tempo;
+            String label=UiText.HOLD.text()+tempo;
             if(!jogTempoLabel.getText().toString().equals(label)) jogTempoLabel.setText(label);
         }
         if(service!=null && observedDraftRevision>=0 && observedDraftRevision!=service.draftRevision) {
             observedDraftRevision=service.draftRevision; clearLocalPlan();
         }
-        connection.setText(service==null ? "Nicht verbunden" : service.connection);
+        connection.setText(service==null ? UiText.NOT_CONNECTED.text() : service.connectionText());
         int keepOn=android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
         boolean keepScreen=service!=null && service.connected;
         if(((getWindow().getAttributes().flags&keepOn)!=0)!=keepScreen) getWindow().setFlags(keepScreen?keepOn:0,keepOn);
-        message.setText(service==null ? "Bereit" : service.message);
+        message.setText(service==null ? UiText.READY.text() : service.messageText());
         boolean loadedForAlignment=service!=null && service.fresh() && service.state.state.equals("PLAN_READY");
         if(alignmentReset!=null) alignmentReset.setVisibility(service!=null && service.fresh() && PlanAbort.allowed(service.state.state)?View.VISIBLE:View.GONE);
-        if(planDeviceStatus!=null) planDeviceStatus.setText(service==null || !service.fresh()?"Zum Übertragen mit dem Gerät verbinden":loadedForAlignment?(canStartLocalPlan()?"✓ Plan bestätigt · Aufnahme jetzt starten":"Plan auf dem Handy geändert oder Auswahl offen. Auftrag zurücksetzen und aktuellen Plan übertragen."):service.state.state.equals("IDLE")?"Erst übertragen, Bestätigung abwarten, dann Aufnahme starten.":"Gerätezustand: "+service.state.state+" · Auftrag vor dem neuen Plan zurücksetzen");
+        if(planDeviceStatus!=null) planDeviceStatus.setText(service==null || !service.fresh()?UiText.CONNECT_TO_THE_DEVICE_TO_UPLOAD.text():loadedForAlignment?(canStartLocalPlan()?UiText.PLAN_CONFIRMED_START_CAPTURE_NOW.text():UiText.PLAN_CHANGED_ON_PHONE_OR_SELECTION_PENDING_RESET.text()):service.state.state.equals("IDLE")?UiText.UPLOAD_FIRST_WAIT_FOR_CONFIRMATION_THEN_START_CAPTURE.text():UiText.DEVICE_STATE.text()+service.state.state+UiText.RESET_JOB_BEFORE_UPLOADING_A_NEW_PLAN.text());
         if(alignmentHint!=null) alignmentHint.setText(alignmentHelp());
         if(activeProfile!=null && inputs.containsKey("profileName")) {
             String name=inputs.get("profileName").getText().toString();
             CameraProfile selected=(CameraProfile)profilePicker.getSelectedItem();
-            activeProfile.setText("Aktiv: "+name+(selected!=null && !selected.name.equals(name)?"\nAuswahl oben mit „Kameraprofil verwenden“ übernehmen.":""));
+            activeProfile.setText(UiText.ACTIVE.text()+name+(selected!=null && !selected.name.equals(name)?UiText.APPLY_THE_SELECTION_ABOVE_USING_USE_CAMERA_PROFILE.text():""));
         }
         TextView manualHint=pages[1].findViewWithTag("alignmentHint"); if(manualHint!=null) manualHint.setText(alignmentHelp());
-        if(endpointSummary!=null) endpointSummary.setText(endpointLabel("start","Start")+"\n"+endpointLabel("end","Ende"));
+        if(endpointSummary!=null) endpointSummary.setText(endpointLabel("start","Start")+"\n"+endpointLabel("end",UiText.END.text()));
         if(runProgress!=null) {
             long completed=savedPlot!=null?savedPlot.model.captures.size():service==null?0:service.state.completed;
             long total=savedPlot!=null && savedPlot.plan!=null?savedPlot.plan.total():service==null?0:service.state.total;
-            String state=savedPlot!=null?"Gespeichert":service==null || !service.fresh()?"Status ausstehend":friendlyState(service.state.state);
-            runProgress.setText(state+" · "+completed+" / "+total+" Aufnahmen"); captureProgress.setMax((int)Math.max(1,total)); captureProgress.setProgress((int)completed);
+            String state=savedPlot!=null?UiText.SAVED.text():service==null || !service.fresh()?UiText.STATUS_PENDING.text():friendlyState(service.state.state);
+            runProgress.setText(state+" · "+completed+" / "+total+UiText.CAPTURES.text()); captureProgress.setMax((int)Math.max(1,total)); captureProgress.setProgress((int)completed);
         }
         live.setText(statusText());
         TextView runLive=pages[3].findViewWithTag("live"); if (runLive!=null) runLive.setText(statusText());
-        diagnostics.setText(service==null ? "Noch keine Diagnose" : service.diagnostics);
-        papywizardStatus.setText(service==null?"Papywizard-Sicherung wird vorbereitet.":service.papywizardStatus());
+        diagnostics.setText(service==null ? UiText.NO_DIAGNOSTICS_YET.text() : service.diagnosticsText());
+        papywizardStatus.setText(service==null?UiText.PREPARING_PAPYWIZARD_BACKUP.text():service.papywizardStatus());
         if(tiltReference!=null) {
             DeviceState s=service==null?null:service.state;
-            tiltReference.setText(s==null || !service.fresh()?"Zum Einstellen mit dem Gerät verbinden.":!s.tiltCalibrationKnown?"Tilt-Nullpunkt benötigt Firmware 2.3.5 oder neuer.":String.format(Locale.GERMANY,"Aktueller Tilt: %.3f°\nNullpunkt: %s",s.tilt/1000.0,s.tiltZeroOffset==0?"Werkreferenz":"im Gerät gespeichert"));
+            tiltReference.setText(s==null || !service.fresh()?UiText.CONNECT_TO_THE_DEVICE_TO_CONFIGURE.text():!s.tiltCalibrationKnown?UiText.TILT_ZERO_POINT_REQUIRES_FIRMWARE_2_3_5.text():String.format(UiText.locale(),UiText.CURRENT_TILT_3F_ZERO_POINT_S.text(),s.tilt/1000.0,s.tiltZeroOffset==0?UiText.FACTORY_REFERENCE.text():UiText.SAVED_ON_DEVICE.text()));
             if(s!=null && service.fresh() && s.limitsKnown) {
                 String limits=s.tiltMin+"|"+s.tiltMax+"|"+s.tiltZeroOffset;
                 if(!limits.equals(displayedTiltLimits)) {
@@ -736,11 +761,11 @@ public final class MainActivity extends Activity {
         if(preview!=null) { preview.setLive(service==null?null:service.state,service==null?null:service.plot,service!=null && service.fresh()); preview.setDriveReady(positionReady()); }
         if(preview!=null && service!=null && service.state.limitsKnown && !planRangeInitialized) { planRangeInitialized=true; applyTiltRange(); }
         if(runPreview!=null) {
-            runTitle.setText(savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId:"Aktueller Auftrag");
+            runTitle.setText(savedPlot!=null?UiText.SAVED_RUN.text()+savedPlot.model.runId:UiText.CURRENT_JOB.text());
             runPreview.setPlan(savedPlot!=null?savedPlot.plan:service==null?null:service.state.plan);
             runPreview.setLive(savedPlot!=null?null:service==null?null:service.state,savedPlot!=null?savedPlot.model:service==null?null:service.plot,savedPlot==null && service!=null && service.fresh());
-            runLegend.setText((savedPlot!=null?"Gespeicherter Lauf "+savedPlot.model.runId+" · keine Live-Position\n":"Aktueller Gerätelauf\n")+"Blau: Soll · Grün: Aufnahme · Orange: Istposition\nRoter Kreis mit ×: Warnpunkt antippen · orange ×: rekonstruiert\nLetzte 512 Aufnahmen und alle Warnpunkte; grau: Verlauf");
-            int warnings=warningCaptures().size();warningPoints.setText("⚠ "+warnings+" Warnpunkte · anzeigen / erneut anfahren");warningPoints.setVisibility(warnings==0?View.GONE:View.VISIBLE);
+            runLegend.setText((savedPlot!=null?UiText.SAVED_RUN.text()+savedPlot.model.runId+UiText.NO_LIVE_POSITION.text():UiText.CURRENT_DEVICE_RUN.text())+UiText.BLUE_TARGET_GREEN_CAPTURE_ORANGE_ACTUAL_POSITION_RED.text());
+            int warnings=warningCaptures().size();warningPoints.setText("⚠ "+warnings+UiText.WARNING_POINTS_SHOW_REVISIT.text());warningPoints.setVisibility(warnings==0?View.GONE:View.VISIBLE);
             // New status/plan data never silently replace the chosen zoom.
             if(savedPlot==null && service!=null && service.fresh()) plottedRun=service.state.runId;
         }
@@ -756,40 +781,40 @@ public final class MainActivity extends Activity {
     }
     private void showCaptureWarnings() {
         List<RunPlotModel.Capture> warnings=warningCaptures();String[] labels=new String[warnings.size()];
-        for(int i=0;i<labels.length;i++) labels[i]="Aufnahme "+warnings.get(i).ordinal+" · "+CaptureWarning.describe(warnings.get(i).warningFlags);
-        new AlertDialog.Builder(this).setTitle("Warnpunkte – Lauf wird fortgesetzt").setItems(labels,(dialog,index) -> reviewCaptureWarning(warnings.get(index))).setNegativeButton("Schließen",null).show();
+        for(int i=0;i<labels.length;i++) labels[i]=UiText.CAPTURE.text()+warnings.get(i).ordinal+" · "+CaptureWarning.describe(warnings.get(i).warningFlags);
+        new AlertDialog.Builder(this).setTitle(UiText.WARNING_POINTS_RUN_CONTINUES.text()).setItems(labels,(dialog,index) -> reviewCaptureWarning(warnings.get(index))).setNegativeButton(UiText.CLOSE.text(),null).show();
     }
     private AlertDialog reviewCaptureWarning(RunPlotModel.Capture capture) {
-        String detail=CaptureWarning.describe(capture.warningFlags)+String.format(Locale.GERMANY,"\nSoll: Pan %.3f° · Tilt %.3f°",-capture.targetPan/1000.0,capture.targetTilt/1000.0);
-        detail+=capture.reconstructed?"\nIstposition nicht übertragen.":String.format(Locale.GERMANY,"\nIst: Pan %.3f° · Tilt %.3f°\nAbweichung: Pan %.3f° · Tilt %.3f°",-capture.pan/1000.0,capture.tilt/1000.0,(capture.targetPan-capture.pan)/1000.0,(capture.tilt-capture.targetTilt)/1000.0);
+        String detail=CaptureWarning.describe(capture.warningFlags)+String.format(UiText.locale(),UiText.TARGET_PAN_3F_TILT_3F.text(),-capture.targetPan/1000.0,capture.targetTilt/1000.0);
+        detail+=capture.reconstructed?UiText.ACTUAL_POSITION_NOT_TRANSMITTED.text():String.format(UiText.locale(),UiText.ACTUAL_PAN_3F_TILT_3F_DEVIATION_PAN_3F.text(),-capture.pan/1000.0,capture.tilt/1000.0,(capture.targetPan-capture.pan)/1000.0,(capture.tilt-capture.targetTilt)/1000.0);
         boolean drive=service!=null && service.navigationAllowed() && (savedPlot==null || service.connectedTo(savedPlot.device));
         if(drive) try {service.state.validateManualTarget(capture.targetPan,capture.targetTilt);} catch(IllegalArgumentException ex) {drive=false;}
-        detail+=drive?"\nErneutes Anfahren löst keine Aufnahme aus. Danach bei Bedarf manuell auslösen.":"\nZum erneuten Anfahren: Lauf pausieren oder beenden und mit demselben Gerät verbinden. Der Sollpunkt muss innerhalb der aktuellen Grenzen liegen.";
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Warnpunkt · Aufnahme "+capture.ordinal).setMessage(detail).setNegativeButton("Schließen",null)
-            .setPositiveButton("Sollpunkt anfahren",(d,which) -> safely(() -> service.moveToUi(-capture.targetPan/1000.0,capture.targetTilt/1000.0))).create();
+        detail+=drive?UiText.REVISITING_DOES_NOT_TRIGGER_A_CAPTURE_TRIGGER_MANUALLY.text():UiText.TO_REVISIT_PAUSE_OR_END_THE_RUN_AND.text();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(UiText.WARNING_POINT_CAPTURE.text()+capture.ordinal).setMessage(detail).setNegativeButton(UiText.CLOSE.text(),null)
+            .setPositiveButton(UiText.MOVE_TO_TARGET.text(),(d,which) -> safely(() -> service.moveToUi(-capture.targetPan/1000.0,capture.targetTilt/1000.0))).create();
         dialog.show();dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(drive);
         return dialog;
     }
     private String endpointLabel(String prefix,String title) {
-        return endpointSet(prefix)?String.format(Locale.GERMANY,"%s  Pan %.3f° · Tilt %.3f°",title,number(prefix+"Pan"),number(prefix+"Tilt")):title+" noch nicht gesetzt";
+        return endpointSet(prefix)?String.format(UiText.locale(),"%s  Pan %.3f° · Tilt %.3f°",title,number(prefix+"Pan"),number(prefix+"Tilt")):title+UiText.NOT_YET_SET.text();
     }
     private String alignmentHelp() {
-        if(service==null) return "Zum Ausrichten mit dem Gerät verbinden.";
+        if(service==null) return UiText.CONNECT_TO_THE_DEVICE_TO_ALIGN.text();
         String reason=service.navigationReason(); if(!reason.isEmpty()) return reason;
-        if(!service.state.positionSafe()) return "Istposition außerhalb der Grenze. Nur in Richtung des erlaubten Bereichs zurückfahren.";
-        if(service.manualMoving) return "Kamera fährt … Zielankunft abwarten, dann Start oder Ende merken.";
-        if(!service.endpointCaptureAllowed()) return "Position beruhigt sich … frische Istposition abwarten, dann Start oder Ende merken.";
-        return "Pfeile halten: orangefarbenen Jetzt-Punkt bewegen. Loslassen → Start oder Ende merken. Alternativ Punkt antippen und anfahren.";
+        if(!service.state.positionSafe()) return UiText.ACTUAL_POSITION_OUTSIDE_LIMIT_ONLY_MOVE_BACK_TOWARDS.text();
+        if(service.manualMoving) return UiText.CAMERA_MOVING_WAIT_FOR_ARRIVAL_THEN_REMEMBER_START.text();
+        if(!service.endpointCaptureAllowed()) return UiText.POSITION_SETTLING_WAIT_FOR_A_FRESH_ACTUAL_POSITION.text();
+        return UiText.HOLD_ARROWS_MOVE_THE_ORANGE_CURRENT_POSITION_RELEASE.text();
     }
     private void showColumnRetry() {
         if(service==null || !service.canRetryColumn()) return;
         long run=service.state.runId,index=service.state.nextImageIndex;
         int column=(int)(index/service.state.plan.rows)+1;
         int[] choice={0};
-        restDialog=new AlertDialog.Builder(this).setTitle("Pausiertes Raster · Spalte "+column)
-            .setSingleChoiceItems(new String[]{"Betroffene Spalte wiederholen","Eine Spalte davor beginnen"},0,(d,which) -> choice[0]=which)
-            .setNegativeButton("Abbrechen",null)
-            .setPositiveButton("Wiederholung vorbereiten",(d,which) -> safely(() -> service.retryColumn(choice[0]==1,run,index))).create();
+        restDialog=new AlertDialog.Builder(this).setTitle(UiText.PAUSED_GRID_COLUMN.text()+column)
+            .setSingleChoiceItems(new String[]{UiText.REPEAT_AFFECTED_COLUMN.text(),UiText.START_ONE_COLUMN_EARLIER.text()},0,(d,which) -> choice[0]=which)
+            .setNegativeButton(UiText.CANCEL.text(),null)
+            .setPositiveButton(UiText.PREPARE_REPEAT.text(),(d,which) -> safely(() -> service.retryColumn(choice[0]==1,run,index))).create();
         restDialog.show();
     }
     private void showIncident() {
@@ -802,13 +827,13 @@ public final class MainActivity extends Activity {
         dialogIncidentId=id;
         PanoramaService owner=service;
         boolean paused=RunRecoveryPause.active(owner.state);
-        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(paused || owner.hasRecoveryCheckpoint()?"Aufnahme unterbrochen · Auftrag erhalten":"Aktion unterbrochen")
-            .setMessage(owner.incident.detail+(paused?"\n\nQuittieren erhält den pausierten Auftrag und löst keine Fahrt aus.":"\n\nQuittieren prüft den Gerätestand. Danach kann das Panorama ab einer vollständigen Spalte bzw. einem Tilt-Band wiederaufgenommen werden. Laden und Starten bleiben getrennt. Entwurf und gespeicherte Aufnahmen bleiben erhalten."))
-            .setCancelable(false).setPositiveButton("Quittieren & prüfen",(dialog,which) -> safely(() -> {
+        AlertDialog.Builder builder=new AlertDialog.Builder(this).setTitle(paused || owner.hasRecoveryCheckpoint()?UiText.CAPTURE_INTERRUPTED_JOB_RETAINED.text():UiText.ACTION_INTERRUPTED.text())
+            .setMessage(owner.incidentDetail()+(paused?UiText.ACKNOWLEDGEMENT_RETAINS_THE_PAUSED_JOB_AND_DOES_NOT.text():UiText.ACKNOWLEDGEMENT_CHECKS_THE_DEVICE_STATE_THE_PANORAMA_CAN.text()))
+            .setCancelable(false).setPositiveButton(UiText.ACKNOWLEDGE_CHECK.text(),(dialog,which) -> safely(() -> {
                 if(owner.hasRecoveryCheckpoint()) {recoveryOfferRun=owner.state.runId;savedPlot=null;savedPlotKey=null;selectPage(3);}
                 owner.acknowledgeIncident(id);
             }));
-        builder.setNeutralButton("NOT-STOP",(dialog,which) -> safely(owner::emergencyStop));
+        builder.setNeutralButton(UiText.E_STOP.text(),(dialog,which) -> safely(owner::emergencyStop));
         incidentDialog=builder.create(); incidentDialog.setCanceledOnTouchOutside(false);
         // Not-Stop remains reachable without dismissing the required acknowledgement.
         incidentDialog.setOnShowListener(dialog -> {
@@ -818,17 +843,17 @@ public final class MainActivity extends Activity {
         incidentDialog.show();
     }
     private String friendlyState(String state) {
-        switch(state) { case "IDLE": return "Bereit"; case "PLAN_READY": return "Plan geladen"; case "RUNNING": return "Aufnahme läuft"; case "PAUSE_PENDING": return "Pause wird vorbereitet"; case "PAUSED": return "Pausiert"; case "STOPPED": return "Gestoppt"; case "COMPLETED": return "Abgeschlossen"; case "FAULT": return "Gerätefehler"; default: return state; }
+        switch(state) { case "IDLE": return UiText.READY.text(); case "PLAN_READY": return UiText.PLAN_LOADED.text(); case "RUNNING": return UiText.CAPTURING.text(); case "PAUSE_PENDING": return UiText.PREPARING_PAUSE.text(); case "PAUSED": return UiText.PAUSED.text(); case "STOPPED": return UiText.STOPPED.text(); case "COMPLETED": return UiText.COMPLETED.text(); case "FAULT": return UiText.DEVICE_ERROR.text(); default: return state; }
     }
     private void safely(Runnable action) {
-        try { action.run(); } catch (RuntimeException ex) { Toast.makeText(this,ex.getMessage()==null ? "Aktion nicht möglich" : ex.getMessage(),Toast.LENGTH_LONG).show(); }
+        try { action.run(); } catch (RuntimeException ex) { Toast.makeText(this,ex.getMessage()==null ? UiText.ACTION_UNAVAILABLE.text() : ex.getMessage(),Toast.LENGTH_LONG).show(); }
         render();
     }
     private void confirm(String title,String detail,Runnable action) {
-        new AlertDialog.Builder(this).setTitle(title).setMessage(detail).setNegativeButton("Abbrechen",null).setPositiveButton("Ja",(d,w) -> safely(action)).show();
+        new AlertDialog.Builder(this).setTitle(title).setMessage(detail).setNegativeButton(UiText.CANCEL.text(),null).setPositiveButton(UiText.YES.text(),(d,w) -> safely(action)).show();
     }
-    private double number(String key) { double n=Double.parseDouble(inputs.get(key).getText().toString().trim().replace(',','.')); if (!Double.isFinite(n)) throw new IllegalArgumentException("Ungültige Zahl"); return n; }
-    private int integer(String key) { double n=number(key); if (n!=Math.rint(n) || n<Integer.MIN_VALUE || n>Integer.MAX_VALUE) throw new IllegalArgumentException("Ganze Millisekunden/Zahlen erforderlich"); return (int)n; }
+    private double number(String key) { double n=Double.parseDouble(inputs.get(key).getText().toString().trim().replace(',','.')); if (!Double.isFinite(n)) throw new IllegalArgumentException(UiText.INVALID_NUMBER.text()); return n; }
+    private int integer(String key) { double n=number(key); if (n!=Math.rint(n) || n<Integer.MIN_VALUE || n>Integer.MAX_VALUE) throw new IllegalArgumentException(UiText.WHOLE_MILLISECONDS_NUMBERS_REQUIRED.text()); return (int)n; }
     private void saveInputs() {
         SharedPreferences.Editor editor=preferences.edit(); for (Map.Entry<String,EditText> input:inputs.entrySet()) editor.putString(input.getKey(),input.getValue().getText().toString());
         editor.putInt("mode",modePicker.getSelectedItemPosition()).putBoolean("stopOnLoss",stopOnLoss.isChecked()).apply();
@@ -848,15 +873,15 @@ public final class MainActivity extends Activity {
         if (!permission()) return;
         BluetoothAdapter adapter=getSystemService(BluetoothManager.class).getAdapter(); devices.clear();
         try { if (adapter!=null && adapter.isEnabled()) devices.addAll(adapter.getBondedDevices()); }
-        catch (SecurityException ex) { message.setText("Bluetooth-Berechtigung fehlt"); return; }
+        catch (SecurityException ex) { message.setText(UiText.BLUETOOTH_PERMISSION_MISSING.text()); return; }
         devices.sort(Comparator.comparing(this::deviceName));
         List<String> names=new ArrayList<>(); int selected=0; String saved=preferences.getString("device","");
         for (int i=0;i<devices.size();i++) { BluetoothDevice d=devices.get(i); String name=deviceName(d); names.add(name+" ("+d.getAddress()+")"); if (d.getAddress().equals(saved) || (saved.isEmpty() && name.startsWith("RNBT"))) selected=i; }
         devicePicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,names)); devicePicker.setSelection(selected); render();
     }
     private String deviceName(BluetoothDevice device) {
-        try { String name=device.getName(); return name==null ? "Unbenannt" : name; }
-        catch (SecurityException ex) { return "Bluetooth-Berechtigung fehlt"; }
+        try { String name=device.getName(); return name==null ? UiText.UNNAMED.text() : name; }
+        catch (SecurityException ex) { return UiText.BLUETOOTH_PERMISSION_MISSING.text(); }
     }
     private void connect() {
         if (!permission() || devicePicker.getSelectedItemPosition()<0 || service==null || service.hasConnection()) return;
@@ -865,7 +890,7 @@ public final class MainActivity extends Activity {
         Intent intent=new Intent(this,PanoramaService.class).putExtra("address",devices.get(devicePicker.getSelectedItemPosition()).getAddress());
         startForegroundService(intent);
     }
-    private void takePosition(String prefix) { if (!positionReady() || !service.state.positionSafe() || !service.endpointCaptureAllowed()) throw new IllegalArgumentException("Position erst nach Beruhigung und frischer Rückmeldung übernehmen"); preview.discardSelection(); inputs.get(prefix+"Pan").setText(""+(-service.state.pan/1000.0)); inputs.get(prefix+"Tilt").setText(""+(service.state.tilt/1000.0)); Toast.makeText(this,prefix.equals("start")?"Startposition gespeichert":"Endposition gespeichert",Toast.LENGTH_SHORT).show(); }
+    private void takePosition(String prefix) { if (!positionReady() || !service.state.positionSafe() || !service.endpointCaptureAllowed()) throw new IllegalArgumentException(UiText.REMEMBER_POSITION_ONLY_AFTER_SETTLING_AND_RECEIVING_FRESH.text()); preview.discardSelection(); inputs.get(prefix+"Pan").setText(""+(-service.state.pan/1000.0)); inputs.get(prefix+"Tilt").setText(""+(service.state.tilt/1000.0)); Toast.makeText(this,prefix.equals("start")?UiText.START_POSITION_SAVED.text():UiText.END_POSITION_SAVED.text(),Toast.LENGTH_SHORT).show(); }
     private void migrateTiltSign() {
         if(!preferences.getBoolean("tiltPositiveUp",false)) return;
         SharedPreferences.Editor editor=preferences.edit();
@@ -889,13 +914,13 @@ public final class MainActivity extends Activity {
         if (service!=null && service.state.limitsKnown) pendingPlan.validate(service.state);
         preview.setPlan(pendingPlan);
         double seconds=pendingPlan.total()*(pendingPlan.settleMs+pendingPlan.pulseMs+pendingPlan.exposureMs)/1000.0;
-        planSummary.setText(String.format(Locale.GERMANY,"Bildwinkel %.3f° × %.3f°\n%d Aufnahmen · %d Spalten/max. Bandbilder · %d Zeilen/Bänder\nMindestens %.1f min plus Fahrzeiten (Schätzung)",profile.fovX(),profile.fovY(),pendingPlan.total(),pendingPlan.columns,pendingPlan.rows,seconds/60)); saveInputs();
+        planSummary.setText(String.format(UiText.locale(),UiText.FIELD_OF_VIEW_3F_3F_D_CAPTURES_D.text(),profile.fovX(),profile.fovY(),pendingPlan.total(),pendingPlan.columns,pendingPlan.rows,seconds/60)); saveInputs();
         render();
     }
     private void loadPlan() {
-        if(preview.selection.pending) throw new IllegalArgumentException("Grafische Auswahl zuerst übernehmen oder verwerfen");
+        if(preview.selection.pending) throw new IllegalArgumentException(UiText.APPLY_OR_DISCARD_THE_CHART_SELECTION_FIRST.text());
         calculate(); PanoramaPlan plan=pendingPlan;
-        confirm("Plan übertragen?",plan.total()+" Aufnahmen mit "+editedProfile().name+". Nach der Bestätigung „Aufnahme starten“ drücken. Übertragen allein fährt das Gerät nicht.",() -> service.loadPlan(plan));
+        confirm(UiText.UPLOAD_PLAN_2.text(),plan.total()+UiText.CAPTURES_WITH.text()+editedProfile().name+UiText.AFTER_CONFIRMATION_PRESS_START_CAPTURE_UPLOADING_ALONE_DOES.text(),() -> service.loadPlan(plan));
     }
     private void loadProfiles() {
         try {
@@ -914,7 +939,7 @@ public final class MainActivity extends Activity {
         CameraProfile p=profiles.get(profilePicker.getSelectedItemPosition());
         inputs.get("profileName").setText(p.name); inputs.get("focal").setText(""+p.focal); inputs.get("width").setText(""+p.width); inputs.get("height").setText(""+p.height);
         inputs.get("settle").setText(""+p.settleMs); inputs.get("exposure").setText(""+p.exposureMs);
-        saveInputs(); Toast.makeText(this,"Profil aktiv: "+p.name,Toast.LENGTH_SHORT).show();
+        saveInputs(); Toast.makeText(this,UiText.PROFILE_ACTIVE.text()+p.name,Toast.LENGTH_SHORT).show();
     }
     private void saveProfile() {
         CameraProfile p=editedProfile(); int index=-1; for (int i=0;i<profiles.size();i++) if (profiles.get(i).name.equals(p.name)) index=i;
@@ -922,7 +947,7 @@ public final class MainActivity extends Activity {
     }
     private void persistProfiles() {
         try { JSONArray data=new JSONArray(); for (CameraProfile p:profiles) data.put(new JSONObject().put("name",p.name).put("focal",p.focal).put("width",p.width).put("height",p.height).put("settle",p.settleMs).put("exposure",p.exposureMs)); preferences.edit().putString("profiles",data.toString()).apply(); }
-        catch (JSONException ex) { throw new IllegalArgumentException("Profile konnten nicht gespeichert werden",ex); }
+        catch (JSONException ex) { throw new IllegalArgumentException(UiText.COULD_NOT_SAVE_PROFILES.text(),ex); }
     }
     private void importConfig() { startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE),61); }
     private void parseConfig(InputStream input) throws Exception {
@@ -930,7 +955,7 @@ public final class MainActivity extends Activity {
         int event; while ((event=parser.next())!=org.xmlpull.v1.XmlPullParser.END_DOCUMENT) if (event==org.xmlpull.v1.XmlPullParser.START_TAG) {
             String tag=parser.getName(); if (tag.matches("(FocalLength|ChipWidth|ChipHeight|VibrationDelay|ExposureDelay)_[1-9]")) values.put(tag,parser.nextText().trim());
         }
-        if (!values.containsKey("FocalLength_4")) throw new IllegalArgumentException("Keine Windows-Kameraprofile gefunden");
+        if (!values.containsKey("FocalLength_4")) throw new IllegalArgumentException(UiText.NO_WINDOWS_CAMERA_PROFILES_FOUND.text());
         int[] indices={4,5,6,7,8,values.containsKey("FocalLength_9")?9:1,2,3}; List<CameraProfile> imported=new ArrayList<>();
         for (int i=0;i<indices.length;i++) {
             int n=indices[i]; CameraProfile old=profiles.get(Math.min(i,profiles.size()-1));
@@ -943,9 +968,9 @@ public final class MainActivity extends Activity {
     }
     private void refreshRuns() { if (service!=null) runPicker.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,service.captures.runs())); }
     private void exportCaptures(boolean xml) {
-        CaptureStore.Run run=(CaptureStore.Run)runPicker.getSelectedItem(); if (run==null) throw new IllegalArgumentException("Keine Aufnahmen gespeichert; Läufe laden");
+        CaptureStore.Run run=(CaptureStore.Run)runPicker.getSelectedItem(); if (run==null) throw new IllegalArgumentException(UiText.NO_CAPTURES_SAVED_LOAD_RUNS.text());
         if(service.captures.hasUncertainExposure(run.key)) {
-            confirm("Kameradateien abgleichen", "Ein Belichtungsfehler kann zusätzliche Fotos ohne gezählten Aufnahmeeintrag erzeugt haben. Der Export enthält gezählte Aufnahmen einschließlich wiederholter Spalten. Vor dem PTGui-Import zusätzliche Kameradateien anhand Zeitstempel und Unterbrechungs-CSV abgleichen.",() -> saveCaptureExport(run,xml));
+            confirm(UiText.CHECK_CAMERA_FILES.text(), UiText.AN_EXPOSURE_ERROR_MAY_HAVE_CREATED_EXTRA_PHOTOS.text(),() -> saveCaptureExport(run,xml));
         } else saveCaptureExport(run,xml);
     }
     private void saveCaptureExport(CaptureStore.Run run,boolean xml) {
@@ -954,12 +979,12 @@ public final class MainActivity extends Activity {
         startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType(xml?"application/xml":"text/csv").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Panorama-"+run.key+(xml?".xml":".csv")),60);
     }
     private void exportInterruptions() {
-        CaptureStore.Run run=(CaptureStore.Run)runPicker.getSelectedItem();if(run==null) throw new IllegalArgumentException("Zuerst gespeicherte Läufe laden");
+        CaptureStore.Run run=(CaptureStore.Run)runPicker.getSelectedItem();if(run==null) throw new IllegalArgumentException(UiText.LOAD_SAVED_RUNS_FIRST.text());
         pendingExport=service.captures.exportInterruptions(run.key);prepareExport();
         startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/csv").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Panorama-Unterbrechungen-"+run.key+".csv"),60);
     }
     private void exportSupport() {
-        try { pendingExport="PanoramaControl "+BuildConfig.VERSION_NAME+"\n"+statusText()+"\n"+service.diagnostics+"\n"+service.support.snapshot(); }
+        try { pendingExport="PanoramaControl "+BuildConfig.VERSION_NAME+"\n"+statusText()+"\n"+service.diagnosticsText()+"\n"+service.support.snapshot(); }
         catch (IOException ex) { throw new IllegalArgumentException(ex.getMessage(),ex); }
         prepareExport();
         startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/plain").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Panorama-Diagnose.txt"),60);
@@ -969,7 +994,7 @@ public final class MainActivity extends Activity {
             File file=File.createTempFile("export-",".snapshot",getCacheDir());
             try (OutputStream out=new FileOutputStream(file)) { out.write(pendingExport.getBytes(StandardCharsets.UTF_8)); }
             pendingExportName=file.getName(); pendingExport=null;
-        } catch (IOException ex) { throw new IllegalArgumentException("Exportsnapshot nicht speicherbar",ex); }
+        } catch (IOException ex) { throw new IllegalArgumentException(UiText.CANNOT_SAVE_EXPORT_SNAPSHOT.text(),ex); }
     }
     @Override protected void onActivityResult(int request,int result,Intent data) {
         super.onActivityResult(request,result,data); if (result!=RESULT_OK || data==null || data.getData()==null) return;
@@ -977,16 +1002,16 @@ public final class MainActivity extends Activity {
             if (request==60 && pendingExportName!=null) {
                 File snapshot=new File(getCacheDir(),pendingExportName);
                 try (OutputStream output=getContentResolver().openOutputStream(data.getData(),"wt")) {
-                    if (output==null) throw new IOException("Datei nicht schreibbar");
+                    if (output==null) throw new IOException(UiText.FILE_IS_NOT_WRITABLE.text());
                     try (InputStream source=new FileInputStream(snapshot)) {
                         byte[] buffer=new byte[8192]; int count;
                         while ((count=source.read(buffer))!=-1) output.write(buffer,0,count);
                     }
                 }
                 if (!snapshot.delete()) snapshot.deleteOnExit();
-                pendingExportName=null; Toast.makeText(this,"Datei gespeichert",Toast.LENGTH_SHORT).show();
-            } else if (request==61) try (InputStream input=getContentResolver().openInputStream(data.getData())) { if (input==null) throw new IOException("Datei nicht lesbar"); parseConfig(input); }
-        } catch (Exception ex) { Toast.makeText(this,"Dateifehler: "+ex.getMessage(),Toast.LENGTH_LONG).show(); }
+                pendingExportName=null; Toast.makeText(this,UiText.FILE_SAVED.text(),Toast.LENGTH_SHORT).show();
+            } else if (request==61) try (InputStream input=getContentResolver().openInputStream(data.getData())) { if (input==null) throw new IOException(UiText.FILE_IS_NOT_READABLE.text()); parseConfig(input); }
+        } catch (Exception ex) { Toast.makeText(this,UiText.FILE_ERROR.text()+ex.getMessage(),Toast.LENGTH_LONG).show(); }
     }
     private void migrateTiltDirection() {
         if(preferences.getBoolean("tiltDevicePositiveUp",false)) return;
@@ -1006,17 +1031,17 @@ public final class MainActivity extends Activity {
         return ready() && service.state.tiltCalibrationKnown && service.state.positionSafe() && service.state.state.equals("IDLE") && !service.manualMoving && !service.manualTrigger;
     }
     private void setTiltZero(boolean reset) {
-        if(!tiltCalibrationReady()) throw new IllegalArgumentException("Tilt-Nullpunkt nur im Stillstand ohne Geräteauftrag setzen");
-        confirm(reset?"Tilt-Werkreferenz wiederherstellen?":"Aktuelle Tiltposition als 0° setzen?",
-            (reset?"Der gespeicherte Tilt-Nullpunkt wird zurückgesetzt.":"Kamera waagerecht ausgerichtet? Die aktuelle Position wird als Tilt 0° gespeichert.")+" Das Gerät fährt dabei nicht. Die Limits bleiben an denselben physischen Stellen. Der Planentwurf wird geleert.",() -> service.setTiltZero(reset));
+        if(!tiltCalibrationReady()) throw new IllegalArgumentException(UiText.SET_TILT_ZERO_POINT_ONLY_WHILE_STATIONARY_WITH.text());
+        confirm(reset?UiText.RESTORE_FACTORY_TILT_REFERENCE.text():UiText.SET_CURRENT_TILT_POSITION_AS_0.text(),
+            (reset?UiText.THE_SAVED_TILT_ZERO_POINT_WILL_BE_RESET.text():UiText.IS_THE_CAMERA_LEVEL_THE_CURRENT_POSITION_WILL.text())+UiText.THE_DEVICE_WILL_NOT_MOVE_THE_LIMITS_REMAIN.text(),() -> service.setTiltZero(reset));
     }
     private void setTiltLimits() {
         int low=DeviceState.toTiltDevice(number("tiltMin")), high=DeviceState.toTiltDevice(number("tiltMax"));
-        if (low>=high || service.state.tilt<low || service.state.tilt>high) throw new IllegalArgumentException("Grenzen müssen die aktuelle Tiltposition einschließen");
+        if (low>=high || service.state.tilt<low || service.state.tilt>high) throw new IllegalArgumentException(UiText.LIMITS_MUST_INCLUDE_THE_CURRENT_TILT_POSITION.text());
         if (!(service.state.state.equals("IDLE")||service.state.state.equals("STOPPED")||service.state.state.equals("COMPLETED")) || service.manualMoving || service.manualTrigger)
-            throw new IllegalArgumentException("Grenzen nur im sicheren Stillstand ändern");
+            throw new IllegalArgumentException(UiText.CHANGE_LIMITS_ONLY_WHEN_SAFELY_STATIONARY.text());
         if(service.state.tiltCalibrationKnown && (low<service.state.tiltAbsoluteMin || high>service.state.tiltAbsoluteMax))
-            throw new IllegalArgumentException("Grenzen außerhalb des vermessenen Gerätebereichs");
-        confirm("Vermessene Grenzen übernehmen?","Diese Werte müssen mit montiertem Objektiv und Steckern mechanisch geprüft sein.",() -> service.command("SET_TILT_LIMITS",""+low,""+high));
+            throw new IllegalArgumentException(UiText.LIMITS_OUTSIDE_THE_MEASURED_DEVICE_RANGE.text());
+        confirm(UiText.APPLY_MEASURED_LIMITS.text(),UiText.THESE_VALUES_MUST_HAVE_BEEN_CHECKED_MECHANICALLY_WITH.text(),() -> service.command("SET_TILT_LIMITS",""+low,""+high));
     }
 }

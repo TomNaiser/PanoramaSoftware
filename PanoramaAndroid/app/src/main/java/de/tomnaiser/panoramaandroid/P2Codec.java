@@ -18,34 +18,34 @@ public final class P2Codec {
             appendToken(body, field);
         }
         String frame = body + "|" + String.format(java.util.Locale.ROOT, "%04X", crc(body.toString())) + "\r\n";
-        if (frame.length() > MAX_FRAME_LENGTH) throw new IllegalArgumentException("Frame zu lang");
+        if (frame.length() > MAX_FRAME_LENGTH) throw new IllegalArgumentException(UiText.FRAME_TOO_LONG.text());
         return frame;
     }
 
     public static Frame decode(String raw) {
-        if (raw == null) throw new IllegalArgumentException("Leerer Frame");
+        if (raw == null) throw new IllegalArgumentException(UiText.EMPTY_FRAME.text());
         String value = raw.replaceAll("[\\r\\n]+$", "");
         if (value.length() > MAX_FRAME_LENGTH || !value.startsWith("@P2|"))
-            throw new IllegalArgumentException("Ungültiger Frame");
+            throw new IllegalArgumentException(UiText.INVALID_FRAME.text());
         for (int i = 0; i < value.length(); i++) {
             if (value.charAt(i) > 127 || value.charAt(i) < 32)
-                throw new IllegalArgumentException("Nicht druckbares ASCII");
+                throw new IllegalArgumentException(UiText.NON_PRINTABLE_ASCII.text());
         }
         int separator = value.lastIndexOf('|');
         if (separator < 0 || value.length() - separator != 5)
-            throw new IllegalArgumentException("CRC fehlt");
+            throw new IllegalArgumentException(UiText.CRC_MISSING.text());
         int received;
         try { received = Integer.parseInt(value.substring(separator + 1), 16); }
-        catch (NumberFormatException ex) { throw new IllegalArgumentException("CRC ungültig", ex); }
+        catch (NumberFormatException ex) { throw new IllegalArgumentException(UiText.INVALID_CRC.text(), ex); }
         String body = value.substring(0, separator);
-        if (crc(body) != received) throw new IllegalArgumentException("CRC falsch");
+        if (crc(body) != received) throw new IllegalArgumentException(UiText.INCORRECT_CRC.text());
         String[] tokens = body.split("\\|", -1);
         if (tokens.length < 3 || !tokens[0].equals("@P2") || tokens[2].isEmpty())
-            throw new IllegalArgumentException("Felder fehlen");
+            throw new IllegalArgumentException(UiText.MISSING_FIELDS.text());
         int sequence;
         try { sequence = Integer.parseInt(tokens[1]); }
-        catch (NumberFormatException ex) { throw new IllegalArgumentException("Sequenz ungültig", ex); }
-        if (sequence < 0 || sequence > 65535) throw new IllegalArgumentException("Sequenz außerhalb des Bereichs");
+        catch (NumberFormatException ex) { throw new IllegalArgumentException(UiText.INVALID_SEQUENCE.text(), ex); }
+        if (sequence < 0 || sequence > 65535) throw new IllegalArgumentException(UiText.SEQUENCE_OUTSIDE_RANGE.text());
         return new Frame(sequence, tokens[2], Arrays.copyOfRange(tokens, 3, tokens.length));
     }
 
@@ -60,10 +60,10 @@ public final class P2Codec {
     }
 
     private static void appendToken(StringBuilder out, String value) {
-        if (value == null || value.isEmpty()) throw new IllegalArgumentException("Leeres Feld");
+        if (value == null || value.isEmpty()) throw new IllegalArgumentException(UiText.EMPTY_FIELD.text());
         for (int i = 0; i < value.length(); i++) {
             char ch = value.charAt(i);
-            if (ch < 32 || ch > 126 || ch == '|') throw new IllegalArgumentException("Ungültiges Feld");
+            if (ch < 32 || ch > 126 || ch == '|') throw new IllegalArgumentException(UiText.INVALID_FIELD.text());
         }
         out.append(value);
     }

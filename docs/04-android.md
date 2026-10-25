@@ -2,7 +2,7 @@
 
 [Inhalt](README.md) · [Windows](05-windows.md)
 
-**Version 0.6.25 / Code 38**, Paket `de.tomnaiser.panoramaandroid`. Java, native Android-Views, minSdk 26, compileSdk/targetSdk 35. Die App verwendet keine Weboberfläche.
+**Version 0.6.26 / Code 39**, Paket `de.tomnaiser.panoramaandroid`. Java, native Android-Views, minSdk 26, compileSdk/targetSdk 35. Die App verwendet keine Weboberfläche.
 
 ## Blöcke und Nebenläufigkeit
 
@@ -59,6 +59,8 @@ flowchart LR
 | Extras | Timelapse, gespeicherte Läufe, XML/CSV/Unterbrechungen, Sicherungsstatus, Diagnose, Grenzen und Tilt-Referenz |
 
 NOT-STOP und grundlegende Fahrbedienung werden auch bei großer Grafik zugänglich gehalten. Eine Zielmarkierung oder ein ACK verschiebt keinen gemessenen Istpunkt.
+
+Ab 0.6.26 bietet **Extras → Sprache / Language** die gespeicherte Auswahl **Deutsch / English**, unabhängig von der Systemsprache. `PanoramaApplication` lädt die Auswahl vor UI und Service. `UiText` enthält die gemeinsamen Übersetzungen auch für JVM-testbare Modelle; sprachabhängige Zahlenformate betreffen nur die Anzeige. Protokollfelder, Koordinaten, Dateischemata und gespeicherte Eingabewerte bleiben sprachunabhängig. Ein Sprachwechsel erstellt die Activity neu und erhält Eingaben, Seite, Diagrammausschnitt und offene Zielauswahl. Der Foreground-Service behält Verbindung und Auftrag. Statuswerte werden bei ihrem Auftreten in beiden Sprachen erfasst und bei Bedarf neu angezeigt. Neue Vorfälle speichern beide Sprachfassungen; historische Logs und ältere Fehlerdetails bleiben in ihrer ursprünglichen Sprache.
 
 ## Freigaben und Kommunikation
 

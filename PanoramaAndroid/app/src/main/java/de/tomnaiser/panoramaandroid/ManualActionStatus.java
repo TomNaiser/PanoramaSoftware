@@ -10,7 +10,7 @@ final class ManualActionStatus {
         this.pan=pan; this.tilt=tilt; durationMs=duration; maximumMs=maximum;
     }
     static ManualActionStatus parse(String[] f) {
-        if(f.length!=7) throw new IllegalArgumentException("Manueller Status unvollständig");
+        if(f.length!=7) throw new IllegalArgumentException(UiText.INCOMPLETE_MANUAL_STATUS.text());
         int sequence=Integer.parseInt(f[0]),pan=Integer.parseInt(f[3]),tilt=Integer.parseInt(f[4]);
         long duration=DeviceState.unsigned(f[5]),maximum=DeviceState.unsigned(f[6]);
         String kind=f[1],result=f[2];
@@ -24,7 +24,7 @@ final class ManualActionStatus {
                     kind.equals("JOG") && result.equals("REACHED") ||
                     kind.equals("TRIGGER") && result.equals("TRIGGERED"));
         }
-        if(!valid) throw new IllegalArgumentException("Manueller Status ungültig");
+        if(!valid) throw new IllegalArgumentException(UiText.INVALID_MANUAL_STATUS.text());
         return new ManualActionStatus(sequence,kind,result,pan,tilt,duration,maximum);
     }
     boolean active() { return result.equals("ACTIVE"); }

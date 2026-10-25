@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <application android:label="PanoramaControl" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="false">
+    <application android:name=".PanoramaApplication" android:label="PanoramaControl" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="false">
         <service android:name=".PanoramaService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>

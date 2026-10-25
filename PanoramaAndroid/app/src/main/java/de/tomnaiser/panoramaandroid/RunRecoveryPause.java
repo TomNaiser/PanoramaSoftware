@@ -12,10 +12,10 @@ final class RunRecoveryPause {
     }
     static String detail(DeviceState s) {
         String reason=s.lastError.equals("EXPOSURE_UNSTABLE")?
-            "Position während der Aufnahme verändert. Das Bild wurde nicht gezählt; eine zusätzliche Kameradatei kann existieren.":
-            s.lastError.equals("CAPTURE_NOT_STABLE")?"Position wurde vor der Aufnahme nicht ausreichend ruhig. Es wurde nicht ausgelöst.":
-            "Die Fahrt konnte nicht zuverlässig abgeschlossen werden. Es wurde kein weiteres Bild ausgelöst.";
-        return reason+"\n\nAuftrag und bisherige Aufnahmen bleiben erhalten. Motoren und Auslösung sind aus. Nach Quittierung im Reiter Lauf bewusst fortsetzen oder "+
-            (s.plan!=null && s.plan.mode==1?"das betroffene Tilt-Band wiederholen.":"die betroffene oder vorherige Spalte wiederholen.");
+            UiText.POSITION_CHANGED_DURING_EXPOSURE_THE_IMAGE_WAS_NOT.text():
+            s.lastError.equals("CAPTURE_NOT_STABLE")?UiText.POSITION_DID_NOT_SETTLE_SUFFICIENTLY_BEFORE_CAPTURE_THE.text():
+            UiText.MOVEMENT_COULD_NOT_BE_COMPLETED_RELIABLY_NO_FURTHER.text();
+        return reason+UiText.THE_JOB_AND_EXISTING_CAPTURES_ARE_RETAINED_MOTORS.text()+
+            (s.plan!=null && s.plan.mode==1?UiText.REPEAT_THE_AFFECTED_TILT_BAND.text():UiText.REPEAT_THE_AFFECTED_OR_PREVIOUS_COLUMN.text());
     }
 }

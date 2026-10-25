@@ -16,7 +16,7 @@ final class SupportLog implements AutoCloseable {
     private volatile String failure;
     SupportLog(File directory) { this(directory,1024*1024,8); }
     SupportLog(File directory,long maximumBytes,int retainedFiles) {
-        if(maximumBytes<1 || retainedFiles<2) throw new IllegalArgumentException("Ungültige Loggröße");
+        if(maximumBytes<1 || retainedFiles<2) throw new IllegalArgumentException(UiText.INVALID_LOG_SIZE.text());
         file=new File(directory,"support.log");this.maximumBytes=maximumBytes;this.retainedFiles=retainedFiles;
     }
     private File part(int index) {
@@ -39,18 +39,18 @@ final class SupportLog implements AutoCloseable {
         try {
             // Queue the read behind pending writes and rotations, so exports include the fault just received.
             return writer.submit(() -> {
-                if(failure!=null) throw new IOException("Diagnoselog: "+failure);
+                if(failure!=null) throw new IOException(UiText.DIAGNOSTIC_LOG.text()+failure);
                 StringBuilder out=new StringBuilder();
                 for(int i=retainedFiles-1;i>=0;i--) if(part(i).exists()) {
                     out.append("=== ").append(part(i).getName()).append(" ===\n");
                     out.append(new String(Files.readAllBytes(part(i).toPath()),StandardCharsets.UTF_8));
                 }
-                return out.length()==0?"Noch keine Meldungen":out.toString();
+                return out.length()==0?UiText.NO_MESSAGES_YET.text():out.toString();
             }).get(5,TimeUnit.SECONDS);
         } catch(InterruptedException ex) {
-            Thread.currentThread().interrupt();throw new IOException("Diagnoseexport unterbrochen",ex);
+            Thread.currentThread().interrupt();throw new IOException(UiText.DIAGNOSTIC_EXPORT_INTERRUPTED.text(),ex);
         } catch(java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException ex) {
-            throw new IOException("Diagnoseexport nicht abgeschlossen",ex);
+            throw new IOException(UiText.DIAGNOSTIC_EXPORT_NOT_COMPLETED.text(),ex);
         }
     }
     @Override public void close() { writer.shutdown(); }

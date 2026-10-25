@@ -6,7 +6,7 @@ final class RasterRecovery {
     final int nextIndex;
     RasterRecovery(PanoramaPlan source,long nextIndex) {
         if(source==null || nextIndex<0 || nextIndex>=source.total())
-            throw new IllegalArgumentException("Wiederaufnahme benötigt einen unterbrochenen Panoramaauftrag");
+            throw new IllegalArgumentException(UiText.RECOVERY_REQUIRES_AN_INTERRUPTED_PANORAMA_JOB.text());
         this.source=source;this.nextIndex=(int)nextIndex;
     }
     static boolean recoverable(String error) {
@@ -24,7 +24,7 @@ final class RasterRecovery {
             error.equals("MOTION_SETTLE_TIMEOUT") || error.equals("MOTION_NOT_QUIET") || error.equals("MOVEMENT_TIMEOUT") ||
             error.equals("MOTION_TARGET_MISSED") || error.equals("MOTION_FINE_TIMEOUT") || error.equals("TARGET_REJECTED"));
     }
-    String unit() { return source.mode==0?"Spalte":"Tilt-Band"; }
+    String unit() { return source.mode==0?UiText.COLUMN.text():UiText.TILT_BAND.text(); }
     int startColumn(boolean previous) {
         int requested=Math.max(0,(source.mode==0?nextIndex/source.rows:source.target(nextIndex)[3])-(previous?1:0));
         if(source.mode==0) return requested;
@@ -39,10 +39,10 @@ final class RasterRecovery {
                    PanoramaPlan.interpolate(latitude,source.endTilt,band-start,source.rows-start-1)) {exact=false;break;}
             if(exact) return start;
         }
-        throw new IllegalStateException("Originale Bandgrenzen fehlen");
+        throw new IllegalStateException(UiText.ORIGINAL_BAND_BOUNDARIES_MISSING.text());
     }
     PanoramaPlan remaining(long newId,boolean previous) {
-        if(newId==source.runId) throw new IllegalArgumentException("Restauftrag braucht eine neue Laufnummer");
+        if(newId==source.runId) throw new IllegalArgumentException(UiText.RECOVERY_JOB_NEEDS_A_NEW_RUN_NUMBER.text());
         int column=startColumn(previous);
         String[] fields=source.fields();fields[0]=""+newId;
         if(source.mode==0) {

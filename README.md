@@ -19,7 +19,7 @@ Plan a panorama from your camera, lens, coverage and overlap, send it to the hea
 
 | Project | Role |
 |---|---|
-| [Android app](PanoramaAndroid/README.md), documented version **0.6.25** | Mobile planning, acquisition, recovery and export; Android 8.0 or newer |
+| [Android app](PanoramaAndroid/README.md), documented version **0.6.26** | Mobile planning, acquisition, recovery and export; German/English interface; Android 8.0 or newer |
 | [PanoDuinoControl](https://github.com/TomNaiser/PanoDuinoControl), **2.4.75** | Arduino firmware; current development target is Nano R4 with AS5048B encoders |
 | [PanoramaControl](https://github.com/TomNaiser/PanoramaControl), **27.4.4** | Windows client using .NET Framework 4.8 |
 | [PanoBoard](https://github.com/TomNaiser/PanoBoard) | Related controller-board design files |

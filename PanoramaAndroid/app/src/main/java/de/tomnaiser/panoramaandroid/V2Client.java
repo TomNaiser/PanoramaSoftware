@@ -46,27 +46,27 @@ public final class V2Client implements AutoCloseable {
     }
 
     public synchronized CompletableFuture<Result> send(String type, String... fields) {
-        if (closed || uncertain) return failed("Sitzung geschlossen oder Befehlswirkung unklar; erneut verbinden");
-        if (pending != null) return failed("Ein Befehl wartet noch auf Bestätigung");
+        if (closed || uncertain) return failed(UiText.SESSION_CLOSED_OR_COMMAND_EFFECT_UNCERTAIN_RECONNECT.text());
+        if (pending != null) return failed(UiText.A_COMMAND_IS_STILL_AWAITING_ACKNOWLEDGEMENT.text());
         return begin(type, fields);
     }
 
     public synchronized CompletableFuture<Result> emergencyStop(String runId) {
-        if (closed) return failed("Sitzung geschlossen");
-        cancelPending("Durch Not-Stop verworfen");
+        if (closed) return failed(UiText.SESSION_CLOSED.text());
+        cancelPending(UiText.DISCARDED_BY_EMERGENCY_STOP.text());
         uncertain = false;
         return begin("ESTOP", new String[] { runId, "ANDROID_ESTOP" });
     }
     public synchronized CompletableFuture<Result> stopJog(String token) {
-        if(closed) return failed("Sitzung geschlossen");
-        cancelPending("Durch Loslassen verworfen"); uncertain=false;
+        if(closed) return failed(UiText.SESSION_CLOSED.text());
+        cancelPending(UiText.DISCARDED_ON_RELEASE.text()); uncertain=false;
         return begin("MANUAL_JOG_STOP",new String[]{token});
     }
 
     private CompletableFuture<Result> begin(String type, String[] fields) {
         int id = nextSequence();
         String wire = P2Codec.encode(id, type, fields);
-        if (wire.length() > 164) throw new IllegalArgumentException("Befehl überschreitet Firmware-Rahmenlimit");
+        if (wire.length() > 164) throw new IllegalArgumentException(UiText.COMMAND_EXCEEDS_FIRMWARE_FRAME_LIMIT.text());
         Pending request = new Pending(id, wire, type);
         pending = request;
         worker.execute(() -> transmit(request));
@@ -80,7 +80,7 @@ public final class V2Client implements AutoCloseable {
                 uncertain = !CommandEffects.readOnly(request.type);
                 pending = null;
                 request.completion.completeExceptionally(new IOException(
-                    "Keine Bestätigung für " + request.type + (uncertain?"; Wirkung unklar. Gerätestand prüfen.":"; Abfrage unvollständig.")));
+                    UiText.NO_ACKNOWLEDGEMENT_FOR.text() + request.type + (uncertain?UiText.EFFECT_UNCERTAIN_CHECK_DEVICE_STATE.text():UiText.QUERY_INCOMPLETE.text())));
                 return;
             }
             request.attempts++;
@@ -100,7 +100,7 @@ public final class V2Client implements AutoCloseable {
             if (closed || (request != null && pending != request)) return false;
             activeWrite = token;
             deadline = watchdog.schedule(() -> failWrite(token,
-                new IOException("Bluetooth-Schreibzeit überschritten; Verbindung neu aufbauen")), timeoutMs, TimeUnit.MILLISECONDS);
+                new IOException(UiText.BLUETOOTH_WRITE_TIMED_OUT_RECONNECT.text())), timeoutMs, TimeUnit.MILLISECONDS);
         }
         try {
             // Never hold the client monitor while invoking blocking platform I/O.
@@ -156,7 +156,7 @@ public final class V2Client implements AutoCloseable {
     @Override public synchronized void close() {
         closed = true; activeWrite = null;
         watchdog.shutdownNow();
-        cancelPending("Verbindung beendet; Befehl nicht wiederholen");
+        cancelPending(UiText.CONNECTION_ENDED_DO_NOT_REPEAT_COMMAND.text());
     }
     private static final class Pending {
         final int sequence; final String wire, type;

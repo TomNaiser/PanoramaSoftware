@@ -1,6 +1,6 @@
 # PanoramaControl für Android
 
-Android-Bedienung für einen motorisierten Pan-/Tilt-Panoramakopf. Aktueller Quellstand: **0.6.25, VersionCode 38**, Protokoll V2; zuletzt geprüfte normale Firmware **2.4.75**.
+Android-Bedienung für einen motorisierten Pan-/Tilt-Panoramakopf. Aktueller Quellstand: **0.6.26, VersionCode 39**, Protokoll V2; zuletzt geprüfte normale Firmware **2.4.75**.
 
 ## Dokumentation
 
@@ -14,6 +14,8 @@ Android-Bedienung für einen motorisierten Pan-/Tilt-Panoramakopf. Aktueller Que
 
 Raster- und sphärische Planung, getrenntes Übertragen/Starten, manuelle Ziel- und Haltefahrt, Pause, Spaltennavigation, Timelapse, Tilt-Referenz und Grenzen. Fehler können nach Prüfung des Gerätestands über verknüpfte Restaufträge fortgesetzt werden; sphärische Originalbänder bleiben erhalten.
 
+Unter **Extras → Sprache / Language** stehen **Deutsch** und **English** zur Wahl. Die Auswahl gilt für Oberfläche, Dialoge, Status- und Fehlermeldungen und bleibt nach einem Neustart gespeichert. Deutsch ist die Voreinstellung. Der Wechsel erneuert die Oberfläche; Geräteverbindung, geladener Auftrag, Eingaben und Diagrammausschnitt bleiben erhalten. Historische Protokolle und vor 0.6.26 gespeicherte Fehlerdetails behalten ihre ursprüngliche Sprache.
+
 Aufnahmen liegen dauerhaft in SQLite. Papywizard-XML wird während der Acquise im Hintergrund als vollständig geschlossene Datei atomar ersetzt. Nach Prozessneustart wird aus SQLite ergänzt. Unter Extras stehen Sicherungsstatus, erneute Sicherung sowie XML-/CSV-Export.
 
 ## Bauen
@@ -23,6 +25,8 @@ JDK 17 beziehungsweise kompatible Android-Studio-JBR, Android SDK 35; minSdk 26.
 ```powershell
 ./PanoramaAndroid/gradlew.bat -p PanoramaAndroid testDebugUnitTest lintDebug assembleDebug
 ```
+
+Prüfstand 0.6.26 (25. Oktober 2026): 141 Unit-Tests erfolgreich, zusätzlich 18 gezielte Sprachwechselprüfungen mit echter Activity und Service in einer getrennten Emulator-App; abschließender Build, Lint und Sprachtests erfolgreich. Auf dem Pixel 7 Pro wurde die vorhandene App mit `adb install -r` auf 0.6.26 / Code 39 aktualisiert und die installierte Version über den Android-Paketmanager bestätigt. Die Sprachwechselprüfungen liefen im Emulator.
 
 Die APK liegt anschließend unter `app/build/outputs/apk/debug/`. Hardwarefreie Pixel-Integration mit separater Validation-App und Hinweise zur produktiven Paketkennung: [Build- und Testanleitung](../docs/10-build-tests-und-wartung.md).
 

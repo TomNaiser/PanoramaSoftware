@@ -29,6 +29,7 @@ public final class AppChecks extends Instrumentation {
     private Bundle enduranceArguments;
     private boolean acknowledgedIncidentCheck;
     private boolean configureMotorStress;
+    private boolean languageCheck;
     @Override public void callActivityOnCreate(android.app.Activity activity,Bundle state) {
         if(restRecoveryCheck || enduranceArguments!=null) {
             activity.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -38,6 +39,7 @@ public final class AppChecks extends Instrumentation {
     }
     @Override public void onCreate(Bundle arguments) {
         super.onCreate(arguments); connectionCheck=arguments!=null && "true".equals(arguments.getString("connectionCheck"));
+        languageCheck=arguments!=null && "true".equals(arguments.getString("languageCheck"));
         acknowledgedIncidentCheck=arguments!=null && "true".equals(arguments.getString("acknowledgedIncidentCheck"));
         configureMotorStress=arguments!=null && "true".equals(arguments.getString("configureMotorStress"));
         if(arguments!=null && "true".equals(arguments.getString("acquisitionEndurance"))) enduranceArguments=new Bundle(arguments);
@@ -71,6 +73,11 @@ public final class AppChecks extends Instrumentation {
         int result=android.app.Activity.RESULT_OK;
         Context context = getTargetContext(); String name = "checks-"+UUID.randomUUID()+".db";
         try {
+            if(languageCheck) {
+                int checks=new LanguageUiChecks().run(this);
+                report.putString("stream","\nPASS: "+checks+" language UI checks; no hardware connection.\n");
+                finish(android.app.Activity.RESULT_OK,report);return;
+            }
             if(liveExportCheck) {
                 int checks=new LivePapywizardChecks().run(this,liveExportIterations);
                 report.putString("stream","\nPASS: "+checks+" live Papywizard checks; SQLite, external media, no hardware.\n");

@@ -4,7 +4,6 @@ import android.graphics.*;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
-import java.util.Locale;
 
 /** Shared projection for recipe, telemetry and touch; never sends device commands. */
 final class PlanPreview extends FrameLayout {
@@ -34,7 +33,7 @@ final class PlanPreview extends FrameLayout {
     private Runnable driveAction=() -> { };
     private final ScaleGestureDetector scale;
     PlanPreview(Context context) {
-        super(context); setWillNotDraw(false); setContentDescription("Pan-Tilt-Diagramm in Grad");
+        super(context); setWillNotDraw(false); setContentDescription(UiText.PAN_TILT_CHART_IN_DEGREES.text());
         touchSlop=ViewConfiguration.get(context).getScaledTouchSlop();
         selectionActions=new LinearLayout(context); selectionActions.setOrientation(LinearLayout.VERTICAL);
         selectionActions.setTag("selectionActions"); selectionActions.setPadding(dp(6),dp(4),dp(6),dp(4));
@@ -44,7 +43,7 @@ final class PlanPreview extends FrameLayout {
         selectionLabel=new TextView(context); selectionLabel.setTextColor(Color.rgb(25,43,59)); selectionLabel.setTextSize(12);
         selectionLabel.setPadding(dp(4),0,dp(4),0); selectionActions.addView(selectionLabel);
         LinearLayout actions=new LinearLayout(context); selectionActions.addView(actions);
-        driveButton=new Button(context); driveButton.setText("▶ Anfahren"); driveButton.setTag("driveSelection");
+        driveButton=new Button(context); driveButton.setText(UiText.MOVE.text()); driveButton.setTag("driveSelection");
         driveButton.setAllCaps(false); driveButton.setTextSize(14); driveButton.setPadding(dp(6),0,dp(6),0);
         driveButton.setMinWidth(0); driveButton.setMinimumWidth(0);
         driveButton.setBackgroundTintList(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{Color.rgb(218,227,231),Color.rgb(18,105,116)}));
@@ -52,7 +51,7 @@ final class PlanPreview extends FrameLayout {
         driveButton.setOnClickListener(v -> { if(selection.pending && editMode==3) driveAction.run(); });
         actions.addView(driveButton,new LinearLayout.LayoutParams(0,dp(48),1));
         Button dismiss=new Button(context); dismiss.setText("×"); dismiss.setTextSize(24);
-        dismiss.setContentDescription("Fahrpunkt verwerfen"); dismiss.setTag("discardSelection"); dismiss.setPadding(0,0,0,0);
+        dismiss.setContentDescription(UiText.DISCARD_MOVEMENT_TARGET.text()); dismiss.setTag("discardSelection"); dismiss.setPadding(0,0,0,0);
         dismiss.setMinWidth(0); dismiss.setMinimumWidth(0); dismiss.setOnClickListener(v -> discardSelection());
         actions.addView(dismiss,new LinearLayout.LayoutParams(dp(48),dp(48)));
         addView(selectionActions,new FrameLayout.LayoutParams(dp(210),-2,Gravity.TOP|Gravity.LEFT));
@@ -162,10 +161,19 @@ final class PlanPreview extends FrameLayout {
         if(Double.isFinite(x0)) viewport.fit(x0,x1,y0,y1); else viewport.fit(-180,180,-90,90);
         invalidate();
     }
-    void save(Bundle b,String key) { b.putDoubleArray(key,new double[]{viewport.left,viewport.right,viewport.bottom,viewport.top,editMode}); }
+    void save(Bundle b,String key) {
+        b.putDoubleArray(key,new double[]{viewport.left,viewport.right,viewport.bottom,viewport.top,editMode});
+        b.putDoubleArray(key+"Selection",new double[]{selection.baseTilt,selection.pan,selection.tilt,selection.pending?1:0,selection.limited?1:0});
+    }
     void restore(Bundle b,String key) {
         double[] v=b==null?null:b.getDoubleArray(key);
         if(v!=null && v.length==5) { viewport.left=v[0]; viewport.right=v[1]; viewport.bottom=v[2]; viewport.top=v[3]; editMode=(int)v[4]; }
+        double[] chosen=b==null?null:b.getDoubleArray(key+"Selection");
+        if(chosen!=null && chosen.length==5) {
+            selection.baseTilt=chosen[0];selection.pan=chosen[1];selection.tilt=chosen[2];
+            selection.pending=chosen[3]!=0;selection.limited=chosen[4]!=0;
+        }
+        updateSelectionActions();
     }
     private float density() { return getResources().getDisplayMetrics().density; }
     private int dp(int value) { return Math.round(value*density()); }
@@ -173,7 +181,7 @@ final class PlanPreview extends FrameLayout {
         boolean visible=selection.pending && editMode==3 && !multiTouch;
         selectionActions.setVisibility(visible?VISIBLE:GONE);
         if(!visible) return;
-        selectionLabel.setText(String.format(Locale.GERMANY,"Pan %.2f° · Tilt %.2f°",selection.pan,selection.tilt));
+        selectionLabel.setText(String.format(UiText.locale(),"Pan %.2f° · Tilt %.2f°",selection.pan,selection.tilt));
         if(getWidth()==0) return;
         int width=Math.min(dp(210),getWidth()-dp(8));
         selectionActions.measure(MeasureSpec.makeMeasureSpec(width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
@@ -205,9 +213,9 @@ final class PlanPreview extends FrameLayout {
         for(int i=0;i<=4;i++) {
             float x=l()+i*w()/4,y=t()+i*h()/4; paint.setColor(Color.LTGRAY);
             c.drawLine(x,t(),x,t()+h(),paint); c.drawLine(l(),y,l()+w(),y,paint); paint.setColor(Color.DKGRAY);
-            String tick=String.format(Locale.GERMANY,"%.2f",viewport.pan(i/4.0));
+            String tick=String.format(UiText.locale(),"%.2f",viewport.pan(i/4.0));
             c.drawText(tick,Math.max(2*density(),Math.min(getWidth()-paint.measureText(tick)-8*density(),x-paint.measureText(tick)/2)),t()+h()+16*density(),paint);
-            c.drawText(String.format(Locale.GERMANY,"%.2f",viewport.tilt(i/4.0)),2*density(),y+4*density(),paint);
+            c.drawText(String.format(UiText.locale(),"%.2f",viewport.tilt(i/4.0)),2*density(),y+4*density(),paint);
         }
         c.drawText("Tilt ° ↑",4*density(),17*density(),paint); c.drawText("← Pan °",getWidth()-65*density(),getHeight()-8*density(),paint);
         c.save(); c.clipRect(l(),t(),l()+w(),t()+h());
@@ -244,7 +252,7 @@ final class PlanPreview extends FrameLayout {
         if(positionKnown()) {
             dot(c,currentPan(),currentTilt(),fresh?Color.rgb(220,70,25):Color.GRAY,7);
             paint.setTextSize(12*density()); paint.setColor(fresh?Color.rgb(180,55,20):Color.GRAY);
-            c.drawText(fresh?"Jetzt":"Letzte Position",px(-currentPan()/1000.0)+10*density(),py(currentTilt()/1000.0)-10*density(),paint);
+            c.drawText(fresh?UiText.NOW.text():UiText.LAST_POSITION.text(),px(-currentPan()/1000.0)+10*density(),py(currentTilt()/1000.0)-10*density(),paint);
         }
         if(listener!=null) {
             paint.setTextSize(12*density());

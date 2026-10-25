@@ -1,6 +1,6 @@
 # Gesamtdokumentation PanoramaSoftware
 
-**Stand: 24. Oktober 2026. Sprache: Deutsch.** Referenz: Firmware 2.4.75, Android 0.6.25, Windows 27.4.4. Diese Dokumentation beschreibt Funktionen, Architektur und den jeweiligen Prüfstand. Für den englischen Einstieg: [Overview and features](../README.md) · [Short manual](en/manual.md).
+**Stand: 25. Oktober 2026. Sprache: Deutsch.** Referenz: Firmware 2.4.75, Android 0.6.26, Windows 27.4.4. Diese Dokumentation beschreibt Funktionen, Architektur und den jeweiligen Prüfstand. Für den englischen Einstieg: [Overview and features](../README.md) · [Short manual](en/manual.md).
 
 ## Lesen nach Fragestellung
 

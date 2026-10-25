@@ -19,14 +19,14 @@ public final class PanoramaPlan {
                 || pulse < 1 || pulse > 60000 || exposure < 0 || exposure > 3600000
                 || speedX < 1 || speedX > 2000 || speedY < 1 || speedY > 2000
                 || policy < 0 || policy > 1 || (policy == 1 && (heartbeat < 500 || heartbeat > 60000)))
-            throw new IllegalArgumentException("Ungültige Planparameter");
+            throw new IllegalArgumentException(UiText.INVALID_PLAN_PARAMETERS.text());
         if (mode == 1 && (dx <= 0 || y < -90000 || y > 90000 || ey < -90000 || ey > 90000
                 || (rows == 1 && y != ey) || Math.abs((long)ex - x) > 360000))
-            throw new IllegalArgumentException("Ungültiges sphärisches Rezept");
-        if (total() > 4000) throw new IllegalArgumentException("Mehr als 4000 Aufnahmen");
+            throw new IllegalArgumentException(UiText.INVALID_SPHERICAL_RECIPE.text());
+        if (total() > 4000) throw new IllegalArgumentException(UiText.MORE_THAN_4000_CAPTURES.text());
         if (mode == 1) {
             int max = 0; for (int band = 0; band < rows; band++) max = Math.max(max, shots(band));
-            if (max != cols) throw new IllegalArgumentException("Sphärische Spaltenzahl inkonsistent");
+            if (max != cols) throw new IllegalArgumentException(UiText.INCONSISTENT_SPHERICAL_COLUMN_COUNT.text());
         }
     }
     public static PanoramaPlan create(long id, boolean spherical, double sx, double sy,
@@ -34,12 +34,12 @@ public final class PanoramaPlan {
             int settle, int pulse, int exposure, int speed, boolean stopOnLoss) {
         if (!Double.isFinite(overlap) || overlap < 0 || overlap >= 100
                 || !Double.isFinite(fovX) || !Double.isFinite(fovY) || fovX <= 0 || fovY <= 0)
-            throw new IllegalArgumentException("Bildwinkel/Überlappung ungültig");
+            throw new IllegalArgumentException(UiText.INVALID_FIELD_OF_VIEW_OVERLAP.text());
         double dx = fovX * (100 - overlap) / 100, dy = fovY * (100 - overlap) / 100;
         int x = DeviceState.toDevice(sx), y = DeviceState.toTiltDevice(sy);
         int endX = DeviceState.toDevice(ex), endY = DeviceState.toTiltDevice(ey);
         int stepX = Math.abs(DeviceState.toDevice(dx)), stepY = Math.abs(DeviceState.toDevice(dy));
-        if (stepX < 1 || stepY < 1) throw new IllegalArgumentException("Bildschritt zu klein");
+        if (stepX < 1 || stepY < 1) throw new IllegalArgumentException(UiText.IMAGE_STEP_TOO_SMALL.text());
         long c, r;
         if (!spherical) {
             c = 1 + (long)Math.abs(Math.rint((ex - sx) / dx));
@@ -47,22 +47,22 @@ public final class PanoramaPlan {
             stepX = endX < x ? -stepX : stepX; stepY = endY < y ? -stepY : stepY;
         } else {
             r = endY == y ? 1 : (Math.abs((long)endY - y) + stepY - 1) / stepY + 1;
-            if (r > 4000) throw new IllegalArgumentException("Zu viele Tilt-Bänder");
+            if (r > 4000) throw new IllegalArgumentException(UiText.TOO_MANY_TILT_BANDS.text());
             c = 0;
             for (int band = 0; band < r; band++)
                 c = Math.max(c, shotsInBand(x, endX, interpolate(y, endY, band, (int)r - 1), stepX));
         }
-        if (c > 65535 || r > 4000 || c < 1 || r < 1) throw new IllegalArgumentException("Raster zu groß");
+        if (c > 65535 || r > 4000 || c < 1 || r < 1) throw new IllegalArgumentException(UiText.GRID_TOO_LARGE.text());
         return new PanoramaPlan(id, spherical ? 1 : 0, x, y, (int)c, (int)r, stepX, stepY,
             endX, endY, settle, pulse, exposure, speed, speed, stopOnLoss ? 1 : 0, stopOnLoss ? 5000 : 0);
     }
     public static PanoramaPlan parse(String[] fields) {
-        if (fields.length != 16 && fields.length != 18) throw new IllegalArgumentException("Plan unvollständig");
+        if (fields.length != 16 && fields.length != 18) throw new IllegalArgumentException(UiText.INCOMPLETE_PLAN.text());
         int[] n = new int[fields.length];
         for (int i = 1; i < fields.length; i++) n[i] = Integer.parseInt(fields[i]);
         if ((n[2] == 0 && (n[1] != 1 || fields.length != 16))
                 || (n[2] == 1 && (n[1] != 2 || fields.length != 18)))
-            throw new IllegalArgumentException("Planversion unbekannt");
+            throw new IllegalArgumentException(UiText.UNKNOWN_PLAN_VERSION.text());
         return new PanoramaPlan(DeviceState.unsigned(fields[0]), n[2], n[3], n[4], n[5], n[6], n[7], n[8],
             fields.length == 18 ? n[16] : 0, fields.length == 18 ? n[17] : 0,
             n[9], n[10], n[11], n[12], n[13], n[14], n[15]);
@@ -74,7 +74,7 @@ public final class PanoramaPlan {
     }
     public int shots(int band) { return shotsInBand(startPan, endPan, interpolate(startTilt, endTilt, band, rows - 1), stepPan); }
     public int[] target(int index) {
-        if (index < 0 || index >= total()) throw new IllegalArgumentException("Bildindex");
+        if (index < 0 || index >= total()) throw new IllegalArgumentException(UiText.IMAGE_INDEX.text());
         if (mode == 0) return new int[] {
             Math.toIntExact(startPan + (long)(index / rows) * stepPan),
             Math.toIntExact(startTilt + (long)(index % rows) * stepTilt), index / rows, index % rows };
@@ -85,15 +85,15 @@ public final class PanoramaPlan {
                 interpolate(startTilt, endTilt, band, rows - 1), index, band };
             index -= count;
         }
-        throw new IllegalArgumentException("Bildindex");
+        throw new IllegalArgumentException(UiText.IMAGE_INDEX.text());
     }
     public void validate(DeviceState device) {
         if(panSpeed>device.runMaximumTempo || tiltSpeed>device.runMaximumTempo)
-            throw new IllegalArgumentException("Gerät unterstützt höchstens "+device.runMaximumTempo+" ‰ Lauftempo; neue Firmware erforderlich");
+            throw new IllegalArgumentException(UiText.DEVICE_SUPPORTS_AT_MOST.text()+device.runMaximumTempo+UiText.RUN_SPEED_NEWER_FIRMWARE_REQUIRED.text());
         for (int i = 0; i < total(); i++) { int[] t = target(i); device.validateTarget(t[0], t[1]); }
         if (mode == 1) device.validateTarget(endPan, endTilt);
         if (P2Codec.encode(65535, "LOAD_PLAN", fields()).length() > 164)
-            throw new IllegalArgumentException("Auftrag überschreitet Firmware-Rahmenlimit");
+            throw new IllegalArgumentException(UiText.JOB_EXCEEDS_FIRMWARE_FRAME_LIMIT.text());
     }
     public String[] fields() {
         String[] f = new String[] { Long.toString(runId), mode == 0 ? "1" : "2", Integer.toString(mode),
@@ -109,7 +109,7 @@ public final class PanoramaPlan {
         return Arrays.equals(Arrays.copyOfRange(a,1,a.length),Arrays.copyOfRange(b,1,b.length));
     }
     static int shotsInBand(int x, int ex, int tilt, int step) {
-        if (step <= 0 || tilt < -90000 || tilt > 90000) throw new IllegalArgumentException("Bandparameter");
+        if (step <= 0 || tilt < -90000 || tilt > 90000) throw new IllegalArgumentException(UiText.BAND_PARAMETERS.text());
         long span = Math.abs((long)ex - x); if (span == 0) return 1;
         long radians = Math.abs((long)tilt) * 3141593L / 180000L;
         long square = radians * radians / 1000000L, fourth = square * square / 1000000L;
