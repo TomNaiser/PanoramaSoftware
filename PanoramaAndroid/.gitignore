@@ -15,7 +15,9 @@ __pycache__/
 /docs/history/
 
 # Device snapshots and measurement results stay at their existing local paths.
-/config/
+# Keep device snapshots local, except the explicitly versioned tested baseline.
+/config/*
+!/config/MotionConfig.precise-2.4.75-20261027.json
 /diagnostics/motion-baseline-*.json
 /releases/
 

@@ -175,6 +175,8 @@ final class RestRecoveryChecks {
                 try {service.saveCaptureStability(.3,.3,.4,15);throw new AssertionError("Loaded plan ignored");}
                 catch(IllegalArgumentException expected) {check(fake.commands.size()==count,"Loaded job prevents changing capture guards");}
             });
+            pausedRasterRecovery(store,fake);
+            freshRasterStart(fake);
             fieldRecovery(context,store,fake,screen);
             migration(context,name+"-v2");
         } finally {
@@ -250,6 +252,62 @@ final class RestRecoveryChecks {
             check(service.state.plan.mode==1 && service.state.plan.rows==2 && service.state.plan.startTilt==0,"Spherical recovery retains exact remaining bands");
         });
     }
+    private void pausedRasterRecovery(CaptureStore store,FakeLink fake) throws Exception {
+        stage="paused raster recovery";
+        PanoramaPlan source=PanoramaPlan.parse("819366978|1|0|78025|4614|43|6|2062|-3083|500|30|300|1700|1700|1|5000".split("\\|"));
+        main(() -> {
+            service.state=faultState(source,"MOTION_STALLED",18);service.state.state="PAUSED";
+            service.state.recoveryPauseSupported=true;service.incident.resolved();fresh();
+            try {
+                store.accept("00:06:66:EE:18:E4",service.state,new P2Codec.Frame(1,"PLAN",source.fields()));
+                for(int i=0;i<18;i++) capture(store,source,i);
+            } catch(Exception ex) {throw new RuntimeException(ex);}
+            store.recordFault("00:06:66:EE:18:E4",133,service.state,statusFields(service.state));
+            fake.commands.clear();fake.allowRecovery=true;fake.rejectStop=true;
+            service.prepareRest(true,source.runId,18);
+        });
+        await(() -> !service.preparingRest && !service.busy);
+        main(() -> {
+            check(fake.commands.equals(Collections.singletonList("STOP")),"Rejected STOP never clears, loads or starts");
+            check(service.state.state.equals("PAUSED") && service.state.runId==source.runId,"Rejected STOP retains paused source");
+            fake.rejectStop=false;fake.commands.clear();fresh();
+            service.prepareRest(true,source.runId,18);
+        });
+        await(() -> !service.preparingRest && !service.busy);
+        main(() -> {
+            check(service.state.state.equals("PLAN_READY"),"Paused field raster reaches a confirmed ready recovery job");
+            check(fake.commands.equals(Arrays.asList("STOP","CLEAR_RUN","LOAD_PLAN","GET_SUPPORT_BUNDLE")),"Paused raster confirms STOP, CLEAR and exact LOAD without starting");
+            PanoramaPlan rest=service.state.plan;
+            check(rest.runId!=source.runId && rest.startPan==82149 && rest.columns==41 && rest.rows==6,"Previous column preserves exact field recipe under a new run ID");
+            String key=store.checkpoint("00:06:66:EE:18:E4",source.runId).key;
+            check(store.export(key,false).split("\n").length==19,"All 18 original captures survive recovery unchanged");
+            fake.allowStart=true;service.runCommand("START");
+        });
+        await(() -> !service.busy);
+        main(() -> {
+            check(service.state.state.equals("RUNNING"),"Separately requested START releases recovered job");
+            check(fake.commands.equals(Arrays.asList("STOP","CLEAR_RUN","LOAD_PLAN","GET_SUPPORT_BUNDLE","START")),"Only explicit START releases movement");
+        });
+    }
+    private void freshRasterStart(FakeLink fake) throws Exception {
+        stage="fresh raster start";
+        PanoramaPlan plan=PanoramaPlan.parse("819366979|1|0|78025|4614|43|6|2062|-3083|500|30|300|1700|1700|1|5000".split("\\|"));
+        main(() -> {
+            service.state.state="IDLE";service.state.runId=0;service.state.plan=null;fresh();
+            fake.commands.clear();service.loadPlan(plan);
+        });
+        await(() -> !service.busy);
+        main(() -> {
+            check(service.state.state.equals("PLAN_READY") && service.state.plan.sameRecipe(plan),"Fresh upload confirms the original field recipe");
+            check(fake.commands.equals(Arrays.asList("LOAD_PLAN","GET_SUPPORT_BUNDLE")),"Fresh upload alone never starts");
+            service.runCommand("START");
+        });
+        await(() -> !service.busy);
+        main(() -> {
+            check(service.state.state.equals("RUNNING") && service.state.runId==plan.runId,"Explicit first START reaches RUNNING");
+            check(fake.commands.equals(Arrays.asList("LOAD_PLAN","GET_SUPPORT_BUNDLE","START")),"First start sends only the confirmed field run");
+        });
+    }
     private void screenshot(Context context,String name) throws Exception {
         // A host can capture the visible screen without attaching UiAutomation
         // to this custom instrumentation runner. Keep the inspection bounded.
@@ -315,7 +373,7 @@ final class RestRecoveryChecks {
         throw new AssertionError("Rest preparation timed out: "+stage+"; "+service.state.state+"; "+service.message);
     }
     private final class FakeLink implements DeviceLink {
-        final List<String> commands=new ArrayList<>();boolean rejectClear,rejectLoad,allowRecovery,sensorsHealthy=true;
+        final List<String> commands=new ArrayList<>();boolean rejectClear,rejectLoad,rejectStop,allowRecovery,allowStart,sensorsHealthy=true;
         void heartbeat() { fresh();ui.postDelayed(this::heartbeat,200); }
         public CompletableFuture<V2Client.Result> send(String type,String... f) {
             commands.add(type);
@@ -326,7 +384,18 @@ final class RestRecoveryChecks {
                 if(rejectLoad) return CompletableFuture.completedFuture(new V2Client.Result(false,"REJECTED"));
                 service.state.plan=PanoramaPlan.parse(f);service.state.runId=service.state.plan.runId;service.state.state="PLAN_READY";fresh();
             } else if(type.equals("GET_SUPPORT_BUNDLE") || type.equals("GET_STATUS")) fresh();
-            else if(type.equals("STOP") && allowRecovery) {service.state.state="STOPPED";fresh();}
+            else if(type.equals("STOP") && allowRecovery) {
+                // Match V2Controller::requireRunId: malformed STOP must leave the job paused.
+                if(f.length!=1) return CompletableFuture.completedFuture(new V2Client.Result(false,"BAD_FIELD_COUNT"));
+                if(!f[0].equals(""+service.state.runId)) return CompletableFuture.completedFuture(new V2Client.Result(false,"RUN_ID_MISMATCH"));
+                if(rejectStop) return CompletableFuture.completedFuture(new V2Client.Result(false,"REJECTED"));
+                service.state.state="STOPPED";fresh();
+            }
+            else if(type.equals("START") && allowStart) {
+                check(f.length==1 && f[0].equals(""+service.state.runId),"START uses the new confirmed run ID");
+                check(service.state.state.equals("PLAN_READY"),"START requires confirmed loaded recipe");
+                service.state.state="RUNNING";fresh();
+            }
             else if(type.equals("PAUSE")) { service.state.state="PAUSED";fresh(); }
             else if(type.equals("RETRY_COLUMN")) {
                 check(Long.parseLong(f[0])==service.state.runId,"Retry stays in original run");

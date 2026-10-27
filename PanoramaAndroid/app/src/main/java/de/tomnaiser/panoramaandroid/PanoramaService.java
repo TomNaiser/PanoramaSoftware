@@ -428,7 +428,9 @@ public final class PanoramaService extends Service {
                 if(flow.failed()) { finish(() -> UiText.RECOVERY_JOB_REJECTED_OLD_RUN_REMAINS_SAVED.text());return; }
                 if(flow.done()) { finish(() -> UiText.RECOVERY_JOB_LOADED.text()+rest.total()+UiText.CAPTURES_START_JOB_SEPARATELY_TO_MOVE.text());return; }
                 if(next!=null) {
-                    execute(next,next.equals("LOAD_PLAN")?rest.fields():new String[0],false,true).whenComplete((reply,error) -> {
+                    String[] fields=next.equals("LOAD_PLAN")?rest.fields():
+                        next.equals("STOP")?new String[]{""+expectedRun}:new String[0];
+                    execute(next,fields,false,true).whenComplete((reply,error) -> {
                         if(restPreparation!=flow || generation!=id) return;
                         flow.acknowledged(error==null && reply.accepted);deadline=SystemClock.elapsedRealtime()+5000;
                         if(error==null && reply.accepted && next.equals("LOAD_PLAN")) {
