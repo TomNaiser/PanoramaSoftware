@@ -42,7 +42,7 @@ Reale Positionierungsprüfung vom selben Tag: Mit regulärer Firmware 2.4.75 wur
 
 Vollständige frühere Entwicklungsnotizen bleiben lokal unter `docs/history/`, Messbelege unter `abnahme/` und im übergeordneten `analysis/`. Ausgelesene Motorprofile unter `config/`, gespeicherte Diagnoseergebnisse und APK-Pakete unter `releases/` bleiben ebenfalls lokal. Sie werden nicht für einen normalen öffentlichen Checkout benötigt. Die öffentlich zusammengefassten Tests beweisen keine allgemeine Motorfehlerrate oder Bildschärfe.
 
-Ausnahme: `config/MotionConfig.precise-2.4.75-20261027.json` ist als vollständiges Profil des am 27. Oktober geprüften Kopfs mitversioniert, damit dessen Gerätekonfiguration zusammen mit dem App-Stand wiederherstellbar ist.
+Ausnahmen: Das vollständige [aktuelle Profil Revision 40](config/MotionConfig.precise-pan-2.4.75-20261027.json) und das [Rückfallprofil Revision 39](config/MotionConfig.precise-2.4.75-20261027.json) sind mitversioniert. Revision 40 ändert ausschließlich die beiden Pan-Ankunftsfenster auf 0,15°/0,25°; die übrigen 127 Werte bleiben erhalten. Die Korrektur ist im Kopf gespeichert und wirkt für Android und Windows. [96 reale Aufnahmen, Messwerte und Grenzen](../docs/validation/2026-10-27-pan-positioning.md). Ein App-Start schreibt das Profil nicht automatisch.
 
 ## Lizenz
 

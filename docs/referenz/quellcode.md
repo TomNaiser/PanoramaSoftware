@@ -2,7 +2,7 @@
 
 [Inhalt](../README.md) · [Funktionssignaturen](funktionen.md)
 
-Aktive Firmware-Quellen, Android-Produktionsklassen und im Windows-Version-27-Projekt eingebundene C#-Dateien; generierte Designer-/AssemblyInfo-Dateien und Tests ausgenommen. Ein eingebundener Legacy-Helfer ist dadurch nicht automatisch der aktive V2-Pfad. Die Fachkapitel erklären die tatsächlich verwendeten Verantwortungen.
+Erfasst sind die aktuell ausgecheckten Firmware-Quellen, Android-Produktionsklassen und im Windows-Version-27-Projekt eingebundenen C#-Dateien; generierte Designer-/AssemblyInfo-Dateien und Tests ausgenommen. Der Katalog dokumentiert Quellen, keine zusätzliche Hardwareabnahme. Die Versions- und Messnachweise stehen im [Prüfstand](../validation/README.md). Ein eingebundener Legacy-Helfer ist nicht automatisch der aktive V2-Pfad.
 
 Windows/Firmware-Quelllinks zeigen auf ihre eigenen GitHub-Repositories (`master`). Der lokale Dateipfad bleibt im Text erkennbar. Für publizierte Releases Links auf erreichbare Commitstände fixieren; lokale unpublizierte Änderungen werden auf GitHub erst nach deren Veröffentlichung sichtbar.
 
@@ -60,15 +60,16 @@ Windows/Firmware-Quelllinks zeigen auf ihre eigenen GitHub-Repositories (`master
 | [IncidentTracker.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/IncidentTracker.java) | `IncidentTracker` | 4 |
 | [JogHold.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/JogHold.java) | `JogHold` | 4 |
 | [LivePapywizard.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/LivePapywizard.java) | `BeforeReplace`, `Listener`, `LivePapywizard`, `Publisher`, `Snapshot`, `Source` | 14 |
-| [MainActivity.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java) | `MainActivity` | 91 |
+| [MainActivity.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java) | `MainActivity` | 92 |
 | [ManualActionProgress.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionProgress.java) | `ManualActionProgress`, `Outcome` | 2 |
 | [ManualActionStatus.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionStatus.java) | `ManualActionStatus` | 4 |
 | [ManualMotionOptions.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualMotionOptions.java) | `ManualMotionOptions` | 2 |
 | [ManualMoveProgress.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualMoveProgress.java) | `ManualMoveProgress` | 2 |
 | [ManualTargets.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualTargets.java) | `ManualTargets` | 2 |
 | [P2Codec.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/P2Codec.java) | `Frame`, `P2Codec` | 6 |
+| [PanoramaApplication.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaApplication.java) | `PanoramaApplication` | 0 |
 | [PanoramaPlan.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaPlan.java) | `PanoramaPlan` | 11 |
-| [PanoramaService.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java) | `LocalBinder`, `Observer`, `PanoramaService` | 91 |
+| [PanoramaService.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java) | `LocalBinder`, `Observer`, `PanoramaService` | 100 |
 | [PlanAbort.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanAbort.java) | `PlanAbort` | 6 |
 | [PlanPreview.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java) | `EndpointListener`, `PlanPreview` | 40 |
 | [PlotViewport.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlotViewport.java) | `PlotViewport` | 8 |
@@ -81,20 +82,31 @@ Windows/Firmware-Quelllinks zeigen auf ihre eigenen GitHub-Repositories (`master
 | [RunRecoveryPause.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RunRecoveryPause.java) | `RunRecoveryPause` | 3 |
 | [StatusLogPolicy.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/StatusLogPolicy.java) | `StatusLogPolicy` | 1 |
 | [SupportLog.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/SupportLog.java) | `SupportLog` | 5 |
+| [UiText.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java) | `Language`, `Message`, `UiText` | 14 |
 | [V2Client.java](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/V2Client.java) | `Pending`, `Result`, `Transport`, `V2Client` | 19 |
 
 ## Windows
 
 | Datei | Deklarierte Typen | Erfasste Signaturen |
 |---|---|---:|
-| [DiagnosticSessionLog.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs) | `DiagnosticSessionLog` | 5 |
+| [DeviceIdentity.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DeviceIdentity.cs) | `DeviceIdentity` | 2 |
+| [DiagnosticSessionLog.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs) | `DiagnosticSessionLog`, `Entry` | 6 |
+| [LiveRunBackup.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs) | `LiveRunBackup` | 7 |
 | [ManualMoveTargets.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/ManualMoveTargets.cs) | `ManualMoveTargets` | 6 |
 | [PanoramaPlanFactory.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaPlanFactory.cs) | `PanoramaPlanFactory` | 3 |
-| [PanoramaSessionController.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs) | `ConnectionStateEventArgs`, `DeviceCapabilitiesEventArgs`, `DeviceDiagnosticsEventArgs`, `DeviceInfoEventArgs`, `DeviceStatusEventArgs`, `PanoramaSessionController`, `RunEventEventArgs`, `SessionMessageEventArgs` | 71 |
+| [PanoramaSessionController.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs) | `ConnectionStateEventArgs`, `DeviceCapabilitiesEventArgs`, `DeviceDiagnosticsEventArgs`, `DeviceInfoEventArgs`, `DeviceStatusEventArgs`, `PanoramaSessionController`, `RunEventEventArgs`, `SessionMessageEventArgs` | 73 |
 | [PanoramaSessionController.Operations.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs) | `CaptureWarningEventArgs`, `PanoramaSessionController` | 28 |
+| [PanoramaSessionController.Parity.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs) | `PanoramaSessionController` | 17 |
 | [PapyWizardRunExporter.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PapyWizardRunExporter.cs) | `IPapyWizardWriter`, `LegacyPapyWizardWriter`, `PapyWizardRunExporter` | 11 |
 | [RunArchive.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs) | `LocalSettings`, `RunArchive` | 19 |
+| [RunExport.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunExport.cs) | `RunExport` | 3 |
+| [RunRecovery.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs) | `CaptureStabilitySettings`, `RecoveryCheckpoint`, `RestReservation`, `RunRecovery` | 9 |
+| [RunStore.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs) | `RunStore` | 33 |
 | [RunTimingSettings.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunTimingSettings.cs) | `RunTimingSettings` | 3 |
+| [SqliteDatabase.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs) | `SqliteDatabase` | 13 |
+| [UiText.Catalogue.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.Catalogue.cs) | `UiText` | 1 |
+| [UiText.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.cs) | `UiText` | 3 |
+| [UiText.Windows.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.Windows.cs) | `UiText` | 1 |
 | [CalculationsHelper.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/CalculationsHelper.cs) | `CalculationsHelper` | 1 |
 | [BluetoothComTransport.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs) | `BluetoothComTransport` | 9 |
 | [ConnectionState.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/ConnectionState.cs) | `ConnectionState` | 0 |
@@ -110,10 +122,11 @@ Windows/Firmware-Quelllinks zeigen auf ihre eigenen GitHub-Repositories (`master
 | [RunSegment.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/RunSegment.cs) | `RunSegment` | 0 |
 | [RunSegmentResolver.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/RunSegmentResolver.cs) | `RunSegmentResolver` | 1 |
 | [RunState.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/RunState.cs) | `DisconnectPolicy`, `MoveMode`, `RunPhase`, `RunState` | 0 |
-| [SessionFeatures.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs) | `CaptureWarnings`, `ManualActionProgress`, `ManualActionStatus`, `PositionTrace`, `Sample`, `SessionFeatures` | 14 |
+| [SessionFeatures.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs) | `CaptureWarnings`, `ManualActionProgress`, `ManualActionStatus`, `PositionTrace`, `Sample`, `SessionFeatures` | 15 |
 | [SphericalGeometry.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SphericalGeometry.cs) | `SphericalGeometry` | 4 |
 | [Form1.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.cs) | `BufferedPanel`, `PanoControlForm` | 96 |
-| [Form1.Current.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs) | `NavigationArrowButton`, `PanoControlForm` | 52 |
+| [Form1.Current.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs) | `NavigationArrowButton`, `PanoControlForm` | 56 |
+| [Form1.Parity.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs) | `PanoControlForm`, `ViewOnlyWriter` | 11 |
 | [InterfaceClassAcquisition2UI.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/InterfaceClassAcquisition2UI.cs) | `InterfaceClassAcquisition2UI` | 0 |
 | [muControllerInterface.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/muControllerInterface.cs) | `muControllerInterface` | 19 |
 | [PanoControlApp.cs](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/PanoControlApp.cs) | `PanoControlApp` | 1 |

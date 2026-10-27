@@ -73,16 +73,24 @@ dotnet run --project PanoramaControlGitRepo/Tests/ProtocolTests/ProtocolTests.cs
 Kompletter vorhandener Paketbuild:
 
 ```powershell
-pwsh -File PanoramaControlGitRepo/Tests/build-windows.ps1
+pwsh -File PanoramaControlGitRepo/Tests/build-windows.ps1 `
+  -MotionProfile PanoramaAndroid/config/MotionConfig.precise-pan-2.4.75-20261027.json
 ```
 
-Das Paketskript baut die .NET-Framework-App, führt simulierte WinForms-/Vorschauprüfungen aus und erzeugt `releases/27.4.4` sowie ein ZIP im Windows-Unterprojekt. Diese GUI-Tests benötigen eine geeignete lokale Windows-Sitzung; sie verwenden einen Simulator. Separat vorhandene Hardwaretests nicht automatisch mit ausführen. Der Paketbuild kann Dateien im Ausgabeverzeichnis ersetzen; lokale Benutzerdaten bleiben davon getrennt.
+Das Paketskript baut die .NET-Framework-App und führt simulierte WinForms-/Vorschau-/Navigations-/Touchprüfungen aus. Der gezeigte Aufruf aus dem Gesamtprojekt erzeugt `releases/27.5.4-pan-r40` und `releases/PanoramaControl-27.5.4-pan-r40.zip` im Windows-Unterprojekt mit dem vollständigen geprüften Profil Revision 40. Ohne `-MotionProfile` bleibt das Ausgabeziel `releases/27.5.4`; das frühere Profil `MotionConfig.precise-2.4.75-20261027.json` mit Revision 39 wird weiterhin unterstützt. `REFERENCE.json` hält Revision und Profil-Prüfsumme fest. Das Profil wird nicht automatisch angewandt. Diese GUI-Tests benötigen eine geeignete lokale Windows-Sitzung; sie verwenden einen Simulator. Separat vorhandene Hardwaretests nicht automatisch mit ausführen. Der Paketbuild kann Dateien im Ausgabeverzeichnis ersetzen; lokale Benutzerdaten bleiben davon getrennt.
 
 ## Nachweisstand, nicht neu ausgeführte Regression
 
 | Datum / Stand | Beleg |
 |---|---|
+| Windows 27.5.4 / Motorprofil Revision 40, 27.10. | 1.432 Host-, 132 UI-, 16 Vorschau-, 34 Navigations- und 19 Touchprüfungen: 1.633 insgesamt. 96 reale Aufnahmen, Pan maximal 0,236°, Median 0,089°; 13 Warnungen im 72er-Lauf. Alle 129 Parameter zurückgelesen; [Pan-Korrektur, Profil und Grenzen](validation/2026-10-27-pan-positioning.md) |
+| Windows 27.5.1, 26.10. | 1.415 Host-, 129 UI-, 16 Raster- und 29 gezielte Navigationsprüfungen bestanden; [Befunde und offene Surface-Diagnose](https://github.com/TomNaiser/PanoramaControl/blob/master/docs/history/WINDOWS-27.5.1-NAVIGATION-DIAGNOSE.md) |
+| Windows 27.5.2, 26.10. | Direkte Pointer-Eingabe mit 19 Touchprüfungen; [Surface-Log, Korrektur und Messplan](https://github.com/TomNaiser/PanoramaControl/blob/master/docs/history/WINDOWS-27.5.2-SURFACE-TOUCH.md) |
+| Windows 27.5.3, 27.10. | 1.427 Host-/Controllerprüfungen, Android-Praxisraster und pausierte Restaufträge; [Referenzbedingungen und Paket](https://github.com/TomNaiser/PanoramaControl/blob/master/docs/WINDOWS-27.5.3-ANDROID-0.6.27.md) |
+| Android 0.6.27 / Firmware 2.4.75, 27.10. | Festgehaltene Referenz mit Motorprofil Revision 39; 57 reale Auslösungen, davon 39 mit verbessertem Bremswert; [Gegenversuch und Grenzen](validation/2026-10-27-positioning.md) |
 | Firmware 2.4.75, 23.10. | 20.286 Host-Assertions, normaler R4-Build und Boot-Stack-Prüfung laut [Firmware-Abnahme (Zusammenfassung)](validation/README.md#firmware-2-4-75) und [Build (Zusammenfassung)](validation/README.md#firmware-2-4-75) |
+| Firmware 2.4.76, 26./27.10. | 20.295 Host-Assertions, neun gezielte Sensorreferenzprüfungen, R4-/Startstackprüfung und realer Sensorstart mit Nullregister 0; [Nachweis und Grenzen](https://github.com/TomNaiser/PanoDuinoControl/blob/master/docs/history/TILT-REFERENCE-2.4.76.md) |
+| Windows 27.5.0, 25.10. | 1.415 Host-/Protokoll-/Controller-, 129 WinForms- und 16 Raster-/Transferprüfungen; Paketbuild erfolgreich; [Nachweis und Grenzen](https://github.com/TomNaiser/PanoramaControl/blob/master/docs/history/WINDOWS-27.5.0-ANDROID-PARITAET.md) |
 | Windows 27.4.4, 22.10. | 192 Protokoll-/Controller- und 115 simulierte UI-Prüfungen laut [Versionsnachweis](https://github.com/TomNaiser/PanoramaControl/blob/master/docs/history/WINDOWS-27.4.4-ROBUSTHEIT.md) |
 | Android 0.6.24, 24.10. | 131 JVM-, 69 Wiederaufnahme-/Dialog- und 21 Speicherprüfungen laut [Befund (Zusammenfassung)](validation/README.md#recovery-2026-10-24) |
 | Android 0.6.25, 24.10. | 136 JVM-Tests, Lint, 3.024 Pixel-Prüfungen mit 1.000 einzelnen XML-Updates laut [Papywizard-Nachweis (Zusammenfassung)](validation/README.md#papywizard-2026-10-24) |
@@ -109,4 +117,4 @@ Bei null Fehlern in 1.000 unabhängigen gleichartigen Versuchen liegt die einsei
 
 ## Diagnose bei einem neuen Feldfehler
 
-App-/Firmwareversion, Laufnummer, letzten bestätigten Bildindex, Fehlermeldung und unveränderte Originaldaten sichern. Zunächst SQLite beziehungsweise Windows-Journal und Diagnose exportieren; eine manuelle Dateibereinigung darf nicht die einzige Rekonstruktionsquelle entfernen. Vor Neustart des Kopfes die Bedeutung von Boot-/Tilt-Referenz für die Wiederaufnahme beachten. Fehlende Istwerte als unbekannt belassen.
+App-/Firmwareversion, Laufnummer, letzten bestätigten Bildindex, Fehlermeldung und unveränderte Originaldaten sichern. Zunächst SQLite (bei Windows vor 27.5.0 das Journal) und Diagnose exportieren; eine manuelle Dateibereinigung darf nicht die einzige Rekonstruktionsquelle entfernen. Vor Neustart des Kopfes die Bedeutung von Boot-/Tilt-Referenz für die Wiederaufnahme beachten. Fehlende Istwerte als unbekannt belassen.

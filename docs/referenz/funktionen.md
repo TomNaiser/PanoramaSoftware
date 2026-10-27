@@ -793,97 +793,98 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java
 
-- [L140](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L140): `private int dp(int value)`
-- [L141](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L141): `private TextView text(String value,int size)`
-- [L145](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L145): `private LinearLayout vertical()`
-- [L146](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L146): `private GradientDrawable surface(int color)`
-- [L147](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L147): `private LinearLayout card(LinearLayout parent,String title)`
-- [L152](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L152): `private LinearLayout details(LinearLayout parent,String title)`
-- [L158](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L158): `private void primary(Button button)`
-- [L162](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L162): `private void buildUi()`
-- [L411](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L411): `public void beforeTextChanged(CharSequence s,int start,int count,int after)`
-- [L412](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L412): `public void onTextChanged(CharSequence s,int start,int before,int count)`
-- [L413](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L413): `public void afterTextChanged(Editable value)`
-- [L417](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L417): `public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id)`
-- [L418](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L418): `public void onNothingSelected(android.widget.AdapterView<?> p)`
-- [L422](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L422): `public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id)`
-- [L423](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L423): `public void onNothingSelected(android.widget.AdapterView<?> parent)`
-- [L427](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L427): `private PlotWorkspace installPlotWorkspace(android.widget.FrameLayout container,int page,LinearLayout diagram)`
-- [L433](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L433): `private void plotControls(LinearLayout parent,PlanPreview view)`
-- [L442](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L442): `private void togglePlotWorkspace(PlanPreview view)`
-- [L446](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L446): `private void updatePlotSizeLabels()`
-- [L451](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L451): `private void syncPlotChrome()`
-- [L469](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L469): `private void chooseTiltRange()`
-- [L475](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L475): `private void applyTiltRange()`
-- [L480](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L480): `private void schedulePlot()`
-- [L481](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L481): `private void updateProposal()`
-- [L486](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L486): `private String proposalText()`
-- [L492](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L492): `private boolean positionReady()`
-- [L493](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L493): `private boolean canStartLoadedPlan()`
-- [L494](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L494): `private boolean canStartLocalPlan()`
-- [L495](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L495): `private void startLoadedPlan()`
-- [L504](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L504): `private void abortLoadedPlan()`
-- [L507](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L507): `private void prepareRest()`
-- [L522](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L522): `private void removePlan()`
-- [L530](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L530): `private void clearLocalPlan()`
-- [L535](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L535): `private boolean endpointSet(String prefix)`
-- [L538](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L538): `private void driveSelection()`
-- [L542](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L542): `private void driveEndpoint(String prefix)`
-- [L543](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L543): `private void driveUiPoint(double pan,double tilt)`
-- [L547](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L547): `private void refreshEndpoints()`
-- [L555](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L555): `private Button button(LinearLayout parent,String title,Runnable action,BooleanSupplier enabled)`
-- [L564](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L564): `private void arrowButton(LinearLayout parent,String symbol,String description,int axis,int direction)`
-- [L594](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L594): `private EditText input(LinearLayout parent,String key,String label,String fallback)`
-- [L600](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L600): `public void beforeTextChanged(CharSequence s,int start,int count,int after)`
-- [L601](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L601): `public void onTextChanged(CharSequence s,int start,int before,int count)`
-- [L602](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L602): `public void afterTextChanged(Editable value)`
-- [L606](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L606): `private boolean timingReady()`
-- [L609](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L609): `private AlertDialog editRunTiming()`
-- [L630](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L630): `private boolean ready()`
-- [L631](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L631): `private boolean manualReady()`
-- [L632](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L632): `private void selectPage(int index)`
-- [L642](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L642): `private String statusText()`
-- [L656](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L656): `private void render()`
-- [L751](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L751): `private List<RunPlotModel.Capture> warningCaptures()`
-- [L757](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L757): `private void showCaptureWarnings()`
-- [L762](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L762): `private AlertDialog reviewCaptureWarning(RunPlotModel.Capture capture)`
-- [L773](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L773): `private String endpointLabel(String prefix,String title)`
-- [L776](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L776): `private String alignmentHelp()`
-- [L784](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L784): `private void showColumnRetry()`
-- [L795](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L795): `private void showIncident()`
-- [L820](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L820): `private String friendlyState(String state)`
-- [L823](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L823): `private void safely(Runnable action)`
-- [L827](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L827): `private void confirm(String title,String detail,Runnable action)`
-- [L830](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L830): `private double number(String key)`
-- [L831](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L831): `private int integer(String key)`
-- [L832](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L832): `private void saveInputs()`
-- [L837](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L837): `private boolean permission()`
-- [L847](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L847): `private void refreshDevices()`
-- [L857](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L857): `private String deviceName(BluetoothDevice device)`
-- [L861](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L861): `private void connect()`
-- [L868](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L868): `private void takePosition(String prefix)`
-- [L869](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L869): `private void migrateTiltSign()`
-- [L883](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L883): `private static long newRunId()`
-- [L884](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L884): `private CameraProfile editedProfile()`
-- [L885](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L885): `private void calculate()`
-- [L895](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L895): `private void loadPlan()`
-- [L900](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L900): `private void loadProfiles()`
-- [L912](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L912): `private void updateProfilePicker()`
-- [L913](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L913): `private void applyProfile()`
-- [L919](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L919): `private void saveProfile()`
-- [L923](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L923): `private void persistProfiles()`
-- [L927](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L927): `private void importConfig()`
-- [L928](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L928): `private void parseConfig(InputStream input) throws Exception`
-- [L944](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L944): `private void refreshRuns()`
-- [L945](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L945): `private void exportCaptures(boolean xml)`
-- [L951](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L951): `private void saveCaptureExport(CaptureStore.Run run,boolean xml)`
-- [L956](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L956): `private void exportInterruptions()`
-- [L961](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L961): `private void exportSupport()`
-- [L967](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L967): `private void prepareExport()`
-- [L991](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L991): `private void migrateTiltDirection()`
-- [L1005](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1005): `private boolean tiltCalibrationReady()`
-- [L1008](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1008): `private void setTiltZero(boolean reset)`
-- [L1013](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1013): `private void setTiltLimits()`
+- [L146](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L146): `private AlertDialog chooseLanguage()`
+- [L163](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L163): `private int dp(int value)`
+- [L164](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L164): `private TextView text(String value,int size)`
+- [L168](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L168): `private LinearLayout vertical()`
+- [L169](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L169): `private GradientDrawable surface(int color)`
+- [L170](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L170): `private LinearLayout card(LinearLayout parent,String title)`
+- [L175](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L175): `private LinearLayout details(LinearLayout parent,String title)`
+- [L181](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L181): `private void primary(Button button)`
+- [L185](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L185): `private void buildUi()`
+- [L436](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L436): `public void beforeTextChanged(CharSequence s,int start,int count,int after)`
+- [L437](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L437): `public void onTextChanged(CharSequence s,int start,int before,int count)`
+- [L438](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L438): `public void afterTextChanged(Editable value)`
+- [L442](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L442): `public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id)`
+- [L443](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L443): `public void onNothingSelected(android.widget.AdapterView<?> p)`
+- [L447](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L447): `public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id)`
+- [L448](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L448): `public void onNothingSelected(android.widget.AdapterView<?> parent)`
+- [L452](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L452): `private PlotWorkspace installPlotWorkspace(android.widget.FrameLayout container,int page,LinearLayout diagram)`
+- [L458](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L458): `private void plotControls(LinearLayout parent,PlanPreview view)`
+- [L467](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L467): `private void togglePlotWorkspace(PlanPreview view)`
+- [L471](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L471): `private void updatePlotSizeLabels()`
+- [L476](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L476): `private void syncPlotChrome()`
+- [L494](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L494): `private void chooseTiltRange()`
+- [L500](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L500): `private void applyTiltRange()`
+- [L505](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L505): `private void schedulePlot()`
+- [L506](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L506): `private void updateProposal()`
+- [L511](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L511): `private String proposalText()`
+- [L517](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L517): `private boolean positionReady()`
+- [L518](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L518): `private boolean canStartLoadedPlan()`
+- [L519](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L519): `private boolean canStartLocalPlan()`
+- [L520](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L520): `private void startLoadedPlan()`
+- [L529](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L529): `private void abortLoadedPlan()`
+- [L532](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L532): `private void prepareRest()`
+- [L547](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L547): `private void removePlan()`
+- [L555](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L555): `private void clearLocalPlan()`
+- [L560](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L560): `private boolean endpointSet(String prefix)`
+- [L563](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L563): `private void driveSelection()`
+- [L567](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L567): `private void driveEndpoint(String prefix)`
+- [L568](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L568): `private void driveUiPoint(double pan,double tilt)`
+- [L572](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L572): `private void refreshEndpoints()`
+- [L580](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L580): `private Button button(LinearLayout parent,String title,Runnable action,BooleanSupplier enabled)`
+- [L589](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L589): `private void arrowButton(LinearLayout parent,String symbol,String description,int axis,int direction)`
+- [L619](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L619): `private EditText input(LinearLayout parent,String key,String label,String fallback)`
+- [L625](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L625): `public void beforeTextChanged(CharSequence s,int start,int count,int after)`
+- [L626](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L626): `public void onTextChanged(CharSequence s,int start,int before,int count)`
+- [L627](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L627): `public void afterTextChanged(Editable value)`
+- [L631](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L631): `private boolean timingReady()`
+- [L634](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L634): `private AlertDialog editRunTiming()`
+- [L655](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L655): `private boolean ready()`
+- [L656](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L656): `private boolean manualReady()`
+- [L657](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L657): `private void selectPage(int index)`
+- [L667](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L667): `private String statusText()`
+- [L681](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L681): `private void render()`
+- [L776](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L776): `private List<RunPlotModel.Capture> warningCaptures()`
+- [L782](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L782): `private void showCaptureWarnings()`
+- [L787](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L787): `private AlertDialog reviewCaptureWarning(RunPlotModel.Capture capture)`
+- [L798](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L798): `private String endpointLabel(String prefix,String title)`
+- [L801](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L801): `private String alignmentHelp()`
+- [L809](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L809): `private void showColumnRetry()`
+- [L820](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L820): `private void showIncident()`
+- [L845](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L845): `private String friendlyState(String state)`
+- [L848](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L848): `private void safely(Runnable action)`
+- [L852](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L852): `private void confirm(String title,String detail,Runnable action)`
+- [L855](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L855): `private double number(String key)`
+- [L856](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L856): `private int integer(String key)`
+- [L857](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L857): `private void saveInputs()`
+- [L862](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L862): `private boolean permission()`
+- [L872](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L872): `private void refreshDevices()`
+- [L882](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L882): `private String deviceName(BluetoothDevice device)`
+- [L886](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L886): `private void connect()`
+- [L893](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L893): `private void takePosition(String prefix)`
+- [L894](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L894): `private void migrateTiltSign()`
+- [L908](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L908): `private static long newRunId()`
+- [L909](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L909): `private CameraProfile editedProfile()`
+- [L910](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L910): `private void calculate()`
+- [L920](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L920): `private void loadPlan()`
+- [L925](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L925): `private void loadProfiles()`
+- [L937](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L937): `private void updateProfilePicker()`
+- [L938](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L938): `private void applyProfile()`
+- [L944](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L944): `private void saveProfile()`
+- [L948](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L948): `private void persistProfiles()`
+- [L952](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L952): `private void importConfig()`
+- [L953](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L953): `private void parseConfig(InputStream input) throws Exception`
+- [L969](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L969): `private void refreshRuns()`
+- [L970](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L970): `private void exportCaptures(boolean xml)`
+- [L976](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L976): `private void saveCaptureExport(CaptureStore.Run run,boolean xml)`
+- [L981](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L981): `private void exportInterruptions()`
+- [L986](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L986): `private void exportSupport()`
+- [L992](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L992): `private void prepareExport()`
+- [L1016](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1016): `private void migrateTiltDirection()`
+- [L1030](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1030): `private boolean tiltCalibrationReady()`
+- [L1033](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1033): `private void setTiltZero(boolean reset)`
+- [L1038](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java#L1038): `private void setTiltLimits()`
 
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionProgress.java
 
@@ -937,97 +938,106 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java
 
-- [L47](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L47): `public void run()`
-- [L75](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L75): `String papywizardStatus()`
-- [L76](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L76): `void rebuildPapywizard()`
-- [L119](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L119): `public List<String> roots()`
-- [L120](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L120): `public LivePapywizard.Snapshot snapshot(String key)`
-- [L121](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L121): `public void close()`
-- [L158](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L158): `private Notification notification()`
-- [L165](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L165): `public void observe(Observer observer)`
-- [L166](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L166): `public void removeObserver(Observer observer)`
-- [L167](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L167): `private void notifyObservers()`
-- [L168](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L168): `private void open()`
-- [L302](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L302): `private void readDiagnostics(String[] f)`
-- [L309](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L309): `private long currentBoot()`
-- [L312](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L312): `private void pauseForQuality()`
-- [L330](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L330): `private void recordRunFault(String[] fields)`
-- [L343](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L343): `void observeRecoveryPause(String[] fields)`
-- [L353](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L353): `public boolean canPrepareRest()`
-- [L361](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L361): `CaptureStore.Checkpoint restCheckpoint()`
-- [L365](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L365): `private CaptureStore.Checkpoint recoveryCheckpoint()`
-- [L369](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L369): `boolean hasRecoveryCheckpoint()`
-- [L372](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L372): `boolean recoveryInProgress()`
-- [L373](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L373): `String recoveryGuidance()`
-- [L386](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L386): `private void cancelRest()`
-- [L388](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L388): `public void prepareRest(boolean previousColumn,long expectedRun,long expectedIndex)`
-- [L401](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L401): `public void run()`
-- [L422](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L422): `void finish(String detail)`
-- [L428](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L428): `void acceptManualEvent(String[] fields)`
-- [L433](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L433): `private void updateManualAction()`
-- [L458](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L458): `void commandFeedback(String text, boolean background, boolean success)`
-- [L461](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L461): `public boolean fresh()`
-- [L462](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L462): `public boolean manualAllowed()`
-- [L463](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L463): `public boolean navigationAllowed()`
-- [L464](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L464): `boolean connectedTo(String address)`
-- [L465](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L465): `private void signalQualityWarning()`
-- [L472](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L472): `public String navigationReason()`
-- [L494](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L494): `static String faultDescription(String code)`
-- [L504](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L504): `private void saveIncident()`
-- [L509](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L509): `private void raiseIncident(String code,String detail)`
-- [L512](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L512): `private void raiseIncident(String code,String detail,boolean requiresStop)`
-- [L519](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L519): `public void acknowledgeIncident(long id)`
-- [L523](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L523): `public void recoverDevice()`
-- [L532](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L532): `private void beginRecovery()`
-- [L542](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L542): `public void run()`
-- [L564](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L564): `public boolean hasConnection()`
-- [L565](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L565): `public void disconnect()`
-- [L582](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L582): `private void requireReady()`
-- [L593](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L593): `public CompletableFuture<V2Client.Result> command(String type, String... fields)`
-- [L597](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L597): `private CompletableFuture<V2Client.Result> execute(String type, String[] fields, boolean emergency)`
-- [L600](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L600): `private CompletableFuture<V2Client.Result> execute(String type, String[] fields, boolean emergency, boolean background)`
-- [L640](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L640): `private static String actionName(String type)`
-- [L662](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L662): `private static String resultName(String code)`
-- [L691](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L691): `public void emergencyStop()`
-- [L701](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L701): `public void setTiltZero(boolean reset)`
-- [L715](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L715): `public void move(double panDelta, double tiltDelta)`
-- [L727](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L727): `public void setManualTempo(int tempo)`
-- [L731](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L731): `public void setManualTempos(int panTempo,int tiltTempo)`
-- [L738](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L738): `private String[] manualMoveFields(int x,int y)`
-- [L744](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L744): `public boolean jogAllowed()`
-- [L745](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L745): `public void setJogSpeed(double speed)`
-- [L748](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L748): `public void setJogSpeed(int axis,double speed)`
-- [L755](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L755): `public void setRememberSettleMillis(int millis)`
-- [L759](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L759): `private void deferEndpointCapture()`
-- [L767](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L767): `public boolean endpointCaptureAllowed()`
-- [L771](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L771): `public boolean jogHeldFor(int axis,int direction)`
-- [L772](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L772): `public void beginJog(int axis,int direction)`
-- [L797](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L797): `public void endJog()`
-- [L811](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L811): `public void moveToUi(double pan,double tilt)`
-- [L816](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L816): `private void prepareMove(int x,int y)`
-- [L849](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L849): `private void sendManualMove(int x,int y)`
-- [L866](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L866): `private void cancelPreparation()`
-- [L867](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L867): `private void finishPreparation()`
-- [L872](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L872): `public void trigger(int pulse)`
-- [L895](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L895): `public void loadPlan(PanoramaPlan plan)`
-- [L906](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L906): `public void runCommand(String type)`
-- [L925](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L925): `public void abortPlan()`
-- [L928](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L928): `private void markDraftForReview()`
-- [L931](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L931): `public void confirmDraftReference()`
-- [L935](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L935): `public void discardDraft()`
-- [L940](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L940): `public void abortPlan(boolean discardDraftWhenIdle)`
-- [L947](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L947): `public void run()`
-- [L973](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L973): `public void columns(boolean forward)`
-- [L982](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L982): `String timingSummary()`
-- [L993](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L993): `public void saveWarningTolerances(double pan,double tilt)`
-- [L1002](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1002): `boolean canConfigureStability()`
-- [L1009](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1009): `void observeStabilitySettings()`
-- [L1015](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1015): `public void readCaptureStability()`
-- [L1020](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1020): `public void saveCaptureStability(double span,double pan,double tilt,double seconds)`
-- [L1040](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1040): `boolean canRetryColumn()`
-- [L1044](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1044): `public void retryColumn(boolean previous,long expectedRun,long expectedIndex)`
-- [L1050](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1050): `public void updateTiming(int settle, int pulse, int exposure)`
-- [L1061](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1061): `public void timelapse(long id, int interval, int pulse)`
+- [L31](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L31): `String connectionText()`
+- [L32](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L32): `String messageText()`
+- [L33](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L33): `String diagnosticsText()`
+- [L34](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L34): `String incidentDetail()`
+- [L35](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L35): `private void setConnection(Supplier<String> text)`
+- [L36](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L36): `private void setMessage(Supplier<String> text)`
+- [L37](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L37): `private void setDiagnostics(Supplier<String> text)`
+- [L38](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L38): `void languageChanged()`
+- [L66](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L66): `public void run()`
+- [L94](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L94): `String papywizardStatus()`
+- [L95](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L95): `void rebuildPapywizard()`
+- [L138](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L138): `public List<String> roots()`
+- [L139](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L139): `public LivePapywizard.Snapshot snapshot(String key)`
+- [L140](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L140): `public void close()`
+- [L179](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L179): `private Notification notification()`
+- [L186](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L186): `public void observe(Observer observer)`
+- [L187](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L187): `public void removeObserver(Observer observer)`
+- [L188](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L188): `private void notifyObservers()`
+- [L189](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L189): `private void open()`
+- [L323](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L323): `private void readDiagnostics(String[] f)`
+- [L330](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L330): `private long currentBoot()`
+- [L333](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L333): `private void pauseForQuality()`
+- [L351](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L351): `private void recordRunFault(String[] fields)`
+- [L364](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L364): `void observeRecoveryPause(String[] fields)`
+- [L374](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L374): `public boolean canPrepareRest()`
+- [L382](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L382): `CaptureStore.Checkpoint restCheckpoint()`
+- [L386](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L386): `private CaptureStore.Checkpoint recoveryCheckpoint()`
+- [L390](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L390): `boolean hasRecoveryCheckpoint()`
+- [L393](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L393): `boolean recoveryInProgress()`
+- [L394](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L394): `String recoveryGuidance()`
+- [L407](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L407): `private void cancelRest()`
+- [L409](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L409): `public void prepareRest(boolean previousColumn,long expectedRun,long expectedIndex)`
+- [L422](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L422): `public void run()`
+- [L445](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L445): `void finish(Supplier<String> detail)`
+- [L451](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L451): `void acceptManualEvent(String[] fields)`
+- [L456](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L456): `private void updateManualAction()`
+- [L481](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L481): `void commandFeedback(String text, boolean background, boolean success)`
+- [L484](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L484): `private void commandFeedback(Supplier<String> text,boolean background,boolean success)`
+- [L487](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L487): `public boolean fresh()`
+- [L488](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L488): `public boolean manualAllowed()`
+- [L489](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L489): `public boolean navigationAllowed()`
+- [L490](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L490): `boolean connectedTo(String address)`
+- [L491](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L491): `private void signalQualityWarning()`
+- [L498](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L498): `public String navigationReason()`
+- [L520](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L520): `static String faultDescription(String code)`
+- [L530](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L530): `private void saveIncident()`
+- [L537](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L537): `private void raiseIncident(String code,Supplier<String> detail)`
+- [L540](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L540): `private void raiseIncident(String code,Supplier<String> text,boolean requiresStop)`
+- [L550](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L550): `public void acknowledgeIncident(long id)`
+- [L554](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L554): `public void recoverDevice()`
+- [L563](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L563): `private void beginRecovery()`
+- [L573](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L573): `public void run()`
+- [L595](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L595): `public boolean hasConnection()`
+- [L596](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L596): `public void disconnect()`
+- [L613](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L613): `private void requireReady()`
+- [L624](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L624): `public CompletableFuture<V2Client.Result> command(String type, String... fields)`
+- [L628](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L628): `private CompletableFuture<V2Client.Result> execute(String type, String[] fields, boolean emergency)`
+- [L631](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L631): `private CompletableFuture<V2Client.Result> execute(String type, String[] fields, boolean emergency, boolean background)`
+- [L671](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L671): `private static String actionName(String type)`
+- [L693](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L693): `private static String resultName(String code)`
+- [L722](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L722): `public void emergencyStop()`
+- [L732](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L732): `public void setTiltZero(boolean reset)`
+- [L746](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L746): `public void move(double panDelta, double tiltDelta)`
+- [L758](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L758): `public void setManualTempo(int tempo)`
+- [L762](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L762): `public void setManualTempos(int panTempo,int tiltTempo)`
+- [L769](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L769): `private String[] manualMoveFields(int x,int y)`
+- [L775](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L775): `public boolean jogAllowed()`
+- [L776](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L776): `public void setJogSpeed(double speed)`
+- [L779](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L779): `public void setJogSpeed(int axis,double speed)`
+- [L786](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L786): `public void setRememberSettleMillis(int millis)`
+- [L790](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L790): `private void deferEndpointCapture()`
+- [L798](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L798): `public boolean endpointCaptureAllowed()`
+- [L802](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L802): `public boolean jogHeldFor(int axis,int direction)`
+- [L803](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L803): `public void beginJog(int axis,int direction)`
+- [L828](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L828): `public void endJog()`
+- [L842](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L842): `public void moveToUi(double pan,double tilt)`
+- [L847](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L847): `private void prepareMove(int x,int y)`
+- [L880](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L880): `private void sendManualMove(int x,int y)`
+- [L897](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L897): `private void cancelPreparation()`
+- [L898](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L898): `private void finishPreparation()`
+- [L903](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L903): `public void trigger(int pulse)`
+- [L926](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L926): `public void loadPlan(PanoramaPlan plan)`
+- [L937](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L937): `public void runCommand(String type)`
+- [L956](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L956): `public void abortPlan()`
+- [L959](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L959): `private void markDraftForReview()`
+- [L962](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L962): `public void confirmDraftReference()`
+- [L966](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L966): `public void discardDraft()`
+- [L971](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L971): `public void abortPlan(boolean discardDraftWhenIdle)`
+- [L978](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L978): `public void run()`
+- [L1004](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1004): `public void columns(boolean forward)`
+- [L1013](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1013): `String timingSummary()`
+- [L1024](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1024): `public void saveWarningTolerances(double pan,double tilt)`
+- [L1033](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1033): `boolean canConfigureStability()`
+- [L1040](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1040): `void observeStabilitySettings()`
+- [L1046](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1046): `public void readCaptureStability()`
+- [L1051](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1051): `public void saveCaptureStability(double span,double pan,double tilt,double seconds)`
+- [L1071](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1071): `boolean canRetryColumn()`
+- [L1075](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1075): `public void retryColumn(boolean previous,long expectedRun,long expectedIndex)`
+- [L1081](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1081): `public void updateTiming(int settle, int pulse, int exposure)`
+- [L1092](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java#L1092): `public void timelapse(long id, int interval, int pulse)`
 
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanAbort.java
 
@@ -1040,46 +1050,46 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java
 
-- [L36](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L36): `PlanPreview(Context context)`
-- [L64](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L64): `void setListener(EndpointListener value)`
-- [L65](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L65): `void setWarningListener(java.util.function.Consumer<RunPlotModel.Capture> value)`
-- [L66](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L66): `void setProposalListener(Runnable value)`
-- [L67](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L67): `void setDriveAction(Runnable value)`
-- [L68](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L68): `void setDriveReady(boolean ready)`
-- [L69](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L69): `void setEditMode(int mode)`
-- [L70](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L70): `int editMode()`
-- [L71](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L71): `void discardSelection()`
-- [L72](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L72): `void commitSelection()`
-- [L77](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L77): `void fineTilt(double delta)`
-- [L83](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L83): `void finePan(double delta)`
-- [L84](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L84): `private double basePan()`
-- [L85](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L85): `private double baseTilt()`
-- [L86](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L86): `void setEndpoints(double a,double b,double c,double d)`
-- [L90](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L90): `void setEndpointAvailability(boolean start,boolean end)`
-- [L91](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L91): `private void propose(double pan,double tilt)`
-- [L99](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L99): `void setPlan(PanoramaPlan value)`
-- [L106](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L106): `private boolean positionKnown()`
-- [L107](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L107): `private int currentPan()`
-- [L108](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L108): `private int currentTilt()`
-- [L109](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L109): `void followCurrentPosition()`
-- [L117](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L117): `void setLive(DeviceState value,RunPlotModel model,boolean current)`
-- [L122](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L122): `void zoom(double factor)`
-- [L123](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L123): `int alignmentHeight()`
-- [L129](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L129): `void wholeRange()`
-- [L136](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L136): `void alignmentRange(double tiltExtent)`
-- [L144](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L144): `void fit()`
-- [L165](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L165): `void save(Bundle b,String key)`
-- [L166](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L166): `void restore(Bundle b,String key)`
-- [L170](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L170): `private float density()`
-- [L171](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L171): `private int dp(int value)`
-- [L172](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L172): `private void updateSelectionActions()`
-- [L196](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L196): `private float l()`
-- [L197](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L197): `private float t()`
-- [L198](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L198): `private float w()`
-- [L199](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L199): `private float h()`
-- [L200](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L200): `private float px(double x)`
-- [L201](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L201): `private float py(double y)`
-- [L202](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L202): `private void dot(Canvas c,int x,int y,int color,float radius)`
+- [L35](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L35): `PlanPreview(Context context)`
+- [L63](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L63): `void setListener(EndpointListener value)`
+- [L64](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L64): `void setWarningListener(java.util.function.Consumer<RunPlotModel.Capture> value)`
+- [L65](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L65): `void setProposalListener(Runnable value)`
+- [L66](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L66): `void setDriveAction(Runnable value)`
+- [L67](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L67): `void setDriveReady(boolean ready)`
+- [L68](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L68): `void setEditMode(int mode)`
+- [L69](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L69): `int editMode()`
+- [L70](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L70): `void discardSelection()`
+- [L71](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L71): `void commitSelection()`
+- [L76](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L76): `void fineTilt(double delta)`
+- [L82](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L82): `void finePan(double delta)`
+- [L83](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L83): `private double basePan()`
+- [L84](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L84): `private double baseTilt()`
+- [L85](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L85): `void setEndpoints(double a,double b,double c,double d)`
+- [L89](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L89): `void setEndpointAvailability(boolean start,boolean end)`
+- [L90](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L90): `private void propose(double pan,double tilt)`
+- [L98](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L98): `void setPlan(PanoramaPlan value)`
+- [L105](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L105): `private boolean positionKnown()`
+- [L106](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L106): `private int currentPan()`
+- [L107](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L107): `private int currentTilt()`
+- [L108](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L108): `void followCurrentPosition()`
+- [L116](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L116): `void setLive(DeviceState value,RunPlotModel model,boolean current)`
+- [L121](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L121): `void zoom(double factor)`
+- [L122](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L122): `int alignmentHeight()`
+- [L128](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L128): `void wholeRange()`
+- [L135](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L135): `void alignmentRange(double tiltExtent)`
+- [L143](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L143): `void fit()`
+- [L164](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L164): `void save(Bundle b,String key)`
+- [L168](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L168): `void restore(Bundle b,String key)`
+- [L178](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L178): `private float density()`
+- [L179](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L179): `private int dp(int value)`
+- [L180](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L180): `private void updateSelectionActions()`
+- [L204](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L204): `private float l()`
+- [L205](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L205): `private float t()`
+- [L206](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L206): `private float w()`
+- [L207](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L207): `private float h()`
+- [L208](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L208): `private float px(double x)`
+- [L209](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L209): `private float py(double y)`
+- [L210](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java#L210): `private void dot(Canvas c,int x,int y,int color,float radius)`
 
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlotViewport.java
 
@@ -1158,6 +1168,23 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 - [L25](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/SupportLog.java#L25): `void append(String line)`
 - [L38](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/SupportLog.java#L38): `String snapshot() throws IOException`
 
+### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java
+
+- [L649](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L649): `Language(String tag,String label,Locale locale)`
+- [L650](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L650): `static Language fromTag(String tag)`
+- [L656](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L656): `UiText(String german,String english)`
+- [L657](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L657): `String text()`
+- [L658](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L658): `String in(Language language)`
+- [L659](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L659): `static Language language()`
+- [L660](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L660): `static Locale locale()`
+- [L661](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L661): `static void select(String tag)`
+- [L663](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L663): `static String existing(String value)`
+- [L671](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L671): `Message(String german,String english)`
+- [L672](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L672): `String text()`
+- [L673](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L673): `String in(Language language)`
+- [L675](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L675): `static Message capture(Supplier<String> text)`
+- [L678](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java#L678): `private static String render(Language language,Supplier<String> text)`
+
 ### PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/V2Client.java
 
 - [L13](../../PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/V2Client.java#L13): `void write(String frame) throws IOException`
@@ -1182,13 +1209,29 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ## Windows
 
+### PanoramaControlGitRepo/PanoramaControl/Application/DeviceIdentity.cs
+
+- [L11](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DeviceIdentity.cs#L11): `public static string Resolve(string port)`
+- [L39](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DeviceIdentity.cs#L39): `public static bool Confirmed(string identity)`
+
 ### PanoramaControlGitRepo/PanoramaControl/Application/DiagnosticSessionLog.cs
 
-- [L20](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L20): `public DiagnosticSessionLog(string directory = null)`
-- [L34](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L34): `public void Write(string direction, string detail, string data)`
-- [L52](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L52): `private static string FormatLine(string direction, string detail, string data)`
-- [L58](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L58): `private static string Normalize(string value)`
-- [L63](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L63): `public void Dispose()`
+- [L21](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L21): `public DiagnosticSessionLog(string directory = null)`
+- [L29](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L29): `public void Write(string direction, string detail, string data)`
+- [L36](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L36): `private StreamWriter Open()`
+- [L38](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L38): `private void Drain()`
+- [L72](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L72): `public Task FlushAsync()`
+- [L80](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/DiagnosticSessionLog.cs#L80): `public void Dispose()`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/LiveRunBackup.cs
+
+- [L27](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L27): `public LiveRunBackup(RunStore store, string directory)`
+- [L40](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L40): `public void Rebuild()`
+- [L41](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L41): `public void Request(string key)`
+- [L50](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L50): `private void Drain()`
+- [L81](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L81): `public static void AtomicPublish(string path, string xml)`
+- [L94](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L94): `public Task WhenIdleAsync()`
+- [L95](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/LiveRunBackup.cs#L95): `public void Dispose()`
 
 ### PanoramaControlGitRepo/PanoramaControl/Application/ManualMoveTargets.cs
 
@@ -1207,108 +1250,130 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.cs
 
-- [L36](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L36): `public PanoramaSessionController(ISerialTransport transport, string logDirectory = null)`
-- [L67](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L67): `public async Task ConnectAsync(string portName, int baudRate, CancellationToken cancellationToken)`
-- [L76](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L76): `public void Disconnect()`
-- [L88](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L88): `public async Task LoadAndStartAsync(PanoramaPlan plan, CancellationToken cancellationToken)`
-- [L94](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L94): `public async Task LoadPlanAsync(PanoramaPlan plan, CancellationToken cancellationToken)`
-- [L111](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L111): `public async Task<CommandResult> StartAsync(uint runId, CancellationToken cancellationToken)`
-- [L121](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L121): `public Task<CommandResult> PauseAsync(uint runId, CancellationToken cancellationToken)`
-- [L128](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L128): `public Task<CommandResult> ResumeAsync(uint runId, CancellationToken cancellationToken)`
-- [L135](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L135): `public Task<CommandResult> RewindColumnsAsync(uint runId, ushort columns, CancellationToken cancellationToken)`
-- [L143](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L143): `public Task<CommandResult> ForwardColumnsAsync(uint runId, ushort columns, CancellationToken cancellationToken)`
-- [L151](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L151): `public async Task<CommandResult> UpdateTimingAsync(uint runId, RunTimingSettings timing, CancellationToken cancellationToken)`
-- [L167](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L167): `public Task<CommandResult> StopAsync(uint runId, CancellationToken cancellationToken)`
-- [L173](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L173): `public Task<CommandResult> RefreshCapabilitiesAsync(CancellationToken cancellationToken)`
-- [L179](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L179): `public Task<CommandResult> SetTiltLimitsAsync(AngleMdeg minimum, AngleMdeg maximum, CancellationToken cancellationToken)`
-- [L187](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L187): `public async Task<CommandResult> StartTimelapseAsync(uint runId, uint intervalMs, uint pulseMs, CancellationToken cancellationToken)`
-- [L199](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L199): `public Task<CommandResult> StopTimelapseAsync(uint runId, CancellationToken cancellationToken)`
-- [L205](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L205): `public Task<CommandResult> EmergencyStopAsync(uint runId, string reason, CancellationToken cancellationToken)`
-- [L212](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L212): `public Task<CommandResult> ManualMoveAsync(AngleMdeg pan, AngleMdeg tilt, CancellationToken cancellationToken)`
-- [L224](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L224): `public Task<CommandResult> TriggerOnceAsync(uint pulseTimeMs, CancellationToken cancellationToken)`
-- [L233](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L233): `public Task<CommandResult> ClearRunAsync(CancellationToken cancellationToken)`
-- [L239](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L239): `public Task<CommandResult> RequestStatusAsync(CancellationToken cancellationToken)`
-- [L245](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L245): `public Task<CommandResult> RequestDiagnosticsAsync(CancellationToken cancellationToken)`
-- [L251](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L251): `public Task<CommandResult> RequestDebugLogAsync(ushort afterSequence, CancellationToken cancellationToken)`
-- [L257](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L257): `public Task<CommandResult> RequestSupportBundleAsync(CancellationToken cancellationToken)`
-- [L263](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L263): `private async Task EnsureIdleAsync(CancellationToken cancellationToken)`
-- [L278](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L278): `private async Task ConnectAndHandshakeAsync(bool reconnecting, CancellationToken cancellationToken)`
-- [L328](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L328): `private void StartReconnectLoop()`
-- [L366](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L366): `private void StartHeartbeat()`
-- [L390](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L390): `private void StopHeartbeat()`
-- [L397](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L397): `private void ProtocolFrameReceived(object sender, ProtocolFrameEventArgs eventArgs)`
-- [L418](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L418): `default: AcceptFeatureFrame(frame)`
-- [L428](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L428): `private void ParseCapabilities(ProtocolFrame frame)`
-- [L444](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L444): `private void ParseDeviceInfo(ProtocolFrame frame)`
-- [L468](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L468): `private void ParseDiagnostics(ProtocolFrame frame)`
-- [L503](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L503): `private void ParseStatus(ProtocolFrame frame)`
-- [L549](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L549): `private void ParseDebugEvent(ProtocolFrame frame)`
-- [L560](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L560): `private static string DebugEventName(string code)`
-- [L590](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L590): `private void ParseDebugLogEnd(ProtocolFrame frame)`
-- [L597](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L597): `private void ScheduleSupportSnapshot()`
-- [L614](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L614): `private void ParsePlan(ProtocolFrame frame)`
-- [L653](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L653): `private void ParseRunSegment(ProtocolFrame frame)`
-- [L669](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L669): `private void ParseRunEvent(ProtocolFrame frame, string eventType)`
-- [L702](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L702): `private void ParseManualRunEvent(ProtocolFrame frame)`
-- [L730](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L730): `private void ReconstructMissingEvents(DeviceStatus status)`
-- [L735](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L735): `private void ReconstructMissingEventsUntil(uint runId, uint captureCount, uint eventSequence)`
-- [L771](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L771): `private void UpdateCurrentSegment(DeviceStatus status)`
-- [L791](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L791): `private void TransportStateChanged(object sender, TransportStateChangedEventArgs eventArgs)`
-- [L804](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L804): `private void TransportError(object sender, TransportErrorEventArgs eventArgs)`
-- [L810](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L810): `private void ProtocolError(object sender, ProtocolErrorEventArgs eventArgs)`
-- [L815](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L815): `private void ProtocolTrace(object sender, ProtocolTraceEventArgs eventArgs)`
-- [L820](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L820): `private void SetConnectionState(ConnectionState state)`
-- [L829](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L829): `private void RaiseMessage(string message)`
-- [L836](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L836): `private static void EnsureAccepted(CommandResult result, string operation)`
-- [L841](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L841): `private void EnsureConnected()`
-- [L846](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L846): `private static string SanitizeReason(string reason)`
-- [L852](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L852): `private static int ParseInt(string value)`
-- [L853](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L853): `private static uint ParseUInt(string value)`
-- [L854](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L854): `private static ushort ParseUShort(string value)`
-- [L856](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L856): `private static RunState ParseRunState(string value)`
-- [L861](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L861): `private static RunPhase ParseRunPhase(string value)`
-- [L867](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L867): `private static string ToPascalCase(string value)`
-- [L878](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L878): `private static string[] ToArray(System.Collections.Generic.IReadOnlyList<string> values)`
-- [L885](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L885): `private void ThrowIfDisposed()`
-- [L890](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L890): `public void Dispose()`
-- [L917](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L917): `public SessionMessageEventArgs(string message)`
-- [L923](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L923): `public ConnectionStateEventArgs(ConnectionState state)`
-- [L929](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L929): `public DeviceStatusEventArgs(DeviceStatus status)`
-- [L935](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L935): `public DeviceCapabilitiesEventArgs(DeviceCapabilities capabilities)`
-- [L941](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L941): `public DeviceInfoEventArgs(DeviceInfo deviceInfo)`
-- [L947](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L947): `public DeviceDiagnosticsEventArgs(DeviceDiagnostics diagnostics)`
-- [L953](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L953): `public RunEventEventArgs(RunEvent runEvent)`
+- [L40](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L40): `public PanoramaSessionController(ISerialTransport transport, string logDirectory = null)`
+- [L70](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L70): `public void RecordUserAction(string action, string detail)`
+- [L73](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L73): `public async Task ConnectAsync(string portName, int baudRate, CancellationToken cancellationToken)`
+- [L83](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L83): `public void Disconnect()`
+- [L97](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L97): `public async Task LoadAndStartAsync(PanoramaPlan plan, CancellationToken cancellationToken)`
+- [L103](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L103): `public async Task LoadPlanAsync(PanoramaPlan plan, CancellationToken cancellationToken)`
+- [L120](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L120): `public async Task<CommandResult> StartAsync(uint runId, CancellationToken cancellationToken)`
+- [L131](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L131): `public Task<CommandResult> PauseAsync(uint runId, CancellationToken cancellationToken)`
+- [L138](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L138): `public Task<CommandResult> ResumeAsync(uint runId, CancellationToken cancellationToken)`
+- [L145](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L145): `public Task<CommandResult> RewindColumnsAsync(uint runId, ushort columns, CancellationToken cancellationToken)`
+- [L153](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L153): `public Task<CommandResult> ForwardColumnsAsync(uint runId, ushort columns, CancellationToken cancellationToken)`
+- [L161](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L161): `public async Task<CommandResult> UpdateTimingAsync(uint runId, RunTimingSettings timing, CancellationToken cancellationToken)`
+- [L177](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L177): `public Task<CommandResult> StopAsync(uint runId, CancellationToken cancellationToken)`
+- [L184](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L184): `public Task<CommandResult> RefreshCapabilitiesAsync(CancellationToken cancellationToken)`
+- [L190](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L190): `public Task<CommandResult> SetTiltLimitsAsync(AngleMdeg minimum, AngleMdeg maximum, CancellationToken cancellationToken)`
+- [L198](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L198): `public async Task<CommandResult> StartTimelapseAsync(uint runId, uint intervalMs, uint pulseMs, CancellationToken cancellationToken)`
+- [L210](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L210): `public Task<CommandResult> StopTimelapseAsync(uint runId, CancellationToken cancellationToken)`
+- [L216](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L216): `public Task<CommandResult> EmergencyStopAsync(uint runId, string reason, CancellationToken cancellationToken)`
+- [L226](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L226): `public Task<CommandResult> ManualMoveAsync(AngleMdeg pan, AngleMdeg tilt, CancellationToken cancellationToken)`
+- [L238](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L238): `public Task<CommandResult> TriggerOnceAsync(uint pulseTimeMs, CancellationToken cancellationToken)`
+- [L247](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L247): `public Task<CommandResult> ClearRunAsync(CancellationToken cancellationToken)`
+- [L253](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L253): `public Task<CommandResult> RequestStatusAsync(CancellationToken cancellationToken)`
+- [L259](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L259): `public Task<CommandResult> RequestDiagnosticsAsync(CancellationToken cancellationToken)`
+- [L265](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L265): `public Task<CommandResult> RequestDebugLogAsync(ushort afterSequence, CancellationToken cancellationToken)`
+- [L271](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L271): `public Task<CommandResult> RequestSupportBundleAsync(CancellationToken cancellationToken)`
+- [L277](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L277): `private async Task<CommandResult> ReadDiagnosticTransferAsync(string command, CancellationToken token, params string[] fields)`
+- [L318](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L318): `private async Task EnsureIdleAsync(CancellationToken cancellationToken)`
+- [L333](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L333): `private async Task ConnectAndHandshakeAsync(bool reconnecting, CancellationToken cancellationToken)`
+- [L384](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L384): `private void StartReconnectLoop()`
+- [L422](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L422): `private void StartHeartbeat()`
+- [L446](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L446): `private void StopHeartbeat()`
+- [L453](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L453): `private void ProtocolFrameReceived(object sender, ProtocolFrameEventArgs eventArgs)`
+- [L474](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L474): `default: AcceptFeatureFrame(frame)`
+- [L484](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L484): `private void ParseCapabilities(ProtocolFrame frame)`
+- [L500](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L500): `private void ParseDeviceInfo(ProtocolFrame frame)`
+- [L524](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L524): `private void ParseDiagnostics(ProtocolFrame frame)`
+- [L559](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L559): `private void ParseStatus(ProtocolFrame frame)`
+- [L609](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L609): `private void ParseDebugEvent(ProtocolFrame frame)`
+- [L620](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L620): `private static string DebugEventName(string code)`
+- [L650](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L650): `private void ParseDebugLogEnd(ProtocolFrame frame)`
+- [L659](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L659): `private void ScheduleSupportSnapshot()`
+- [L676](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L676): `private void ParsePlan(ProtocolFrame frame)`
+- [L717](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L717): `private void ParseRunSegment(ProtocolFrame frame)`
+- [L733](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L733): `private void ParseRunEvent(ProtocolFrame frame, string eventType)`
+- [L768](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L768): `private void ParseManualRunEvent(ProtocolFrame frame)`
+- [L798](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L798): `private void ReconstructMissingEvents(DeviceStatus status)`
+- [L803](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L803): `private void ReconstructMissingEventsUntil(uint runId, uint captureCount, uint eventSequence)`
+- [L840](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L840): `private void UpdateCurrentSegment(DeviceStatus status)`
+- [L860](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L860): `private void TransportStateChanged(object sender, TransportStateChangedEventArgs eventArgs)`
+- [L876](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L876): `private void TransportError(object sender, TransportErrorEventArgs eventArgs)`
+- [L882](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L882): `private void ProtocolError(object sender, ProtocolErrorEventArgs eventArgs)`
+- [L889](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L889): `private void ProtocolTrace(object sender, ProtocolTraceEventArgs eventArgs)`
+- [L894](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L894): `private void SetConnectionState(ConnectionState state)`
+- [L903](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L903): `private void RaiseMessage(string message)`
+- [L910](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L910): `private static void EnsureAccepted(CommandResult result, string operation)`
+- [L915](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L915): `private void EnsureConnected()`
+- [L920](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L920): `private static string SanitizeReason(string reason)`
+- [L926](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L926): `private static int ParseInt(string value)`
+- [L927](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L927): `private static uint ParseUInt(string value)`
+- [L928](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L928): `private static ushort ParseUShort(string value)`
+- [L930](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L930): `private static RunState ParseRunState(string value)`
+- [L935](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L935): `private static RunPhase ParseRunPhase(string value)`
+- [L941](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L941): `private static string ToPascalCase(string value)`
+- [L952](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L952): `private static string[] ToArray(System.Collections.Generic.IReadOnlyList<string> values)`
+- [L959](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L959): `private void ThrowIfDisposed()`
+- [L964](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L964): `public void Dispose()`
+- [L991](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L991): `public SessionMessageEventArgs(string message)`
+- [L997](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L997): `public ConnectionStateEventArgs(ConnectionState state)`
+- [L1003](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L1003): `public DeviceStatusEventArgs(DeviceStatus status)`
+- [L1009](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L1009): `public DeviceCapabilitiesEventArgs(DeviceCapabilities capabilities)`
+- [L1015](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L1015): `public DeviceInfoEventArgs(DeviceInfo deviceInfo)`
+- [L1021](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L1021): `public DeviceDiagnosticsEventArgs(DeviceDiagnostics diagnostics)`
+- [L1027](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.cs#L1027): `public RunEventEventArgs(RunEvent runEvent)`
 
 ### PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.Operations.cs
 
 - [L51](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L51): `private bool Fresh(DateTime received)`
 - [L53](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L53): `private static bool AxisSafe(int value, int min, int max)`
-- [L86](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L86): `private void EnsureReady()`
-- [L87](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L87): `private void EnsureAcquisitionReady()`
-- [L88](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L88): `private void EnsureNavigation()`
-- [L89](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L89): `private void EnsureColumnsReady(uint runId)`
-- [L97](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L97): `private async Task<CommandResult> SendCommandAsync(string type, CancellationToken token, params string[] fields)`
-- [L129](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L129): `private void ResetConnectionData()`
-- [L136](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L136): `private void ForgetManualAction()`
-- [L144](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L144): `private void CheckManualDeadline()`
-- [L153](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L153): `private async Task WaitForStatusAsync(CancellationToken token)`
-- [L163](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L163): `public async Task RequestFreshStatusAsync(CancellationToken token)`
-- [L176](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L176): `private void AcceptDeviceSession(ProtocolFrame frame)`
-- [L190](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L190): `private void AcceptFeatureFrame(ProtocolFrame frame)`
-- [L223](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L223): `public async Task RecoverAsync(CancellationToken token)`
-- [L245](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L245): `public async Task AbortPlanAsync(CancellationToken token)`
-- [L256](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L256): `private async Task WaitForStateAsync(RunState state, CancellationToken token)`
-- [L267](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L267): `public async Task SetTiltZeroAsync(bool reset, CancellationToken token)`
-- [L275](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L275): `public Task<CommandResult> SaveWarningThresholdsAsync(int pan, int tilt, CancellationToken token)`
-- [L282](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L282): `public void ValidateManualTarget(int pan, int tilt)`
-- [L292](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L292): `private static bool ManualAxisAllowed(int actual, int target, int min, int max)`
-- [L295](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L295): `public async Task BeginJogAsync(int axis, int direction, int velocityMdeg, CancellationToken token)`
-- [L311](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L311): `private async void KeepJogAlive(uint jog)`
-- [L323](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L323): `public async Task EndJogAsync(CancellationToken token)`
-- [L329](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L329): `private void StopJogTimer()`
-- [L330](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L330): `private void AcceptCaptureWarning(ProtocolFrame frame)`
-- [L337](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L337): `private void ApplyKnownWarning(RunEvent capture)`
-- [L342](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L342): `public CaptureWarningEventArgs(uint run, uint capture, int flags)`
+- [L88](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L88): `private void EnsureReady()`
+- [L89](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L89): `private void EnsureAcquisitionReady()`
+- [L90](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L90): `private void EnsureNavigation()`
+- [L91](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L91): `private void EnsureColumnsReady(uint runId)`
+- [L99](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L99): `private async Task<CommandResult> SendCommandAsync(string type, CancellationToken token, params string[] fields)`
+- [L131](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L131): `private void ResetConnectionData()`
+- [L139](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L139): `private void ForgetManualAction()`
+- [L147](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L147): `private void CheckManualDeadline()`
+- [L156](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L156): `private async Task WaitForStatusAsync(CancellationToken token)`
+- [L166](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L166): `public async Task RequestFreshStatusAsync(CancellationToken token)`
+- [L179](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L179): `private void AcceptDeviceSession(ProtocolFrame frame)`
+- [L194](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L194): `private void AcceptFeatureFrame(ProtocolFrame frame)`
+- [L227](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L227): `public async Task RecoverAsync(CancellationToken token)`
+- [L262](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L262): `public async Task AbortPlanAsync(CancellationToken token)`
+- [L276](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L276): `private async Task WaitForStateAsync(RunState state, CancellationToken token)`
+- [L287](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L287): `public async Task SetTiltZeroAsync(bool reset, CancellationToken token)`
+- [L295](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L295): `public Task<CommandResult> SaveWarningThresholdsAsync(int pan, int tilt, CancellationToken token)`
+- [L302](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L302): `public void ValidateManualTarget(int pan, int tilt)`
+- [L312](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L312): `private static bool ManualAxisAllowed(int actual, int target, int min, int max)`
+- [L315](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L315): `public async Task BeginJogAsync(int axis, int direction, int velocityMdeg, CancellationToken token)`
+- [L331](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L331): `private async void KeepJogAlive(uint jog)`
+- [L343](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L343): `public async Task EndJogAsync(CancellationToken token)`
+- [L349](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L349): `private void StopJogTimer()`
+- [L350](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L350): `private void AcceptCaptureWarning(ProtocolFrame frame)`
+- [L359](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L359): `private void ApplyKnownWarning(RunEvent capture)`
+- [L364](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Operations.cs#L364): `public CaptureWarningEventArgs(uint run, uint capture, int flags)`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.Parity.cs
+
+- [L29](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L29): `public Task FlushDiagnosticsAsync()`
+- [L30](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L30): `public void AttachArchive(RunStore store)`
+- [L35](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L35): `public string ArchiveKey(uint run)`
+- [L39](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L39): `private void ReconcileRest()`
+- [L50](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L50): `private void ArchiveAction(Action action)`
+- [L60](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L60): `private void DrainArchive()`
+- [L75](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L75): `private void ArchivePlan(PanoramaPlan plan)`
+- [L85](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L85): `private void ArchiveCaptureEvent(RunEvent capture)`
+- [L104](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L104): `private void SaveRecoveryCheckpoint(string overrideError = null)`
+- [L139](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L139): `public async Task PrepareRestAsync(bool previous, uint expectedRun, uint expectedIndex, CancellationToken token)`
+- [L188](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L188): `private void VerifyRestReference(RecoveryCheckpoint checkpoint, int epoch)`
+- [L194](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L194): `private async Task AwaitConfirmedState(RunState state, uint run, CancellationToken token)`
+- [L206](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L206): `public async Task SaveStabilityAsync(CaptureStabilitySettings request, CancellationToken token)`
+- [L220](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L220): `public Task ReadStabilityAsync(CancellationToken token)`
+- [L221](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L221): `private async Task ReadStabilityCore(CancellationToken token)`
+- [L229](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L229): `public async Task RetryColumnAsync(bool previous, CancellationToken token)`
+- [L238](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/PanoramaSessionController.Parity.cs#L238): `private void ObserveRetainedPause()`
 
 ### PanoramaControlGitRepo/PanoramaControl/Application/PapyWizardRunExporter.cs
 
@@ -1326,25 +1391,79 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaControlGitRepo/PanoramaControl/Application/RunArchive.cs
 
-- [L21](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L21): `public RunArchive(string directory)`
-- [L22](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L22): `public string SelectRun(string device, uint boot, uint run)`
-- [L28](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L28): `private string PathFor(string key)`
-- [L33](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L33): `private static string Number(object value)`
-- [L34](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L34): `private static string Checksum(string value)`
-- [L38](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L38): `private void Append(string key, params object[] values)`
-- [L44](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L44): `public void StorePlan(string key, PanoramaPlan plan)`
-- [L53](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L53): `public void Store(string key, RunEvent e)`
-- [L67](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L67): `public void Warn(string key, uint capture, int flags)`
-- [L68](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L68): `private static string Identity(RunEvent e)`
-- [L69](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L69): `private static uint U(string s)`
-- [L70](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L70): `private static int I(string s)`
-- [L71](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L71): `public RunEvent[] Snapshot(string key)`
-- [L98](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L98): `private IEnumerable<string[]> Records(string key)`
-- [L108](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L108): `public string[] PlanFields(string key)`
-- [L109](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L109): `public static void Export(RunEvent[] snapshot, string xmlPath, string csvPath)`
-- [L133](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L133): `public LocalSettings(string path)`
-- [L140](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L140): `public string Get(string key, string fallback)`
-- [L141](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L141): `public void Set(string key, string value)`
+- [L22](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L22): `public RunArchive(string directory)`
+- [L23](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L23): `public string SelectRun(string device, uint boot, uint run)`
+- [L29](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L29): `private string PathFor(string key)`
+- [L34](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L34): `private static string Number(object value)`
+- [L35](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L35): `private static string Checksum(string value)`
+- [L39](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L39): `private void Append(string key, params object[] values)`
+- [L45](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L45): `public void StorePlan(string key, PanoramaPlan plan)`
+- [L54](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L54): `public void Store(string key, RunEvent e)`
+- [L68](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L68): `public void Warn(string key, uint capture, int flags)`
+- [L69](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L69): `private static string Identity(RunEvent e)`
+- [L70](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L70): `private static uint U(string s)`
+- [L71](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L71): `private static int I(string s)`
+- [L72](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L72): `public RunEvent[] Snapshot(string key)`
+- [L99](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L99): `private IEnumerable<string[]> Records(string key)`
+- [L111](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L111): `public string[] PlanFields(string key)`
+- [L112](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L112): `public static void Export(RunEvent[] snapshot, string xmlPath, string csvPath)`
+- [L136](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L136): `public LocalSettings(string path)`
+- [L143](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L143): `public string Get(string key, string fallback)`
+- [L144](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunArchive.cs#L144): `public void Set(string key, string value)`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/RunExport.cs
+
+- [L12](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunExport.cs#L12): `private static string N(object value)`
+- [L13](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunExport.cs#L13): `public static string Xml(RunEvent[] snapshot, int roll)`
+- [L25](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunExport.cs#L25): `public static string Csv(RunEvent[] snapshot)`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/RunRecovery.cs
+
+- [L27](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L27): `public static bool SameRecipe(PanoramaPlan a, PanoramaPlan b)`
+- [L29](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L29): `public static bool RetainedPause(string error)`
+- [L33](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L33): `public static bool Recoverable(string error)`
+- [L37](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L37): `public static bool UncertainExposure(string error)`
+- [L41](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L41): `public static int StartUnit(PanoramaPlan plan, uint next, bool previous)`
+- [L58](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L58): `public static PanoramaPlan Remaining(PanoramaPlan source, uint next, bool previous, uint newRun)`
+- [L82](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L82): `public CaptureStabilitySettings(int span, int pan, int tilt, int wait, uint revision)`
+- [L88](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L88): `public string[] Fields()`
+- [L93](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunRecovery.cs#L93): `public bool SameValues(CaptureStabilitySettings other)`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/RunStore.cs
+
+- [L20](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L20): `private static string Q(string s)`
+- [L21](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L21): `private static string N(object value)`
+- [L22](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L22): `public RunStore(string directory)`
+- [L48](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L48): `public string SelectRun(string device, uint boot, uint run)`
+- [L54](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L54): `public string KeyFor(string device, uint boot, uint run)`
+- [L55](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L55): `private void Ensure(string key)`
+- [L56](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L56): `private void Touch(string key)`
+- [L57](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L57): `private void Notify(string key)`
+- [L60](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L60): `public string Root(string key)`
+- [L73](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L73): `public void StorePlan(string key, PanoramaPlan plan)`
+- [L86](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L86): `public string[] PlanFields(string key)`
+- [L88](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L88): `internal static string Encode(RunEvent e)`
+- [L93](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L93): `internal static RunEvent Decode(string payload)`
+- [L103](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L103): `private static string Identity(RunEvent e)`
+- [L104](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L104): `private bool StoreCore(string key, RunEvent incoming)`
+- [L117](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L117): `public void Store(string key, RunEvent e)`
+- [L119](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L119): `public void Warn(string key, uint capture, int flags)`
+- [L131](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L131): `public RunEvent[] Snapshot(string key)`
+- [L141](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L141): `public RunEvent[] LinkedSnapshot(string key)`
+- [L153](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L153): `public void SaveCheckpoint(RecoveryCheckpoint checkpoint)`
+- [L164](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L164): `public void Complete(string key)`
+- [L165](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L165): `public RecoveryCheckpoint Checkpoint(string device, uint run)`
+- [L175](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L175): `public RestReservation PendingRest(string parent)`
+- [L184](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L184): `public RestReservation PendingChild(string child)`
+- [L192](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L192): `public bool IsRest(string key)`
+- [L193](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L193): `public bool CanStartRest(string key, PanoramaPlan plan, string device, uint boot, int tilt)`
+- [L202](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L202): `public void ReserveRest(RecoveryCheckpoint checkpoint, RestReservation rest)`
+- [L217](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L217): `public void ConfirmRest(RestReservation rest)`
+- [L222](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L222): `public int Roll(string key)`
+- [L223](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L223): `public void SetRoll(string key, int roll)`
+- [L228](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L228): `public string Faults(string key)`
+- [L236](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L236): `private void ImportJournals()`
+- [L259](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunStore.cs#L259): `public void Dispose()`
 
 ### PanoramaControlGitRepo/PanoramaControl/Application/RunTimingSettings.cs
 
@@ -1352,21 +1471,51 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 - [L18](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunTimingSettings.cs#L18): `public static RunTimingSettings FromSeconds(double moveDelay, double exposureDelay, double triggerDuration, bool controlTriggerDuration)`
 - [L30](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/RunTimingSettings.cs#L30): `private static uint ToMilliseconds(double seconds, uint maximumMs, string name)`
 
+### PanoramaControlGitRepo/PanoramaControl/Application/SqliteDatabase.cs
+
+- [L15](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L15): `private delegate int RowCallback(IntPtr context, int count, IntPtr values, IntPtr names)`
+- [L18](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L18): `private static extern int sqlite3_open_v2(byte[] path, out IntPtr db, int flags, IntPtr vfs)`
+- [L21](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L21): `private static extern int sqlite3_exec(IntPtr db, byte[] sql, RowCallback callback, IntPtr context, out IntPtr error)`
+- [L24](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L24): `private static extern int sqlite3_close_v2(IntPtr db)`
+- [L27](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L27): `private static extern void sqlite3_free(IntPtr pointer)`
+- [L28](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L28): `private static byte[] Utf8(string value)`
+- [L29](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L29): `private static string Read(IntPtr pointer)`
+- [L36](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L36): `internal SqliteDatabase(string path)`
+- [L44](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L44): `internal static string Quote(string value)`
+- [L50](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L50): `internal List<string[]> Query(string sql)`
+- [L71](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L71): `internal void Execute(string sql)`
+- [L72](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L72): `internal void Transaction(Action action)`
+- [L78](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/SqliteDatabase.cs#L78): `public void Dispose()`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/UiText.Catalogue.cs
+
+- [L6](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.Catalogue.cs#L6): `private static Dictionary<string,string> CreateCatalogue()`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/UiText.cs
+
+- [L16](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.cs#L16): `private static string PhrasePattern(string text)`
+- [L21](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.cs#L21): `public static string T(string text)`
+- [L27](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.cs#L27): `public static string Source(string text)`
+
+### PanoramaControlGitRepo/PanoramaControl/Application/UiText.Windows.cs
+
+- [L6](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Application/UiText.Windows.cs#L6): `private static void AddWindows(Dictionary<string,string> values)`
+
 ### PanoramaControlGitRepo/PanoramaControl/CalculationsHelper.cs
 
 - [L11](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/CalculationsHelper.cs#L11): `public static string CalcFOV()`
 
 ### PanoramaControlGitRepo/PanoramaControl/Communication/BluetoothComTransport.cs
 
-- [L34](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L34): `public void Connect(string portName, int baudRate)`
-- [L65](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L65): `public void Disconnect()`
-- [L77](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L77): `public void Send(string text)`
-- [L97](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L97): `private void PortDataReceived(object sender, SerialDataReceivedEventArgs eventArgs)`
-- [L142](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L142): `private void ClosePortLocked()`
-- [L158](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L158): `private void RaiseStateChanged(bool connected)`
-- [L164](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L164): `private void RaiseError(string operation, Exception exception)`
-- [L170](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L170): `private void ThrowIfDisposed()`
-- [L175](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L175): `public void Dispose()`
+- [L35](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L35): `public void Connect(string portName, int baudRate)`
+- [L66](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L66): `public void Disconnect()`
+- [L78](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L78): `public void Send(string text)`
+- [L98](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L98): `private void PortDataReceived(object sender, SerialDataReceivedEventArgs eventArgs)`
+- [L145](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L145): `private void ClosePortLocked()`
+- [L156](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L156): `private void RaiseStateChanged(bool connected)`
+- [L162](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L162): `private void RaiseError(string operation, Exception exception)`
+- [L168](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L168): `private void ThrowIfDisposed()`
+- [L173](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Communication/BluetoothComTransport.cs#L173): `public void Dispose()`
 
 ### PanoramaControlGitRepo/PanoramaControl/Communication/ISerialTransport.cs
 
@@ -1419,20 +1568,21 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaControlGitRepo/PanoramaControl/Domain/SessionFeatures.cs
 
-- [L17](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L17): `public void Accept(string type, IReadOnlyList<string> fields)`
-- [L48](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L48): `private static bool Flag(IReadOnlyList<string> f)`
-- [L54](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L54): `private static int Velocity(IReadOnlyList<string> f, int max)`
-- [L60](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L60): `internal static void Count(IReadOnlyList<string> f, int count)`
-- [L61](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L61): `internal static int Int(string s)`
-- [L62](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L62): `internal static uint UInt(string s)`
-- [L75](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L75): `public static ManualActionStatus Parse(IReadOnlyList<string> f)`
-- [L99](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L99): `internal ManualActionProgress(ushort sequence, string kind, int pan, int tilt, long baseline)`
-- [L101](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L101): `internal bool CompletedBy(ManualActionStatus status, long version)`
-- [L114](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L114): `internal Sample(int pan, int tilt, bool joined)`
-- [L120](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L120): `public Sample[] Snapshot()`
-- [L121](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L121): `public void Break()`
-- [L122](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L122): `public void Observe(string key, int pan, int tilt, long millis)`
-- [L133](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L133): `public static string Describe(int flags)`
+- [L20](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L20): `public void Accept(string type, IReadOnlyList<string> fields)`
+- [L56](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L56): `private static bool Flag(IReadOnlyList<string> f)`
+- [L62](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L62): `private static int Velocity(IReadOnlyList<string> f, int max)`
+- [L68](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L68): `internal static void Count(IReadOnlyList<string> f, int count)`
+- [L69](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L69): `internal static int Int(string s)`
+- [L70](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L70): `internal static uint UInt(string s)`
+- [L83](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L83): `public static ManualActionStatus Parse(IReadOnlyList<string> f)`
+- [L107](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L107): `internal ManualActionProgress(ushort sequence, string kind, int pan, int tilt, long baseline)`
+- [L109](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L109): `internal bool CompletedBy(ManualActionStatus status, long version)`
+- [L122](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L122): `internal Sample(int pan, int tilt, bool joined)`
+- [L128](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L128): `public Sample[] Snapshot()`
+- [L129](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L129): `public void Break()`
+- [L130](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L130): `public void Observe(string key, int pan, int tilt, long millis)`
+- [L141](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L141): `public static string DescribeInvariant(int flags)`
+- [L150](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Domain/SessionFeatures.cs#L150): `public static string Describe(int flags)`
 
 ### PanoramaControlGitRepo/PanoramaControl/Domain/SphericalGeometry.cs
 
@@ -1542,58 +1692,76 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaControlGitRepo/PanoramaControl/Form1.Current.cs
 
-- [L23](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L23): `private static bool HoldKey(Keys key)`
-- [L25](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L25): `protected override bool IsInputKey(Keys keyData)`
-- [L27](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L27): `protected override void OnKeyDown(KeyEventArgs e)`
-- [L34](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L34): `protected override void OnKeyUp(KeyEventArgs e)`
-- [L40](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L40): `protected override void OnLostFocus(EventArgs e)`
-- [L41](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L41): `private void ReleaseKey()`
-- [L86](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L86): `private Button ActionButton(Control parent, string text, Func<Task> action, int width = 110)`
-- [L92](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L92): `private async Task UiActionAsync(Func<Task> action)`
-- [L99](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L99): `private void InitializeCurrentControls()`
-- [L198](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L198): `private async Task EmergencyStopUiAsync()`
-- [L206](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L206): `private void ShowTimingDialog(IWin32Window owner)`
-- [L228](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L228): `private void WireArrow(Button b, int axis, int direction)`
-- [L255](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L255): `private void ClearArrowClickSuppression()`
-- [L257](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L257): `private async Task<int> BeginArrowHoldAsync(Button b, int axis, int direction)`
-- [L269](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L269): `private async Task ArrowClickAsync(Button b, int axis, int direction)`
-- [L280](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L280): `private async Task ReleaseJogAsync()`
-- [L288](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L288): `private void RefreshCurrentState()`
-- [L363](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L363): `private void UpdateTiltInputRange(DeviceCapabilities capabilities)`
-- [L377](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L377): `private PanoramaPlan CreateDraft()`
-- [L381](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L381): `private void CommitPlanInputs()`
-- [L389](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L389): `private void RebuildDraftFromInputs(bool reportError)`
-- [L418](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L418): `private static double ReadNumber(TextBox box, double min, double max)`
-- [L425](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L425): `private async Task UploadPlanAsync()`
-- [L446](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L446): `private async Task<bool> PrepareRememberAsync()`
-- [L462](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L462): `private void SelectPlotTarget(MouseEventArgs e)`
-- [L469](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L469): `private async Task DriveSelectedAsync()`
-- [L476](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L476): `private async Task DriveEndpointAsync(bool start)`
-- [L481](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L481): `private Task ChangeView(double factor)`
-- [L487](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L487): `private void SetTiltDisplayRange()`
-- [L492](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L492): `private Task FitPlanAsync()`
-- [L501](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L501): `private void DrawCurrentPlot(Graphics g)`
-- [L553](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L553): `private Task ShowLargePlotAsync()`
-- [L569](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L569): `private string CurrentArchiveKey(uint run)`
-- [L570](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L570): `private void ArchiveCapture(RunEvent capture)`
-- [L586](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L586): `private void InitializeArchiveControls()`
-- [L610](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L610): `private void RefreshCaptureList()`
-- [L628](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L628): `private Task ExportArchiveAsync()`
-- [L635](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L635): `private async Task ExportSupportAsync()`
-- [L641](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L641): `private void InitializePersistence()`
-- [L670](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L670): `private void SaveSetting(string key, string value)`
-- [L672](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L672): `private int SettingInt(string key, int fallback)`
-- [L673](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L673): `private void SaveEndpoints()`
-- [L681](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L681): `private void MarkDraftForReview()`
-- [L687](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L687): `private void ConfirmDraftReference()`
-- [L693](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L693): `private void RestoreEndpoints()`
-- [L704](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L704): `private void SaveProfile()`
-- [L717](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L717): `private void ApplySavedProfile(string name)`
-- [L726](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L726): `private void ShowMotionOptions()`
-- [L764](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L764): `private void ShowIncident()`
-- [L774](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L774): `private async Task AttemptRecoveryAsync(bool requestedByUser)`
-- [L789](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L789): `private void ShowCoordinateDialog()`
-- [L826](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L826): `private bool FinishClosing(FormClosingEventArgs e)`
+- [L34](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L34): `protected override void WndProc(ref System.Windows.Forms.Message message)`
+- [L65](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L65): `private void ReleasePointer(string reason)`
+- [L71](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L71): `private static bool HoldKey(Keys key)`
+- [L73](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L73): `protected override bool IsInputKey(Keys keyData)`
+- [L75](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L75): `protected override void OnKeyDown(KeyEventArgs e)`
+- [L82](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L82): `protected override void OnKeyUp(KeyEventArgs e)`
+- [L88](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L88): `protected override void OnLostFocus(EventArgs e)`
+- [L89](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L89): `private void ReleaseKey()`
+- [L136](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L136): `private Button ActionButton(Control parent, string text, Func<Task> action, int width = 110)`
+- [L142](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L142): `private async Task UiActionAsync(Func<Task> action)`
+- [L149](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L149): `private void InitializeCurrentControls()`
+- [L259](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L259): `private async Task EmergencyStopUiAsync()`
+- [L267](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L267): `private void ShowTimingDialog(IWin32Window owner)`
+- [L271](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L271): `private Form CreateTimingDialog()`
+- [L320](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L320): `private void WireArrow(Button b, int axis, int direction)`
+- [L357](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L357): `private void ClearArrowClickSuppression()`
+- [L359](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L359): `private async Task<int> BeginArrowHoldAsync(Button b, int axis, int direction)`
+- [L374](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L374): `private int ArrowVelocity(int axis)`
+- [L380](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L380): `private async Task ArrowClickAsync(Button b, int axis, int direction)`
+- [L391](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L391): `private async Task ReleaseJogAsync(string reason = "RELEASE")`
+- [L400](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L400): `private void RefreshCurrentState()`
+- [L478](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L478): `private void UpdateTiltInputRange(DeviceCapabilities capabilities)`
+- [L492](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L492): `private PanoramaPlan CreateDraft()`
+- [L496](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L496): `private void CommitPlanInputs()`
+- [L504](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L504): `private void RebuildDraftFromInputs(bool reportError)`
+- [L533](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L533): `private static double ReadNumber(TextBox box, double min, double max)`
+- [L540](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L540): `private async Task UploadPlanAsync()`
+- [L561](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L561): `private async Task<bool> PrepareRememberAsync()`
+- [L577](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L577): `private void SelectPlotTarget(MouseEventArgs e)`
+- [L584](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L584): `private async Task DriveSelectedAsync()`
+- [L591](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L591): `private async Task DriveEndpointAsync(bool start)`
+- [L596](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L596): `private Task ChangeView(double factor)`
+- [L602](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L602): `private void SetTiltDisplayRange()`
+- [L607](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L607): `private Task FitPlanAsync()`
+- [L616](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L616): `private void DrawCurrentPlot(Graphics g)`
+- [L668](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L668): `private Task ShowLargePlotAsync()`
+- [L684](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L684): `private string CurrentArchiveKey(uint run)`
+- [L685](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L685): `private void ArchiveCapture(RunEvent capture)`
+- [L700](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L700): `private void InitializeArchiveControls()`
+- [L729](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L729): `private void RefreshCaptureList()`
+- [L747](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L747): `private Task ExportArchiveAsync()`
+- [L761](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L761): `private async Task ExportSupportAsync()`
+- [L768](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L768): `private void InitializePersistence()`
+- [L797](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L797): `private void SaveSetting(string key, string value)`
+- [L799](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L799): `private int SettingInt(string key, int fallback)`
+- [L800](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L800): `private void SaveEndpoints()`
+- [L808](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L808): `private void MarkDraftForReview()`
+- [L814](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L814): `private void ConfirmDraftReference()`
+- [L820](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L820): `private void RestoreEndpoints()`
+- [L831](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L831): `private void SaveProfile()`
+- [L845](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L845): `private void ApplySavedProfile(string name)`
+- [L855](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L855): `private void ShowMotionOptions()`
+- [L895](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L895): `private void ShowIncident()`
+- [L905](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L905): `private async Task AttemptRecoveryAsync(bool requestedByUser)`
+- [L920](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L920): `private void ShowCoordinateDialog()`
+- [L957](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Current.cs#L957): `private bool FinishClosing(FormClosingEventArgs e)`
+
+### PanoramaControlGitRepo/PanoramaControl/Form1.Parity.cs
+
+- [L20](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L20): `public void Begin()`
+- [L21](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L21): `public void Write(RunEvent capture, uint id)`
+- [L22](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L22): `public void End()`
+- [L24](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L24): `private void RefreshBackupStatus()`
+- [L30](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L30): `private Task ShowRestDialogAsync()`
+- [L69](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L69): `private void AddParityOptions(FlowLayoutPanel layout, Form dialog)`
+- [L118](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L118): `private void InitializeLanguageControls()`
+- [L119](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L119): `private void ApplyLanguage(Control parent)`
+- [L148](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L148): `private static IEnumerable<Control> Descendants(Control parent)`
+- [L150](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L150): `private void CloseArchive()`
+- [L159](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Form1.Parity.cs#L159): `private void ReleaseSessionResources()`
 
 ### PanoramaControlGitRepo/PanoramaControl/muControllerInterface.cs
 
@@ -1672,20 +1840,20 @@ Kein Compiler-API-Dump: komplexe Operatoren, manche Konstruktor-Initialisierunge
 
 ### PanoramaControlGitRepo/PanoramaControl/Protocol/V2/ProtocolV2Client.cs
 
-- [L25](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L25): `public ProtocolV2Client(ISerialTransport transport)`
-- [L38](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L38): `public void CancelPending(string reason)`
-- [L49](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L49): `public async Task<CommandResult> SendCommandAsync(string messageType, CancellationToken cancellationToken, params string[] fields)`
-- [L90](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L90): `private async Task<CommandResult> EmergencyStopAsync(CancellationToken cancellationToken, string[] fields)`
-- [L121](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L121): `private Task SendFrameAsync(PendingCommand request, string encoded, string detail, CancellationToken cancellationToken)`
-- [L141](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L141): `public void SendUnconfirmed(string messageType, params string[] fields)`
-- [L154](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L154): `private void TransportLineReceived(object sender, SerialLineReceivedEventArgs eventArgs)`
-- [L175](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L175): `private void CompletePending(ProtocolFrame frame)`
-- [L194](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L194): `private ushort NextSequence()`
-- [L205](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L205): `private void RaiseProtocolError(string message, string rawData)`
-- [L211](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L211): `private void RaiseTrace(string direction, string rawData, string detail)`
-- [L217](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L217): `private void ThrowIfDisposed()`
-- [L222](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L222): `public void Dispose()`
-- [L232](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L232): `public PendingCommand(ushort sequence, TaskCompletionSource<CommandResult> completion)`
-- [L245](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L245): `public ProtocolTraceEventArgs(string direction, string rawData, string detail)`
-- [L258](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L258): `public ProtocolFrameEventArgs(ProtocolFrame frame)`
-- [L268](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L268): `public ProtocolErrorEventArgs(string message, string rawData)`
+- [L26](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L26): `public ProtocolV2Client(ISerialTransport transport)`
+- [L40](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L40): `public void CancelPending(string reason)`
+- [L52](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L52): `public async Task<CommandResult> SendCommandAsync(string messageType, CancellationToken cancellationToken, params string[] fields)`
+- [L93](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L93): `private async Task<CommandResult> EmergencyStopAsync(CancellationToken cancellationToken, string[] fields)`
+- [L124](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L124): `private async Task SendFrameAsync(PendingCommand request, string encoded, string detail, CancellationToken cancellationToken)`
+- [L169](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L169): `public void SendUnconfirmed(string messageType, params string[] fields)`
+- [L183](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L183): `private void TransportLineReceived(object sender, SerialLineReceivedEventArgs eventArgs)`
+- [L204](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L204): `private void CompletePending(ProtocolFrame frame)`
+- [L223](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L223): `private ushort NextSequence()`
+- [L234](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L234): `private void RaiseProtocolError(string message, string rawData)`
+- [L240](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L240): `private void RaiseTrace(string direction, string rawData, string detail)`
+- [L246](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L246): `private void ThrowIfDisposed()`
+- [L251](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L251): `public void Dispose()`
+- [L261](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L261): `public PendingCommand(ushort sequence, TaskCompletionSource<CommandResult> completion)`
+- [L274](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L274): `public ProtocolTraceEventArgs(string direction, string rawData, string detail)`
+- [L287](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L287): `public ProtocolFrameEventArgs(ProtocolFrame frame)`
+- [L297](https://github.com/TomNaiser/PanoramaControl/blob/master/PanoramaControl/Protocol/V2/ProtocolV2Client.cs#L297): `public ProtocolErrorEventArgs(string message, string rawData)`

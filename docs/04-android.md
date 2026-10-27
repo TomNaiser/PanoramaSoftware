@@ -2,7 +2,9 @@
 
 [Inhalt](README.md) · [Windows](05-windows.md)
 
-**Version 0.6.26 / Code 39**, Paket `de.tomnaiser.panoramaandroid`. Java, native Android-Views, minSdk 26, compileSdk/targetSdk 35. Die App verwendet keine Weboberfläche.
+**Version 0.6.27 / Code 40**, Paket `de.tomnaiser.panoramaandroid`. Java, native Android-Views, minSdk 26, compileSdk/targetSdk 35. Die App verwendet keine Weboberfläche.
+
+0.6.27 korrigiert den seit 0.6.24 fehlerhaften STOP vor dem Restauftrag: Die ursprüngliche Laufnummer wird übermittelt. [Wiederaufnahmeprüfung und ursprüngliche Tilt-Abstimmung](validation/2026-10-27-positioning.md). Das anschließend im Kopf gespeicherte Motorprofil Revision 40 verbessert Pan für beide Clients; [Messreihe mit 96 Aufnahmen](validation/2026-10-27-pan-positioning.md).
 
 ## Blöcke und Nebenläufigkeit
 

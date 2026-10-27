@@ -29,7 +29,7 @@ flowchart TB
         CFG[Persistente Grenzen und Motorprofil] --> VC
     end
     AS --> DB[SQLite und laufende XML]
-    WS --> JR[Journal und Exportdateien]
+    WS --> JR[SQLite und laufende XML]
 ```
 
 ## Aktiver Aufbau und Schnittstellen

@@ -18,6 +18,7 @@ __pycache__/
 # Keep device snapshots local, except the explicitly versioned tested baseline.
 /config/*
 !/config/MotionConfig.precise-2.4.75-20261027.json
+!/config/MotionConfig.precise-pan-2.4.75-20261027.json
 /diagnostics/motion-baseline-*.json
 /releases/
 

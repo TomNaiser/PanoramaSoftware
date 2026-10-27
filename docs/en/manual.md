@@ -2,7 +2,9 @@
 
 [Overview and features](../../README.md) · [Detailed German handbook](../README.md)
 
-This guide covers firmware **2.4.75**, Android **0.6.26** and Windows **27.4.4**. Use matching V2 versions; the old projects are not a description of the current workflow.
+This guide covers regular firmware **2.4.75**, Android **0.6.27** and Windows **27.5.4**, as of 27 October 2026. Stored motor profile **revision 40** contains the validated Pan correction; revision 39 is retained as a fallback. Use matching V2 versions; the old projects are not a description of the current workflow.
+
+The correction changes only the stored Pan arrival/hold tolerances to **0.15°/0.25°**. All other 127 motor values remain unchanged. Across 96 real captures, maximum Pan error was **0.236°**, median **0.089°**. The 72-capture run retained 13 target-missed warnings and one 0.315° Tilt error. The correction is already stored on the tested head and works with either client; application startup does not automatically apply the bundled profile. [Measured results and limits, in German](../validation/2026-10-27-pan-positioning.md).
 
 On Android, select **Extras → Sprache / Language → English** for the English interface. The app remembers this choice after reopening. You can switch back to **Deutsch** in the same menu. Switching language retains the connection, device job, form values and chart view. Historical logs and error details saved before 0.6.26 retain their original language.
 
@@ -49,19 +51,19 @@ The display distinguishes targets, measured positions and completed captures. A 
 
 An ongoing sensor fault, changed reference or other unresolved device condition can block recovery. The app displays the blocking reason; acknowledgement alone does not make the head ready.
 
-**Windows:** normal pause/resume is available, but Android's newer checkpoint/remaining-job workflow has not yet been ported. Device recovery may clear the loaded job. Do not assume the same fault-recovery choices are available in both clients.
+**Windows:** use **Runs & warning points → Remaining job …** (`Läufe & Warnpunkte → Restauftrag …`) to prepare a continuation from the affected or previous column or spherical band. Confirm the proposal, wait for the matching loaded plan, then start it separately. Checkpoints and linked captures are retained in SQLite. This workflow is implemented and software-tested; a complete new Surface recovery after a real fault remains to be validated.
 
 ## 5. Save and export
 
 On Android, **Extras** provides saved runs, Papywizard XML/CSV export and automatic-backup status. Captures are archived in SQLite. Complete XML snapshots are updated in the background during acquisition; they can be rebuilt from the archive after an app restart. After an interruption, check the backup status or export again before transferring the file to the stitching computer. The app's storage is not a separate external backup.
 
-On Windows, captures are stored in a journal. The classic live XML writer closes the document at normal completion; use the separate journal-snapshot export when a run was interrupted.
+On Windows, captures and checkpoints are stored in SQLite; older journals are imported. Complete XML snapshots are updated automatically in the background and rebuilt after a restart. Under **Runs & warning points** (`Läufe & Warnpunkte`), check the backup status, use **Rebuild XML** (`XML neu sichern`) to retry a backup, or **XML + CSV** to export linked parts of the panorama together with interruption details.
 
 Import the positions together with the camera images into your stitching workflow. Capture counts and electrical trigger confirmations do not prove that the camera saved every image. Repeated columns may also produce additional camera files. Reconstructed entries can have unknown measured positions; they are not new encoder measurements.
 
 ## Other useful controls
 
-Both clients offer camera profiles, column navigation, configurable capture timing and timelapse. Review the selected run mode and settings before starting. Android additionally exposes the current recovery and backup status. More options and their restrictions are covered in the [German operating guide](../02-bedienung-und-acquise.md).
+Both clients offer camera profiles, column navigation, configurable capture timing, timelapse, remaining-job preparation and backup status. Review the selected run mode and settings before starting. On Windows, **Navigation → Timing …** (`Zeiten …`) also offers explicit Android reference values before loading: run tempo 1.7/1.7 and settling/pulse/exposure wait 0.5/0.03/0.3 seconds. Review and apply these values before transferring the plan. More options and their restrictions are covered in the [German operating guide](../02-bedienung-und-acquise.md).
 
 ## Related projects
 

@@ -6,14 +6,17 @@ Steuerung eines motorisierten Pan-/Tilt-Panoramakopfes: Arduino-Firmware, Androi
 
 **[Gesamtdokumentation öffnen](docs/README.md)** — Architektur, Bedienabläufe, Funktionen, Variablen, Motorparameter, Protokoll, Diagramme, Tests und bekannte Probleme.
 
-| Komponente | Dokumentierter Quellstand am 24.10.2026 |
+| Komponente | Dokumentierter Stand am 27.10.2026 |
 |---|---|
-| Firmware PanoDuinoControl | 2.4.75, regulärer Nano-R4-Bluetooth-Build |
-| Android PanoramaControl | 0.6.26, VersionCode 39 |
-| Windows PanoramaControl | 27.4.4, WinForms / .NET Framework 4.8 |
+| Firmware PanoDuinoControl | 2.4.75, festgehaltene reguläre Nano-R4-Bluetooth-Referenz |
+| Android PanoramaControl | 0.6.27, VersionCode 40 |
+| Windows PanoramaControl | 27.5.4, WinForms / .NET Framework 4.8 |
+| Gespeichertes Motorprofil | Revision 40, gezielte Pan-Korrektur; Revision 39 als Rückfallstand erhalten |
 | Drahtprotokoll | V2; Rasterrezept Version 1, sphärisches Rezept Version 2 |
 
 Die Dokumentation beschreibt den angegebenen Softwarestand und seine Prüfgrenzen. Die Komponenten haben unterschiedliche Funktionsstände; [Funktionsmatrix](docs/08-funktionsstand.md) und [offene Probleme](docs/09-probleme-und-roadmap.md) gehören zur technischen Beschreibung.
+
+Die aktuelle Pan-Abstimmung ist mit **96 realen Aufnahmen** geprüft: Pan maximal **0,236°**, Median **0,089°**. Der 72er-Lauf enthielt 13 Zielverfehlungswarnungen; Firmware und Android-Version bleiben unverändert. [Korrektur, vollständiges Profil und Messgrenzen](docs/validation/2026-10-27-pan-positioning.md).
 
 ```mermaid
 flowchart LR

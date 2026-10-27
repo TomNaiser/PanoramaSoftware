@@ -1,6 +1,18 @@
 # Gesamtdokumentation PanoramaSoftware
 
-**Stand: 25. Oktober 2026. Sprache: Deutsch.** Referenz: Firmware 2.4.75, Android 0.6.26, Windows 27.4.4. Diese Dokumentation beschreibt Funktionen, Architektur und den jeweiligen Prüfstand. Für den englischen Einstieg: [Overview and features](../README.md) · [Short manual](en/manual.md).
+**Stand: 27. Oktober 2026.** Dieses Handbuch beschreibt die Bedienung, den Aufbau und die geprüften Funktionen der Panoramasoftware.
+
+| Komponente | Aktuell geprüfter Stand |
+|---|---|
+| Firmware | Reguläre Version **2.4.75** |
+| Android | **0.6.27** |
+| Windows | **27.5.4** |
+| Gespeichertes Motorprofil | **Revision 40**; Revision 39 bleibt Rückfallreferenz |
+
+Die aktuelle Pan-Korrektur ist mit **96 realen Aufnahmen** geprüft.
+[Messwerte, Profil und verbleibende Grenzen](validation/2026-10-27-pan-positioning.md).
+
+English: [Overview and features](../README.md) · [Short manual](en/manual.md).
 
 ## Lesen nach Fragestellung
 
@@ -17,6 +29,7 @@
 | [09 Probleme und Roadmap](09-probleme-und-roadmap.md) | Verbleibende Risiken, bekannte Unterschiede, konkrete nächste Nachweise |
 | [10 Build, Tests und Wartung](10-build-tests-und-wartung.md) | Voraussetzungen, Befehle, Testebenen, Belegstand und Statistik |
 | [11 GitHub und Dokumentationspflege](11-github-und-dokumentationspflege.md) | Mermaid, Veröffentlichung, Submodule, Aktualisierung und Prüfskripte |
+| [Konzept Windows-Angleichung](windows-android-angleichung-konzept.md) | Abgestimmtes Konzept mit Verweis auf Umsetzung und Prüfgrenzen von Windows 27.5.0 |
 | [Motorparameter-Referenz](referenz/motorparameter.md) | Vollständiger generierter Katalog mit ID, Name, Einheit, Skalierung, Default und Grenzen |
 | [Quellcode-Referenz](referenz/quellcode.md) | Generiertes Verzeichnis der aktiven Produktionsdateien und ihrer deklarierten Typen |
 | [Funktionssignaturen](referenz/funktionen.md) | Generierte Methodensignaturen und Quellverweise als zusätzliche Suchhilfe |

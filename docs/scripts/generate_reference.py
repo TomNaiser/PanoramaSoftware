@@ -1,5 +1,6 @@
 """Generate code-backed documentation. Standard library only; never changes product sources."""
 from pathlib import Path
+from datetime import date
 from urllib.parse import quote
 import hashlib
 import json
@@ -103,7 +104,7 @@ def generate():
     assert len(declarations("public static async Task UploadPlanAsync(CancellationToken t) { }")[1])==1
     count = parameters()
     catalog = ["# Quellcode-Referenz", "", "[Inhalt](../README.md) · [Funktionssignaturen](funktionen.md)", "",
-               "Aktive Firmware-Quellen, Android-Produktionsklassen und im Windows-Version-27-Projekt eingebundene C#-Dateien; generierte Designer-/AssemblyInfo-Dateien und Tests ausgenommen. Ein eingebundener Legacy-Helfer ist dadurch nicht automatisch der aktive V2-Pfad. Die Fachkapitel erklären die tatsächlich verwendeten Verantwortungen.", "",
+               "Erfasst sind die aktuell ausgecheckten Firmware-Quellen, Android-Produktionsklassen und im Windows-Version-27-Projekt eingebundenen C#-Dateien; generierte Designer-/AssemblyInfo-Dateien und Tests ausgenommen. Der Katalog dokumentiert Quellen, keine zusätzliche Hardwareabnahme. Die Versions- und Messnachweise stehen im [Prüfstand](../validation/README.md). Ein eingebundener Legacy-Helfer ist nicht automatisch der aktive V2-Pfad.", "",
                "Windows/Firmware-Quelllinks zeigen auf ihre eigenen GitHub-Repositories (`master`). Der lokale Dateipfad bleibt im Text erkennbar. Für publizierte Releases Links auf erreichbare Commitstände fixieren; lokale unpublizierte Änderungen werden auf GitHub erst nach deren Veröffentlichung sichtbar.", ""]
     api = ["# Funktions- und Methodensignaturen", "", "[Inhalt](../README.md) · [Dateien und Typen](quellcode.md)", "",
            "Automatisch lexikalisch erfasste Deklarationen/Definitionen aus den Produktionsdateien. Die Listen dienen zum Auffinden im Code und ergänzen die erklärten Funktionen der Fachkapitel. Enthalten sind auch interne Helfer sowie durch Buildflags eingeschlossene Varianten. Headerdeklaration und Implementierung können beide erscheinen.", "",
@@ -134,7 +135,7 @@ def generate():
     android = re.search(r"versionName '([^']+)'", text(ROOT / "PanoramaAndroid/app/build.gradle"))[1]
     project = ET.parse(ROOT / "PanoramaControlGitRepo/PanoramaControl/PanoramaControl Version 27.csproj")
     windows = project.find(".//{*}ApplicationVersion").text
-    manifest = {"documentationDate": "2026-10-24", "firmware": firmware, "android": android, "windows": windows,
+    manifest = {"documentationDate": date.today().isoformat(), "firmware": firmware, "android": android, "windows": windows,
                 "motorParameters": count, "productionFiles": len(sources), "lexicallyDetectedSignatures": function_count,
                 "sourceHashNormalization": "CRLF-to-LF", "sources": sources}
     write("stand.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")

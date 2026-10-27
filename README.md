@@ -11,17 +11,17 @@ Plan a panorama from your camera, lens, coverage and overlap, send it to the hea
 - **Plan before you shoot.** Camera/lens profiles, overlap settings and a graphical preview for rectangular grids and spherical bands.
 - **Run the sequence on the head.** Firmware controls the movement and capture sequence after the plan has been loaded. Loading and starting are separate actions.
 - **Use encoder feedback.** Measured pan/tilt positions, settling checks and visible position warnings help assess what actually happened.
-- **Recover interrupted work on Android.** Prepare a continuation from a selected grid column or original spherical band, with completed captures retained in the archive.
-- **Keep useful data after an interruption.** Android saves captures in SQLite and updates complete Papywizard XML snapshots in the background, with rebuilding after an app restart.
+- **Recover interrupted work.** Android and Windows can prepare a continuation from a selected grid column or original spherical band, with completed captures retained in the archive.
+- **Keep useful data after an interruption.** Android and Windows save captures in SQLite and update complete Papywizard XML snapshots in the background, with rebuilding after an app restart.
 - **Stay in control.** Manual target moves, held-arrow jogging, pause/resume, column navigation, timelapse and an accessible stop action.
 
 ## Projects and workflow
 
 | Project | Role |
 |---|---|
-| [Android app](PanoramaAndroid/README.md), documented version **0.6.26** | Mobile planning, acquisition, recovery and export; German/English interface; Android 8.0 or newer |
-| [PanoDuinoControl](https://github.com/TomNaiser/PanoDuinoControl), **2.4.75** | Arduino firmware; current development target is Nano R4 with AS5048B encoders |
-| [PanoramaControl](https://github.com/TomNaiser/PanoramaControl), **27.4.4** | Windows client using .NET Framework 4.8 |
+| [Android app](PanoramaAndroid/README.md), documented version **0.6.27** | Mobile planning, acquisition, recovery and export; German/English interface; Android 8.0 or newer |
+| [PanoDuinoControl](https://github.com/TomNaiser/PanoDuinoControl), **2.4.75** | Confirmed firmware baseline; Nano R4 with AS5048B encoders |
+| [PanoramaControl](https://github.com/TomNaiser/PanoramaControl), **27.5.4** | Windows client using .NET Framework 4.8 |
 | [PanoBoard](https://github.com/TomNaiser/PanoBoard) | Related controller-board design files |
 | [Gigapixel-Tools](https://github.com/TomNaiser/Gigapixel-Tools) | Separate Python tools for vignetting correction and arranging loose tiles in PTGui projects |
 
@@ -45,7 +45,9 @@ Build requirements and commands are included in the [short manual](docs/en/manua
 
 ## Current limits
 
-Android has the newer fault-recovery and continuous complete-XML workflow; Windows does not yet provide equivalent behavior. Spherical planning is limited by the head's actual mechanical range. Capture confirmations record electrical triggers and positions, not successful camera-file storage or image sharpness. Reliability under changing load and wind remains under evaluation; see the [feature matrix](docs/08-funktionsstand.md) and [known limitations](docs/09-probleme-und-roadmap.md).
+As of 27 October 2026, Windows 27.5.4 and stored motor profile **revision 40** have completed **96 measured captures**, including a 72-capture run and a reverse-direction check. Maximum pan error was **0.236°**, with a **0.089° median** across all 96 captures. The longer run retained 13 target-missed warnings; maximum tilt error was 0.315°. Firmware 2.4.75 and Android 0.6.27 remain unchanged, and revision 39 is retained as a fallback. See the [Pan correction and validation report](docs/validation/2026-10-27-pan-positioning.md) in German.
+
+Windows includes checkpoint-based remaining jobs and continuous complete XML export. Real recovery after a new fault, the complete Surface workflow and changing load or wind still need validation. Spherical planning is limited by the head's actual mechanical range. Capture confirmations record electrical triggers and positions, not successful camera-file storage or image sharpness; see the [feature matrix](docs/08-funktionsstand.md) and [known limitations](docs/09-probleme-und-roadmap.md).
 
 ## License
 

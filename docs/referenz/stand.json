@@ -1,11 +1,11 @@
 {
-  "documentationDate": "2026-10-24",
+  "documentationDate": "2026-10-27",
   "firmware": "2.4.75",
-  "android": "0.6.25",
-  "windows": "27.4.4.0",
+  "android": "0.6.27",
+  "windows": "27.5.4.0",
   "motorParameters": 129,
-  "productionFiles": 105,
-  "lexicallyDetectedSignatures": 1393,
+  "productionFiles": 118,
+  "lexicallyDetectedSignatures": 1525,
   "sourceHashNormalization": "CRLF-to-LF",
   "sources": [
     {
@@ -191,37 +191,37 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/BluetoothSession.java",
-      "sha256": "1ba346594970e3201697a073fc0eff45f5ccded0a8efc9c5faba2b39edee276b",
+      "sha256": "3843ab5c1c8755190adde40b2daaa92b43b098332a52e64563fb033479b8ecc0",
       "signatures": 14
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CameraProfile.java",
-      "sha256": "df8f8a39d341b2fe2b378459c27da911c7b25924ad94043f9baf41966580b81d",
+      "sha256": "3d592ed6877b7fe37f817c02ea60b0116387be01e7b3204a4a318cab039ef8d5",
       "signatures": 3
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureQualityGuard.java",
-      "sha256": "35c7948ecf341f2500ddfe5abfd2f0aa6a71b3d4e7ef4d488ca401338a0a0708",
+      "sha256": "566fda2e8732574508b7b1a332784ea36e4f634b37c0a25d5abfe8948e83f5a1",
       "signatures": 3
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureStabilitySettings.java",
-      "sha256": "42d5b9eb3f0c7b53a6e881d793a29599af4be5bf4f5136ee3b1c4e2c62d96199",
+      "sha256": "7269200aa36af89454b58c315e3bb37858a7c22c10efe1d88be08361db30d432",
       "signatures": 5
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureStore.java",
-      "sha256": "dfe95b5c135d31c0e062cac96f3dc5e515b4ee3dfa179fd2e231d738f9ffed3c",
+      "sha256": "bb006307eab3a7294d40ce65e7153ebe64c913b39bd61ed6a70b3fe07c0bc3e8",
       "signatures": 35
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/CaptureWarning.java",
-      "sha256": "ee2d144a6c414356f79f5370ae2e11ad1b3f0b14b3cd9874a4b687ff26f4ca9e",
+      "sha256": "d964b9fce486f864338c5e312601e0a2a48c53704fba853014db24e580136193",
       "signatures": 3
     },
     {
@@ -239,13 +239,13 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/DeviceSession.java",
-      "sha256": "fee45d69c6846ad4e14c9ca3e48ac6171b2970d58a4d9d5ab32682c78b71230c",
+      "sha256": "039658fb5af4ed45a5c8838da2e48943addfdb675cd78b6760e9b1a289ba7cd8",
       "signatures": 2
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/DeviceState.java",
-      "sha256": "36b9334143d412a34086c12aea8cd1d1ebd2721fe2013a0349f2d3026a9916fd",
+      "sha256": "83c8490196af805ca1f0511c36bf73cc6dfa45c074bf7cd17806f059fa7b64dd",
       "signatures": 14
     },
     {
@@ -269,43 +269,43 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/JogHold.java",
-      "sha256": "62ec50dac9d2b2432f561c74db85eae617b9a123fa324c3fdfd7cce5a1e2f500",
+      "sha256": "90dba19bb562655855fb8dd2ae4f5c035b3250be7b7554ae6a5c2ef7d7ddb033",
       "signatures": 4
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/LivePapywizard.java",
-      "sha256": "8b8d4eb05ad3fc2c7e7e7604e9b5865cf978e8bee4d75d0c3c74d6bd620c82e8",
+      "sha256": "6784f39a98ba59fb302fc37fa271cae649e8b59e6c42970239785d63dd1dc27e",
       "signatures": 14
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/MainActivity.java",
-      "sha256": "cc80497c75c386b4359a2a327a53d6ca6dc8de1265b460655c91a91aeeea1a3b",
-      "signatures": 91
+      "sha256": "cc20c8c57dec5386742ba2250fb5e39167361a6be4844b05e70ec6e9fdb799a5",
+      "signatures": 92
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionProgress.java",
-      "sha256": "1ccc57261395b390095a3a5edae904d21c9396d7b2292b237face18539bcf754",
+      "sha256": "474b272e625d7b74d321b6716055422504cd9dbfc96f314774265892387f916f",
       "signatures": 2
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualActionStatus.java",
-      "sha256": "dec917c187dc8d145bc6996acad352fd758e17ab883646cd5e72c3ff35a589f2",
+      "sha256": "58aa1fc2a2f56774e54ffecd8fcc6793b27cabdb9b522c6621bae6027c40d22f",
       "signatures": 4
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualMotionOptions.java",
-      "sha256": "69de62810abc8b3a21497553e8c6f3e83da4f630f9e35f7b6755b45efc0427da",
+      "sha256": "e353a5f2f17f015cf919fb0e4622c2280e3d7202ea5ec3db38dc7ff86b7aebb3",
       "signatures": 2
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/ManualMoveProgress.java",
-      "sha256": "c8f86f5ce295f1f45187e163a1699366231b6e0897567a7162d0d2a953030638",
+      "sha256": "31c6c7066db6a9d2e7b91357659738a7f33a15702d0de5d6f24dc2e37b446c8a",
       "signatures": 2
     },
     {
@@ -317,31 +317,37 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/P2Codec.java",
-      "sha256": "fbd96edaf727ec88b35f89bd2dd083c24124806e9a5687ebdf9eed51030e703d",
+      "sha256": "5e121c7055cc7c2cef9e011d164c78713d794fe978980d3e39d97107d0e0db39",
       "signatures": 6
     },
     {
       "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaApplication.java",
+      "sha256": "61fd56f1cfb56930299943fbb939117d9d6d7e4f599b9d39263dff4e40fb303e",
+      "signatures": 0
+    },
+    {
+      "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaPlan.java",
-      "sha256": "db6e252c3bc23495cf49505e287745e98827938f5569e444f38803615a7cfbef",
+      "sha256": "3d3f4916522888974db3dcf72e79c1e8c837725bef61ce1853c230fb25d51ae5",
       "signatures": 11
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PanoramaService.java",
-      "sha256": "05284f2d38d1993b9f91c8d21529c03eba47406fa4112b0bb03f46b0e9c6c1f9",
-      "signatures": 91
+      "sha256": "253fc3177b32ab9c83d4af996fb5858a081f8ff88be7bd06ea14ab375a00ca4e",
+      "signatures": 100
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanAbort.java",
-      "sha256": "b9e67f4dda912fbcfd2e1d4e2abefb2a8322b5c0489a7c68b401e5e6d86fa4e9",
+      "sha256": "ff8081cbb156fd6a3c1e39276a3d1e15ae9554e3195120f4853ad6917e273c96",
       "signatures": 6
     },
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/PlanPreview.java",
-      "sha256": "becf9d3b24557a0e32e9b82993432fc4f02fd66ae72d083127ce62425e09e547",
+      "sha256": "61d681b1719253ee1d62e34cf2fb6488b68678fccec87f4b0d66233429c9d7b9",
       "signatures": 40
     },
     {
@@ -359,7 +365,7 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RasterRecovery.java",
-      "sha256": "745e057287f11484ef90ffbb77e1c2da82c12dc90ac3ec0ba367bd717e05039e",
+      "sha256": "e48778d0c26dbf71472f765d98a27d2271712d27574b732f0297aa2e371a87b7",
       "signatures": 6
     },
     {
@@ -389,7 +395,7 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/RunRecoveryPause.java",
-      "sha256": "6c226d5f6f3b7d656cdcabc6bb2da4332eaab0deef5e8a83ac4cdb11fe82ebec",
+      "sha256": "8ed53083fb37f570d8350fbb4318541f116c575c22b8b06080635472ba6a1cf3",
       "signatures": 3
     },
     {
@@ -401,20 +407,38 @@
     {
       "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/SupportLog.java",
-      "sha256": "9c11679cfb4375fd309b802a4e0a01d329f17c15ee25e8b21f1ce5a91f69c7c9",
+      "sha256": "06eeb3a53382c01e12af88b34f8a4bd4daa7a3563a54378e42bec818f6a1e85b",
       "signatures": 5
     },
     {
       "component": "Android",
+      "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/UiText.java",
+      "sha256": "fc55234c01f5735761d54e6018783ee6d383727dd95a9213f8c2ac1d7cc89e2b",
+      "signatures": 14
+    },
+    {
+      "component": "Android",
       "path": "PanoramaAndroid/app/src/main/java/de/tomnaiser/panoramaandroid/V2Client.java",
-      "sha256": "df20d489f399018a62fcdd6bb459e4bbf865b0bdc1ea4664004894e21ddeac90",
+      "sha256": "b67b78944595f3709fd623d88105b9679c4e7bfbee4a39a785aa1d54da06e244",
       "signatures": 19
     },
     {
       "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/DeviceIdentity.cs",
+      "sha256": "9f897b7e3495d1e5224620a88b25c48fdc2f60dc2f7eae4c95e06a738aea233c",
+      "signatures": 2
+    },
+    {
+      "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Application/DiagnosticSessionLog.cs",
-      "sha256": "34496c29e78694b650805b7f814a52211e3c9f3adf767a62c69119079ab38006",
-      "signatures": 5
+      "sha256": "4041b5eef48df3ffb7af1cccb1d6e096ca92bc03f0ce3a94ff73ebd5887177fe",
+      "signatures": 6
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/LiveRunBackup.cs",
+      "sha256": "91578cf3c3e9e9604595f1868e26c0775324cb4cb8222fdccbac39a1226e65c7",
+      "signatures": 7
     },
     {
       "component": "Windows",
@@ -431,14 +455,20 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.cs",
-      "sha256": "5041d7a3ec0e9745b671294fd2c6dcd4d6731270b6752e0cf2e2b8e76f7e014f",
-      "signatures": 71
+      "sha256": "f1ec002c13365fa6b165e0837e76191d76654970883379ad2df8d35ab52568fe",
+      "signatures": 73
     },
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.Operations.cs",
-      "sha256": "e2024cae575ed5be5cd4cef2f768e5a15e73e217f2cdf1cd2b4532e1bb4c9b79",
+      "sha256": "f6fabd033a0f0e63e2814e52f8ed30b69d8582b68bf706b9da0bebb324c601b6",
       "signatures": 28
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/PanoramaSessionController.Parity.cs",
+      "sha256": "b05a2dff05a0500a2ce65b46a4fe7988e66e71dfba03103e585d9eed3143f186",
+      "signatures": 17
     },
     {
       "component": "Windows",
@@ -449,14 +479,56 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunArchive.cs",
-      "sha256": "1944b6a19e25af9ab6a4931cbdd4d58d694127e4334d1dd80d9446fff7be2200",
+      "sha256": "8a8da9ab0f6e5ade757e77e67d0cc8a45d4d1d03c7467989b90f90feb4e7467d",
       "signatures": 19
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunExport.cs",
+      "sha256": "b45b717318c207e028f7dc89b8b8983add1696b5fe2e9792eb1b11e895837fed",
+      "signatures": 3
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunRecovery.cs",
+      "sha256": "2c343f11a12ac6537fe93ff19f281d2b1e45c704c26eadb42e48395afbc2b9ae",
+      "signatures": 9
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunStore.cs",
+      "sha256": "4bd6d8c291b39df2b5b894ceeac52fa8c1c022b7d8b3b78729176942c075c0d9",
+      "signatures": 33
     },
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Application/RunTimingSettings.cs",
       "sha256": "232594f7f6737cb31b234cc5ef6396da4b792eff34873c5af7a09c99c8ce683f",
       "signatures": 3
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/SqliteDatabase.cs",
+      "sha256": "563c4bafd538df9fdd22bcb2de74006c742fd1d0071a360c93608780d8bc4716",
+      "signatures": 13
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/UiText.Catalogue.cs",
+      "sha256": "941023e6080e245fb2e7440708d6d44d370319f8f3694e63d247c41a7a1bbf68",
+      "signatures": 1
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/UiText.cs",
+      "sha256": "80be1e834e691386e513944f7ae2d5a00394e71da92919b6a81809db9ca5a6a5",
+      "signatures": 3
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Application/UiText.Windows.cs",
+      "sha256": "b47d0b0df7bc14b12c2569af7a09813427a69349c0cd45035218680c391e7f2a",
+      "signatures": 1
     },
     {
       "component": "Windows",
@@ -467,7 +539,7 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Communication/BluetoothComTransport.cs",
-      "sha256": "e0369e5f574a2d038faf805e1bb31c99278396dfb8fdd56c37b9e0378b47fb7a",
+      "sha256": "a9c1b4cd35518109abdc26641bbae7dfa8131ef83c85ae33d6b81320b74de86e",
       "signatures": 9
     },
     {
@@ -527,7 +599,7 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Domain/RunEvent.cs",
-      "sha256": "b83618d4fc0656d094bc3f73fc8f6fc52c5a2671c18db042f7271a753ed9ba1c",
+      "sha256": "af0440b3525b20b8d4271f5f47e4333b4540a0d584d755815868e330f3cc24d2",
       "signatures": 0
     },
     {
@@ -551,8 +623,8 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Domain/SessionFeatures.cs",
-      "sha256": "997b65a6ee8f51591d6d677752fa984d7c086f193d7305c2c45039f20cc02b11",
-      "signatures": 14
+      "sha256": "28529652ed863638a3ecec1e63fc47e3bce6bd16aeb142b3c7b3461df1239e39",
+      "signatures": 15
     },
     {
       "component": "Windows",
@@ -563,14 +635,20 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Form1.cs",
-      "sha256": "a6029cdc954b0c6228a7836fb03ae07be67ab014e45b26016cddad4ca864d94c",
+      "sha256": "3ed774955deb95347b6d497a40ec953ffdcc30eb4ac91920511b17e59c7e5fd3",
       "signatures": 96
     },
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Form1.Current.cs",
-      "sha256": "451be375bf4fa1a31007003c3ace287652e3dcaefbddb5e4800456f33556f94a",
-      "signatures": 52
+      "sha256": "7b8e6264833fe29d42c42d65b4f4d52f4901a093fb83a00d3e8b3218bbe4a68d",
+      "signatures": 56
+    },
+    {
+      "component": "Windows",
+      "path": "PanoramaControlGitRepo/PanoramaControl/Form1.Parity.cs",
+      "sha256": "30b27505de3823608d81d1a6ca97eda0d160b0aad94bb761639a6fab25ba2e28",
+      "signatures": 11
     },
     {
       "component": "Windows",
@@ -587,7 +665,7 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/PanoControlApp.cs",
-      "sha256": "da5f4e2f8655f13c8c5683b966e77634c8cd2d4032b2334926912073b3fe6f8d",
+      "sha256": "2961d89cd413e32d78c92523af0e4238fe9b1b2b6d355d77ebd6e599312b49b6",
       "signatures": 1
     },
     {
@@ -635,7 +713,7 @@
     {
       "component": "Windows",
       "path": "PanoramaControlGitRepo/PanoramaControl/Protocol/V2/ProtocolV2Client.cs",
-      "sha256": "09f1b99f0ca8c18ff211aaa5e27e83421899f52a0396e69c22e7c50636ba9e25",
+      "sha256": "1edb231fcf5eee346b3a9aaf0bcf916290d6eef230c1ac2473efcdfeabbb2a1f",
       "signatures": 17
     }
   ]

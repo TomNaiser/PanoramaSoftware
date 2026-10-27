@@ -67,11 +67,11 @@ Die Zeichnung fasst mehrere Codezweige zusammen; Sensor-/Grenz-/Kontrollzeitfehl
 | Stop / Not-Stop | Motor- und Kameraausgabe sofort aus; keine Parkfahrt. Ein Stop ist kein normaler Resume-Zustand |
 | Sensor-/Sicherheits-Fault | Störung beheben, Vorfall quittieren und frischen Gerätestand prüfen. Ein anhaltender Fehler bleibt gesperrt |
 | Android-Restauftrag | Unterbrochene oder vorherige vollständige Spalte/Band auswählen, neuen Restauftrag laden, danach gesondert starten |
-| Windows-Wiederherstellung | Prüft und bereinigt den Gerätestand, kann dabei den alten Geräteauftrag löschen. Der neue Android-Restauftragsweg fehlt |
+| Windows-Restauftrag | Unter Läufe & Warnpunkte → Restauftrag … betroffene/vorherige Spalte oder Band wählen; nach bestätigter Vorbereitung gesondert starten. Seit 27.5.0 umgesetzt; vollständige neue Surface-Wiederaufnahme noch offen |
 
 ```mermaid
 flowchart TD
-    F[Android: Unterbrechung gespeichert] --> A[Quittieren und Gerätestand prüfen]
+    F[Android und Windows: Unterbrechung gespeichert] --> A[Quittieren und Gerätestand prüfen]
     A --> B{Sensoren, Boot und Tilt-Referenz passend?}
     B -->|Nein| X[Sperrgrund anzeigen und Ursache beheben]
     B -->|Ja| C[Betroffene oder vorherige Spalte wählen]
