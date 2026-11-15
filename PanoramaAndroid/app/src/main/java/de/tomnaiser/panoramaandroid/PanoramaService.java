@@ -86,6 +86,10 @@ public final class PanoramaService extends Service {
     private String savedPause="";
     private CaptureStabilitySettings pendingStability;
     private final CaptureQualityGuard qualityGuard=new CaptureQualityGuard();
+    private long restMotionWarningRun, restMotionWarningOrdinal;
+    private int restMotionWarningGeneration=-1;
+    private int panOrigin, panOriginGeneration=-1;
+    private long panOriginBoot;
     private CaptureQualityGuard.Issue pendingQuality;
     private android.media.ToneGenerator warningTone;
     public CaptureStore captures;
@@ -252,14 +256,22 @@ public final class PanoramaService extends Service {
                     boolean newWarning=captures.accept(device.getAddress(), state, frame);
                     if(frame.type.equals("IMAGE_COMPLETED") && fresh() && frame.fields.length==12 && state.plan!=null && state.plan.mode==0 &&
                         state.runId==Long.parseLong(frame.fields[1]) && (state.state.equals("RUNNING") || state.state.equals("PAUSE_PENDING")) &&
+                        !(restMotionWarningGeneration==generation && restMotionWarningRun==state.runId &&
+                            restMotionWarningOrdinal==Long.parseLong(frame.fields[2])) &&
                         getSharedPreferences("settings",MODE_PRIVATE).getBoolean("qualityPause",true)) {
                         CaptureQualityGuard.Issue issue=qualityGuard.accept(frame.fields);
                         if(issue!=null && pendingQuality==null) { pendingQuality=issue;support.append("QUALITY_DEVIATION "+issue.describe()); }
                     }
-                    if(newWarning) {
+                    if(frame.type.equals("CAPTURE_WARNING")) {
                         CaptureWarning warning=CaptureWarning.parse(frame.fields);
-                        setMessage(() -> UiText.WARNING_FOR_CAPTURE.text()+warning.ordinal+": "+CaptureWarning.describe(warning.flags)+UiText.RUN_CONTINUES.text());
-                        signalQualityWarning();
+                        if((warning.flags & CaptureWarning.REST_MOVEMENT)!=0) {
+                            restMotionWarningRun=warning.runId; restMotionWarningOrdinal=warning.ordinal;
+                            restMotionWarningGeneration=generation;
+                        }
+                        if(newWarning && warning.flags!=CaptureWarning.REST_MOVEMENT) {
+                            setMessage(() -> UiText.WARNING_FOR_CAPTURE.text()+warning.ordinal+": "+CaptureWarning.describe(warning.flags)+UiText.RUN_CONTINUES.text());
+                            signalQualityWarning();
+                        }
                     }
                     if(frame.type.equals("STATUS")) plot.status(frame,SystemClock.elapsedRealtime());
                     if(frame.type.equals("IMAGE_COMPLETED") || frame.type.equals("MANUAL_IMAGE_TRIGGERED") || frame.type.equals("CAPTURE_WARNING") ||
@@ -773,14 +785,17 @@ public final class PanoramaService extends Service {
         return ManualMotionOptions.fields(state,x,y,panTempo,tiltTempo);
     }
     public boolean jogAllowed() { return state.jogSupported && navigationAllowed() && !busy && !manualMoving && !jog.held && !jog.stopping; }
+    boolean jogAllowed(int axis,int direction) { return jogAllowed() && state.jogDirectionAllowed(axis,direction); }
     public void setJogSpeed(double speed) {
         setJogSpeed(1,speed);
     }
+    int jogVelocityLimit(int axis) {
+        return axis==0 && state.jogMaximumPanVelocityMdeg>0?state.jogMaximumPanVelocityMdeg:state.jogMaximumVelocityMdeg;
+    }
     public void setJogSpeed(int axis,double speed) {
-        int maximum=axis==0 && state.jogMaximumPanVelocityMdeg>0?state.jogMaximumPanVelocityMdeg:
-            state.jogMaximumVelocityMdeg>0?state.jogMaximumVelocityMdeg:10000;
-        if(!Double.isFinite(speed) || speed<0.5 || speed>maximum/1000.0)
-            throw new IllegalArgumentException(UiText.JOG_SPEED_0_5_TO.text()+(maximum/1000.0)+UiText.S_DEVICE_MAXIMUM_ADJUSTABLE_IN_MOTOR_CONFIGURATION.text());
+        int maximum=axis==0?20:10;
+        if(!Double.isFinite(speed) || speed<0.5 || speed>maximum)
+            throw new IllegalArgumentException(UiText.JOG_SPEED_0_5_TO.text()+maximum+UiText.S_DEVICE_MAXIMUM_ADJUSTABLE_IN_MOTOR_CONFIGURATION.text());
         getSharedPreferences("settings",MODE_PRIVATE).edit().putString(axis==0?"panJogSpeed":"jogSpeed",Double.toString(speed)).apply();
     }
     public void setRememberSettleMillis(int millis) {
@@ -799,17 +814,35 @@ public final class PanoramaService extends Service {
         return fresh() && !manualMoving && !manualTrigger && !jog.held && !jog.stopping &&
             SystemClock.elapsedRealtime()>=endpointCaptureAfterMs && state.lastStatusMs>=endpointCaptureAfterMs;
     }
+    boolean canSetPanOrigin() {
+        return navigationAllowed() && state.state.equals("IDLE") && state.positionSafe() &&
+            currentBoot()>0 && endpointCaptureAllowed();
+    }
+    void setPanOrigin() {
+        if(!canSetPanOrigin()) throw new IllegalArgumentException(UiText.REMEMBER_POSITION_ONLY_AFTER_SETTLING_AND_RECEIVING_FRESH.text());
+        panOrigin=state.pan; panOriginBoot=currentBoot(); panOriginGeneration=generation;
+        notifyObservers();
+    }
+    boolean hasPanOrigin() {
+        return fresh() && panOriginGeneration==generation && panOriginBoot==currentBoot();
+    }
+    double panFromOrigin(int devicePan) { return ((long)panOrigin-devicePan)/1000.0; }
+    void moveToLogicalPan(double pan) {
+        if(!hasPanOrigin()) throw new IllegalArgumentException(UiText.PAN_ORIGIN_NOT_SET.text());
+        moveToUi(pan-panOrigin/1000.0,state.tilt/1000.0);
+    }
     public boolean jogHeldFor(int axis,int direction) { return jog.matches(axis,direction); }
     public void beginJog(int axis,int direction) {
         requireReady();
         if(!jogAllowed()) throw new IllegalArgumentException(state.jogSupported?UiText.FINISH_MOVEMENT_FIRST.text():UiText.UPDATE_FIRMWARE_FOR_HOLD_TO_MOVE_CONTROL.text());
+        if(!state.jogDirectionAllowed(axis,direction)) throw new IllegalArgumentException(UiText.LIMIT_REACHED_MOVE_BACK_INTO_THE_ALLOWED_RANGE.text());
         boolean velocityMode=state.jogMaximumVelocityMdeg>0;
-        int maximum=axis==0 && state.jogMaximumPanVelocityMdeg>0?state.jogMaximumPanVelocityMdeg:state.jogMaximumVelocityMdeg;
-        String defaultSpeed=axis==0?Double.toString(Math.min(10,maximum/1000.0)):"5";
+        int maximum=jogVelocityLimit(axis);
+        String defaultSpeed=axis==0?"20":"10";
         double requested=velocityMode?Double.parseDouble(getSharedPreferences("settings",MODE_PRIVATE).getString(axis==0?"panJogSpeed":"jogSpeed",defaultSpeed)):0;
-        if(velocityMode && (!Double.isFinite(requested) || requested<0.5 || requested>maximum/1000.0))
+        if(velocityMode && (!Double.isFinite(requested) || requested<0.5 || requested>(axis==0?20:10)))
             throw new IllegalArgumentException(UiText.JOG_SPEED_EXCEEDS_DEVICE_MAXIMUM_ADJUST_SPEED.text());
-        int speed=velocityMode?(int)Math.round(requested*1000):
+        int speed=velocityMode?Math.min(maximum,(int)Math.round(requested*1000)):
             Integer.parseInt(getSharedPreferences("settings",MODE_PRIVATE).getString("manualSpeed","300"));
         if(!jog.begin(axis,direction,SystemClock.elapsedRealtime())) return;
         long token=jog.token; int id=generation;
@@ -1082,12 +1115,19 @@ public final class PanoramaService extends Service {
         requireReady();
         if (state.plan == null || settle < 0 || settle > 600000 || pulse < 1 || pulse > 60000 || exposure < 0 || exposure > 3600000)
             throw new IllegalArgumentException(UiText.INVALID_TIMING_PARAMETERS_OR_JOB.text());
-        long run=state.runId;
+        long run=state.runId; int connectionGeneration=generation;
         command("UPDATE_TIMING", ""+run, ""+settle, ""+pulse, ""+exposure).whenComplete((reply,error) -> {
-            if(error==null && reply.accepted) {
+            if(error==null && reply.accepted && connectionGeneration==generation && run==state.runId) {
                 pendingTimingRun=run;pendingTiming=new int[]{settle,pulse,exposure};notifyObservers();
             }
         });
+    }
+    void updateSettlingPreset(int settle) {
+        PanoramaPlan plan=state.plan;
+        if(plan==null) throw new IllegalArgumentException(UiText.INVALID_TIMING_PARAMETERS_OR_JOB.text());
+        timingSummary();
+        int[] pending=pendingTiming;
+        updateTiming(settle,pending==null?plan.pulseMs:pending[1],pending==null?plan.exposureMs:pending[2]);
     }
     public void timelapse(long id, int interval, int pulse) {
         requireReady();

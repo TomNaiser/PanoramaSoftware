@@ -31,9 +31,30 @@ public final class PanoramaPlanTest {
         assertArrayEquals(new int[]{-60000,0,0,1}, p.target(4));
         assertArrayEquals(new int[]{60000,45000,3,2}, p.target(12)); assertEquals(18, p.fields().length);
     }
-    @Test public void fullCircleDoesNotRepeatEndpoint() {
+    @Test public void fullCircleContainsBothSavedCoordinatesButLegacyRecipeIsUnchanged() {
         PanoramaPlan p = PanoramaPlan.create(78,true,180,0,-180,0,90,30,0,10,30,50,500,false);
-        assertEquals(4, p.total()); assertEquals(90000, p.target(3)[0]);
+        assertEquals(5, p.total()); assertEquals(180000, p.target(4)[0]);
+        String[] legacy=p.fields(); legacy[1]="2"; legacy[5]="4";
+        PanoramaPlan original=PanoramaPlan.parse(legacy);
+        assertEquals(4,original.total()); assertEquals(90000,original.target(3)[0]);
+    }
+    @Test public void nonDivisibleRasterKeepsEndpointsAndCanRecoverOriginalTargets() {
+        PanoramaPlan p=PanoramaPlan.create(79,false,0,0,25,-25,10,10,0,700,30,500,1000,false);
+        assertEquals(3,p.version); assertEquals(16,p.total());
+        assertArrayEquals(new int[]{-8333,-16667,1,2},p.target(6));
+        assertArrayEquals(new int[]{-25000,-25000,3,3},PanoramaPlan.parse(p.fields()).target(15));
+        DeviceState d=new DeviceState();d.limitsKnown=d.confirmed=true;
+        d.panMin=-180000;d.panMax=180000;d.tiltMin=-45000;d.tiltMax=50000;
+        try {p.validate(d);fail("Legacy device accepted the endpoint recipe");} catch(IllegalArgumentException expected) { }
+        d.accept(new P2Codec.Frame(1,"ENDPOINT_PLAN_CAPABILITIES",new String[]{"1"}),100);
+        p.validate(d);
+        RasterRecovery recovery=new RasterRecovery(p,4);
+        PanoramaPlan remaining=recovery.remaining(80,false);
+        int start=recovery.startColumn(false)*p.rows;
+        for(int i=0;i<remaining.total();i++) {
+            assertEquals(p.target(start+i)[0],remaining.target(i)[0]);
+            assertEquals(p.target(start+i)[1],remaining.target(i)[1]);
+        }
     }
     @Test public void rasterMatchesDeviceCoordinateContract() {
         PanoramaPlan p = PanoramaPlan.create(5,false,0,0,10,-10,5,5,0,10,30,50,500,false);
@@ -70,5 +91,19 @@ public final class PanoramaPlanTest {
         s.tilt = 82793; assertFalse(s.positionSafe());
         s.tilt = 50000; assertTrue(s.positionSafe());
         s.confirmed = false; assertFalse(s.positionSafe());
+    }
+    @Test public void uprightTiltOnlyEnablesTheInwardArrowOnCompatibleFirmware() {
+        DeviceState s = new DeviceState();
+        s.accept(new P2Codec.Frame(1,"CAPABILITIES",new String[]{"-180000","180000","-45000","30000","1"}),100);
+        s.accept(new P2Codec.Frame(2,"MANUAL_JOG_VELOCITY_CAPABILITIES",new String[]{"5000"}),100);
+        s.tilt=90000;
+        assertFalse(s.jogDirectionAllowed(1,-1));
+        s.accept(new P2Codec.Frame(3,"TILT_RECOVERY_JOG_CAPABILITIES",new String[]{"1"}),100);
+        assertTrue(s.jogDirectionAllowed(1,-1));
+        assertFalse(s.jogDirectionAllowed(1,1));
+        assertFalse(s.jogDirectionAllowed(0,-1));
+        s.tilt=-90000;
+        assertTrue(s.jogDirectionAllowed(1,1));
+        assertFalse(s.jogDirectionAllowed(1,-1));
     }
 }

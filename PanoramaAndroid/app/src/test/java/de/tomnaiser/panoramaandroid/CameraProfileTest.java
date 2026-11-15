@@ -2,12 +2,13 @@ package de.tomnaiser.panoramaandroid;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public final class CameraProfileTest {
-    @Test public void actual35mmRecipeScalesBothAxesAndKeepsLargeTiltStepOnWire() {
+    @Test public void actual35mmRecipeUsesCameraStepLimitsAndKeepsBothEndpoints() {
         CameraProfile wide=new CameraProfile("35",35,24,35.9,700,500);
         PanoramaPlan p=PanoramaPlan.create(1579773610L,false,-35.112,22.786,-179.714,-29.487,wide.fovX(),wide.fovY(),40,700,30,500,1000,true);
-        assertEquals(22709,p.stepPan);assertEquals(-32582,p.stepTilt);assertEquals(7,p.columns);assertEquals(3,p.rows);
-        assertArrayEquals(new int[]{35112,-9796,0,1},p.target(1));
-        PanoramaPlan received=PanoramaPlan.parse(p.fields());assertEquals(-32582,received.stepTilt);assertArrayEquals(p.target(2),received.target(2));
+        assertEquals(22709,p.stepPan);assertEquals(32581,p.stepTilt);assertEquals(8,p.columns);assertEquals(3,p.rows);
+        assertArrayEquals(new int[]{35112,-3351,0,1},p.target(1));
+        PanoramaPlan received=PanoramaPlan.parse(p.fields());
+        assertArrayEquals(new int[]{179714,-29487,7,2},received.target(23));
     }
     @Test public void profileGeometryMatchesRoundedWindowsFov() {
         CameraProfile tele = new CameraProfile("400",400,24,35.9,700,500);

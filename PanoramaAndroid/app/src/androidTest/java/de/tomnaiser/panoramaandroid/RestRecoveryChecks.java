@@ -294,7 +294,13 @@ final class RestRecoveryChecks {
         PanoramaPlan plan=PanoramaPlan.parse("819366979|1|0|78025|4614|43|6|2062|-3083|500|30|300|1700|1700|1|5000".split("\\|"));
         main(() -> {
             service.state.state="IDLE";service.state.runId=0;service.state.plan=null;fresh();
-            fake.commands.clear();service.loadPlan(plan);
+            fake.commands.clear();
+            service.state.pan=178000;
+            check(service.canSetPanOrigin(),"Pan zero can be set with confirmed idle feedback near the right limit");
+            service.setPanOrigin();
+            check(service.panFromOrigin(service.state.pan)==0 && service.panFromOrigin(service.state.panMax)==-2 &&
+                fake.commands.isEmpty(),"Setting Pan zero changes the logical position without a motor command");
+            service.loadPlan(plan);
         });
         await(() -> !service.busy);
         main(() -> {
@@ -306,6 +312,22 @@ final class RestRecoveryChecks {
         main(() -> {
             check(service.state.state.equals("RUNNING") && service.state.runId==plan.runId,"Explicit first START reaches RUNNING");
             check(fake.commands.equals(Arrays.asList("LOAD_PLAN","GET_SUPPORT_BUNDLE","START")),"First start sends only the confirmed field run");
+            fake.commands.clear();service.updateTiming(750,45,550);
+        });
+        await(() -> !service.busy && service.pendingTiming!=null);
+        main(() -> {
+            service.updateSettlingPreset(2000);
+        });
+        await(() -> !service.busy);
+        main(() -> {
+            check(Arrays.equals(fake.timing,new String[]{""+plan.runId,"2000","45","550"}),
+                "A settling preset preserves queued trigger pulse and exposure wait");
+            check(fake.commands.equals(Arrays.asList("UPDATE_TIMING","UPDATE_TIMING")) && service.state.state.equals("RUNNING") &&
+                service.state.plan.settleMs==500,"Preset sends neither a pause nor a start and waits for plan readback");
+            String[] fields=plan.fields();fields[9]="2000";fields[10]="45";fields[11]="550";
+            service.state.plan=PanoramaPlan.parse(fields);
+            service.timingSummary();
+            check(service.pendingTiming==null,"Confirmed plan makes queued preset active");
         });
     }
     private void screenshot(Context context,String name) throws Exception {
@@ -374,6 +396,7 @@ final class RestRecoveryChecks {
     }
     private final class FakeLink implements DeviceLink {
         final List<String> commands=new ArrayList<>();boolean rejectClear,rejectLoad,rejectStop,allowRecovery,allowStart,sensorsHealthy=true;
+        String[] timing;
         void heartbeat() { fresh();ui.postDelayed(this::heartbeat,200); }
         public CompletableFuture<V2Client.Result> send(String type,String... f) {
             commands.add(type);
@@ -407,6 +430,9 @@ final class RestRecoveryChecks {
                 String[] confirmed=requested.fields();confirmed[4]=""+(requested.revision+1);
                 service.state.accept(new P2Codec.Frame(1,"CAPTURE_STABILITY_SETTINGS",confirmed),SystemClock.elapsedRealtime());
                 service.observeStabilitySettings();fresh();
+            } else if(type.equals("UPDATE_TIMING")) {
+                timing=f.clone();fresh();
+                return CompletableFuture.completedFuture(new V2Client.Result(true,"TIMING_QUEUED"));
             }
             else throw new AssertionError("Forbidden command: "+type);
             return CompletableFuture.completedFuture(new V2Client.Result(true,"OK"));

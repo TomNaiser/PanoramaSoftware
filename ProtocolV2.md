@@ -114,10 +114,10 @@ SET_TILT_ZERO/RESET_TILT_ZERO sind nur in IDLE ohne manuelle Fahrt, Trigger oder
 
 Die Android-App leert den lokalen Plan nach bestätigter Nullpunktänderung und fragt das Supportbundle erneut ab, damit auch nach einer wiederholten ACK-Antwort die aktuelle Referenz und Grenzen vorliegen. Ein Vergleich der gespeicherten Referenz je Gerät erkennt Änderungen auch beim späteren Reconnect. Gespeicherte Aufnahmen bleiben in ihrer damaligen Referenz erhalten.
 
-`LOAD_PLAN` überträgt genau diese 16 Felder:
+`LOAD_PLAN` beginnt mit diesen 16 Feldern:
 
 1. `runId` – 1 bis 4294967295
-2. `planVersion` – 1 für Raster; 2 für sphärische Aufträge
+2. `planVersion` – 1 für Raster mit festen Schritten, 2 für bisherige sphärische Aufträge, 3 für explizite Endpunkte
 3. `moveMode` – 0 (Spalten mit Rücklauf), 1 (sphärische Tilt-Bänder)
 4. `startPanMdeg`
 5. `startTiltMdeg`
@@ -133,9 +133,11 @@ Die Android-App leert den lokalen Plan nach bestätigter Nullpunktänderung und 
 15. `disconnectPolicy` – 0 `CONTINUE`, 1 `ESTOP_ON_TIMEOUT`
 16. `heartbeatTimeoutMs` – bei Policy 1 zwischen 500 und 60000, sonst 0
 
-Bei `planVersion=2` und `moveMode=1` folgen Feld 17 `endPanMdeg` und Feld 18 `endTiltMdeg`. `rows` beschreibt die Zahl der Tilt-Bänder, `columns` die maximale Bildzahl eines Bandes. Die Tiltpositionen werden zwischen Start und Ende ganzzahlig interpoliert; die Zahl der Panbilder pro Band folgt der ganzzahligen Kosinusnäherung aus `SphericalGeometry`. Ein voller 360°-Kreis enthält keinen doppelten Endpunkt. Client und Firmware verwenden dasselbe Rezept; die Gesamtbildzahl ist die Summe aller Bänder und höchstens 4000.
+Bei den Planversionen 2 und 3 folgen Feld 17 `endPanMdeg` und Feld 18 `endTiltMdeg`. Geräte mit `ENDPOINT_PLAN_CAPABILITIES|1` unterstützen Version 3. Ein Rechteck mit gleichmäßigem ganzzahligem Schritt kann weiterhin als Version 1 übertragen werden. Ein Auftrag, dessen Ziele sich im alten Format nicht darstellen lassen, benötigt Version 3.
 
-Bild `i` wird ohne Positionsliste berechnet:
+Bei sphärischen Aufträgen zählt `rows` die Tilt-Bänder und `columns` die maximale Bildzahl eines Bandes. Die Tiltpositionen werden ganzzahlig zwischen Start und Ende interpoliert. Die Zahl der Panbilder pro Band folgt der ganzzahligen Kosinusnäherung. In Version 2 wird die Naht eines vollen 360°-Kreises einmal aufgenommen. In Version 3 werden die beiden gespeicherten Gerätewinkel an dieser Naht als eigene Ziele ausgeführt. Alle Aufträge enthalten höchstens 4000 Bilder.
+
+In einem Rechteck der Version 1 wird Bild `i` aus den festen Schritten berechnet:
 
 ```text
 column = i / rows
@@ -143,6 +145,10 @@ row    = i % rows
 pan    = startPan  + column * stepPan
 tilt   = startTilt + row    * stepTilt
 ```
+
+In einem Rechteck der Version 3 sind `stepPanMdeg` und `stepTiltMdeg` positive obere Grenzen für den Abstand benachbarter Ziele. Für jede Achse gilt bei mehreren Zielen `start + round((end - start) * index / (anzahl - 1))`. Halbe Werte werden für die Differenz vom Nullpunkt weg gerundet. Eine Achse mit einem Ziel hat identische Start- und Endkoordinaten. Die Reihenfolge bleibt spaltenweise.
+
+Bei `CONTINUE` führt die Firmware den geladenen Auftrag ohne Hostverbindung weiter aus. Bei `ESTOP_ON_TIMEOUT` beendet das Gerät einen laufenden Auftrag, wenn der vereinbarte Heartbeat ausbleibt. Die Apps zeigen die Regel des tatsächlich geladenen Rezepts vor dem Start an.
 
 Die Firmware akzeptiert den Plan erst, wenn alle Extremwerte innerhalb ihrer bestätigten Pan- und Tilt-Hartgrenzen liegen. `SAFETY_LIMITS_CONFIRMED=0` sperrt Plan- und manuelle Fahrbefehle fail-closed.
 
@@ -163,6 +169,8 @@ Im vollständig erreichten Zustand `PAUSED` darf ein Client sichere Positionen m
 Ab Firmware 2.3.6 kündigt `NAVIGATION_CAPABILITIES|1` zusätzliche manuelle Fahrzustände an: `PLAN_READY`, `STOPPED` und `COMPLETED`. `MANUAL_MOVE` verändert dabei weder Laufzustand noch Rezept, Cursor, Revision oder Aufnahmezähler. `PAUSED` und `IDLE` bleiben wie bisher fahrbar. In `RUNNING`, `PAUSE_PENDING`, aktiver Timelapse und `FAULT` wird der Befehl abgelehnt; ein abgelehnter Pfeilbefehl führt keinen Stop oder Clear aus. `START`, `RESUME` und `LOAD_PLAN` sind während einer manuellen Fahrt gesperrt. Ältere Firmware kündigt die Fähigkeit nicht an; der Android-Client gibt dort nur die bisherigen Fahrzustände frei.
 
 Ab Firmware 2.3.7 werden beide Encoderabfragen vor Befehlsverarbeitung und Motorausgabe auf I²C-ACK und vollständige Winkelbytes geprüft. Fehlende Rückmeldung führt zu `FAULT_PAN_SENSOR` oder `FAULT_TILT_SENSOR` und stoppt beide Motoren sowie Kamera; Wiederanschließen setzt die Fahrt nicht fort. Der letzte gültige Istwinkel bleibt in STATUS erhalten, der Fehlerzustand kennzeichnet ihn als nicht aktuell verwendbar. Ohne gültige Rückmeldung bleibt Bewegung auch nach CLEAR_RUN gesperrt.
+
+`TILT_RECOVERY_JOG_CAPABILITIES|1` erlaubt eine Tilt-Haltefahrt zum freigegebenen Bereich zurück, wenn Tilt mit gültiger Encoderposition außerhalb steht und Pan im Fahrbereich liegt. `MANUAL_JOG_START_VELOCITY` wird in diesem Fall nur für die Tilt-Achse in Einwärtsrichtung angenommen. Das Solltempo liegt bei höchstens 2°/s. Die Haltefreigabe, der Richtungsschutz und der Sensorstopp bleiben aktiv. Der auswärtige Winkel ist auch bei dieser Gerätefähigkeit kein gültiges Aufnahmeziel.
 
 ### 6.1 Verbindliche Reihenfolge vor jeder Aufnahme
 
@@ -261,8 +269,10 @@ Jeder Befehl erhält ACK/NACK. Ein wiederholter Pulsbefehl mit gleicher Sequenz 
 
 Schreiben ist mit deaktivierten Motoren und Kamera ohne Auftrag in IDLE/STOPPED oder mit erhaltenem Auftrag in PAUSED möglich. Manuelle Fahrt, Jog, Trigger, Timelapse und Benchbetrieb sperren es. Die Hardware verlangt zusätzlich frische ruhende Rückmeldung. Dies lockert ausschließlich den Zugang zu diesen Aufnahmegrenzen; die vollständige Motor-Konfiguration bleibt bei geladenem Auftrag gesperrt.
 
-Vor Auslösung und während Trigger/Belichtungswartezeit/Verbuchung gelten identische Stabilitätsbedingungen. Nach dem Abschalten muss die volle geplante Beruhigungszeit streng bestätigt sein. Die zusätzliche Wartezeit verlängert keine Motorfahrt. Fehlt die Freigabe bis Beruhigungszeit plus extraWaitMs, pausiert der Auftrag mit `lastError=CAPTURE_NOT_STABLE`, ohne Bildzählung und ohne Auslösung.
+Nach dem Abschalten prüft die Firmware die geplante Beruhigungszeit und erlaubt zusätzlich bis zu `extraWaitMs` für passive Beruhigung. Bei Ablauf dieser Frist darf sie mit Warnung auslösen, sofern die Rückmeldung frisch und gültig ist, der Antrieb abgeschaltet ist und die Position innerhalb der Schutzgrenzen liegt. Reine Restbewegung während Trigger, Belichtungswartezeit oder Verbuchung wird im selben Bildzyklus protokolliert. Sicherheitsgründe behalten Vorrang.
 
-`EXPOSURE_UNSTABLE`, `MOTION_STALLED`, `MOTION_SETTLE_TIMEOUT`, `MOTION_FINE_TIMEOUT` und `MOVEMENT_TIMEOUT` pausieren einen laufenden Auftrag bei weiterhin gültigen Grenzen ebenfalls: STATUS meldet PAUSED/NONE mit dem konkreten Fehler. Motoren und Kamera sind aus, Run-ID, Plan, Aufnahmezähler und nächster Bildindex bleiben erhalten. Eine möglicherweise schon ausgelöste, instabile Aufnahme wird nicht gezählt. Sensor-/Grenz-/Kontrollfehler und Not-Stop behalten die harte Abschaltung. Es gibt keinen automatischen RESUME.
+`CAPTURE_WARNING` erweitert die bisherigen Warnbits um Bitwert 16 für Restbewegung. `CAPTURE_REST_MOTION` ergänzt Boot-ID, Run-ID, Planrevision, Bildindex, Aufnahmeordinal, Uptime in ms, Phasenmaske, maximale Pan-/Tilt-Bewegungsspanne in mdeg und Settling-Zeit in ms. Für die Phasenmaske wird jeweils das Bit an der Position der Phasennummer in Abschnitt 6 gesetzt (beginnend mit 0). Während der Verbindung speichern beide Apps den Diagnoseframe im Supportlog und die Warnmarkierung im Aufnahmejournal. Der Firmware-Ring behält eine begrenzte Ereignisspur bei Funkverlust.
+
+`ACQUISITION_INTERRUPTION` meldet Boot-ID, Run-ID, Planrevision, nächsten Bildindex, Uptime in ms, Aktion (`RETRY`, `PAUSE`, `FAULT` oder `STOP`), Grund, Phase, Spalte, Zeile, Soll-Pan/Tilt, Ist-Pan/Tilt, Verbuchungszähler und Settling-Zeit in ms. Ausgewählte Bewegungsfehler vor der Auslösung erlauben einen Wiederholungsversuch am selben Ziel. Bei fehlender passiver Freigabe wird vor einem neuen Puls pausiert oder ein Schutzfehler ausgelöst. Ein bereits ausgelöster, unklarer Zyklus wird nicht automatisch wiederholt.
 
 `RETRY_COLUMN|runId|previous` bereitet im pausierten Raster eine Wiederholung vor: previous=0 beginnt am Anfang der aktuellen Fortsetzungsspalte, previous=1 eine Spalte davor (an Spalte 0 begrenzt). Es gelten dieselbe Run-ID, gültiger Bildindex und keine manuelle Aktion. Die Planrevision steigt; der Aufnahmezähler sinkt nicht. Erfolg `COLUMN_RETRY_READY` plus STATUS. Der Auftrag bleibt PAUSED und fährt erst nach separatem `RESUME|runId`. Wiederholungen ohne bisherige Bilder im aktuellen Segment verbrauchen keinen zusätzlichen Segmentplatz. Der R4 hat 64 Segmentplätze, der klassische Nano weiterhin fünf. Ältere Clients können einen bestätigten PAUSED-Auftrag weiterhin mit dem bestehenden RESUME fortsetzen; unbekannte zusätzliche Fähigkeitsframes ändern die Protokollversion 2 nicht.

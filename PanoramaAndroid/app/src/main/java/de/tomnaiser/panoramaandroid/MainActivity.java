@@ -45,6 +45,8 @@ public final class MainActivity extends Activity {
     private long dialogIncidentId=-1;
     private LinearLayout navigationBar;
     private TextView jogTempoLabel;
+    private TextView panOriginStatus;
+    private Button settlingPreset;
     private LinearLayout endpointBar,runActionBar;
     private PlotWorkspace planWorkspace,runWorkspace;
     private View[] pageViews;
@@ -228,13 +230,18 @@ public final class MainActivity extends Activity {
         LinearLayout manual=pages[1]; manual.addView(text(UiText.MANUAL_CONTROL.text(),20));
         manual.addView(text(UiText.HOLD_AN_ARROW_TO_MOVE_SLOWLY_RELEASE_TO.text(),14));
         TextView manualHint=text("",14); manualHint.setTag("alignmentHint"); manual.addView(manualHint);
+        button(manual,UiText.SET_PAN_ORIGIN.text(),() -> service.setPanOrigin(),() -> service!=null && service.canSetPanOrigin());
+        panOriginStatus=text("",14); manual.addView(panOriginStatus);
+        input(manual,"logicalPanTarget",UiText.LOGICAL_PAN_TARGET.text(),"0");
+        button(manual,UiText.MOVE_TO_TARGET.text(),() -> service.moveToLogicalPan(number("logicalPanTarget")),
+            () -> positionReady() && service.hasPanOrigin());
         button(manual,UiText.RESET_STOPPED_JOB.text(),this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
         input(manual,"pulse",UiText.CAMERA_PULSE_MS.text(),"30");
         input(manual,"manualPanSpeed",UiText.PAN_TARGET_MOVES_SPEED_1_1000.text(),"500");
         manual.addView(text(UiText.PAN_500_FOR_THE_TESTED_CONTINUOUS_MOVEMENT_APPROX.text(),14));
         input(manual,"manualSpeed",UiText.TILT_TARGET_MOVES_SPEED_1_1000.text(),"500");
-        input(manual,"jogSpeed",UiText.TILT_JOG_MAXIMUM_SPEED_S.text(),"5");
-        input(manual,"panJogSpeed",UiText.PAN_JOG_MAXIMUM_SPEED_S.text(),"10");
+        input(manual,"jogSpeed",UiText.TILT_JOG_MAXIMUM_SPEED_S.text(),"10");
+        input(manual,"panJogSpeed",UiText.PAN_JOG_MAXIMUM_SPEED_S.text(),"20");
         input(manual,"rememberSettleMs",UiText.SETTLING_BEFORE_REMEMBERING_POSITION_MS_0_5000.text(),"1000");
         button(manual,UiText.TRIGGER_CAMERA_ONCE.text(),() -> service.trigger(integer("pulse")),() -> service!=null && service.manualAllowed() && !service.manualMoving && service.state.positionSafe());
         button(manual,UiText.MOTION_DIAGNOSTICS.text(),() -> service.command("GET_DIAGNOSTICS"),this::ready);
@@ -334,7 +341,7 @@ public final class MainActivity extends Activity {
         qualityPause.setOnCheckedChangeListener((button,checked) -> preferences.edit().putBoolean("qualityPause",checked).apply());settings.addView(qualityPause);
         settings.addView(text(UiText.THE_APP_REQUESTS_A_PAUSE_REQUIRING_ACKNOWLEDGEMENT_WHEN.text(),13));
         stopOnLoss=new CheckBox(this); stopOnLoss.setText(UiText.STOP_AFTER_5_S_IF_CONNECTION_IS_LOST.text());
-        stopOnLoss.setChecked(preferences.getBoolean("stopOnLoss",false)); settings.addView(stopOnLoss);
+        settings.addView(stopOnLoss);
         settings.addView(text(UiText.WHEN_UNCHECKED_THE_ARDUINO_CONTINUES_THE_JOB_EVEN.text(),14));
         button(settings,UiText.CALCULATE_PREVIEW.text(),this::calculate,() -> true);
         LinearLayout run=card(pages[3],null),runGraph=vertical(); runGraph.setBackground(surface(Color.WHITE)); runGraph.setPadding(dp(4),0,dp(4),0);
@@ -367,6 +374,8 @@ public final class MainActivity extends Activity {
         button(run,UiText.BACK_ONE_COLUMN.text(),() -> service.columns(false),() -> savedPlot==null && ready());
         button(run,UiText.FORWARD_ONE_COLUMN.text(),() -> service.columns(true),() -> savedPlot==null && ready());
         button(runActions,UiText.TIMING.text(),this::editRunTiming,() -> savedPlot==null && timingReady());
+        settlingPreset=button(run,UiText.SETTLING_PRESET.text()+" ▾",this::showSettlingPresets,
+            () -> savedPlot==null && timingReady());
         button(run,UiText.REFRESH_DEVICE_STATE.text(),() -> service.command("GET_SUPPORT_BUNDLE"),this::ready);
         button(run,UiText.CLEAR_EXISTING_JOB.text(),() -> confirm(UiText.CLEAR_JOB.text(),UiText.THE_STORED_DEVICE_JOB_WILL_BE_RESET_LOCAL.text(),() -> service.runCommand("CLEAR_RUN")),this::ready);
         button(run,UiText.ABORT_PLAN_NEW_PLAN.text(),this::abortLoadedPlan,() -> ready() && PlanAbort.allowed(service.state.state));
@@ -442,7 +451,7 @@ public final class MainActivity extends Activity {
             public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id) { preferences.edit().putInt("mode",position).apply();schedulePlot(); }
             public void onNothingSelected(android.widget.AdapterView<?> p) { }
         });
-        stopOnLoss.setOnCheckedChangeListener((v,checked) -> { preferences.edit().putBoolean("stopOnLoss",checked).apply();schedulePlot(); });
+        stopOnLoss.setOnCheckedChangeListener((v,checked) -> schedulePlot());
         profilePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id) { if(plotReady) render(); }
             public void onNothingSelected(android.widget.AdapterView<?> parent) { }
@@ -521,7 +530,8 @@ public final class MainActivity extends Activity {
         if(!canStartLoadedPlan()) throw new IllegalArgumentException(UiText.FIRST_UPLOAD_A_PLAN_AND_WAIT_FOR_CONFIRMATION.text());
         if(selectedPage==2) { calculate(); if(!canStartLocalPlan()) throw new IllegalArgumentException(UiText.PLAN_CHANGED_RESET_DEVICE_JOB_AND_UPLOAD_THE.text()); }
         long run=service.state.runId;
-        confirm(UiText.START_LOADED_JOB.text(),service.state.plan.total()+UiText.CAPTURES_DEVICE_JOB.text()+run+UiText.THE_DEVICE_WILL_MOVE_AND_TRIGGER_THE_CAMERA.text(),() -> {
+        confirm(UiText.START_LOADED_JOB.text(),service.state.plan.total()+UiText.CAPTURES_DEVICE_JOB.text()+run+
+            UiText.THE_DEVICE_WILL_MOVE_AND_TRIGGER_THE_CAMERA.text()+"\n\n"+disconnectPolicyText(service.state.plan),() -> {
             if(!canStartLoadedPlan() || service.state.runId!=run) throw new IllegalArgumentException(UiText.LOADED_JOB_HAS_CHANGED_CHECK_AGAIN.text());
             service.runCommand("START"); selectPage(3);
         });
@@ -596,7 +606,7 @@ public final class MainActivity extends Activity {
             start.run(); long token=service==null ? 0 : service.jog.token;
             plotHandler.postDelayed(() -> { if(service!=null && service.jog.token==token) stop.run(); },1000);
         },
-            () -> service!=null && (service.jogHeldFor(axis,direction) || service.jogAllowed()));
+            () -> service!=null && (service.jogHeldFor(axis,direction) || service.jogAllowed(axis,direction)));
         arrow.setTextSize(24); arrow.setContentDescription(description+UiText.HOLD_RELEASE_TO_STOP.text());
         arrow.setOnTouchListener((view,event) -> {
             int action=event.getActionMasked();
@@ -630,6 +640,21 @@ public final class MainActivity extends Activity {
     }
     private boolean timingReady() {
         return ready() && service.state.plan!=null && Arrays.asList("PLAN_READY","RUNNING","PAUSE_PENDING","PAUSED").contains(service.state.state);
+    }
+    private void showSettlingPresets() {
+        PopupMenu menu=new PopupMenu(this,settlingPreset);
+        menu.getMenu().add(0,500,0,UiText.SETTLING_SHORT.text());
+        menu.getMenu().add(0,1000,1,UiText.SETTLING_MEDIUM.text());
+        menu.getMenu().add(0,2000,2,UiText.SETTLING_LONG.text());
+        menu.setOnMenuItemClickListener(item -> {
+            if(timingReady()) safely(() -> service.updateSettlingPreset(item.getItemId()));
+            return true;
+        });
+        menu.show();
+    }
+    private String disconnectPolicyText(PanoramaPlan plan) {
+        return plan.policy==0 ? UiText.AUTONOMOUS_RUN.text() :
+            String.format(UiText.locale(),UiText.STOP_ON_LOSS_RUN.text(),plan.heartbeatMs/1000);
     }
     private AlertDialog editRunTiming() {
         if(!timingReady()) throw new IllegalArgumentException(UiText.CURRENT_DEVICE_PLAN_MISSING_OR_ACTION_NOT_YET.text());
@@ -674,7 +699,7 @@ public final class MainActivity extends Activity {
         if (s.limitsKnown && s.confirmed && !s.positionSafe()) result+=UiText.ACTUAL_POSITION_OUTSIDE_LIMIT_MOVE_THE_AFFECTED_AXIS.text();
         if (service.manualMoving) result+=UiText.MANUAL_MOVEMENT_ACTIVE.text();
         if (service.manualTrigger) result+=UiText.CAMERA_TRIGGER_ACTIVE_NOT_YET_COMPLETED.text();
-        if (s.plan!=null) result+=UiText.DEVICE_PLAN.text()+s.plan.total()+UiText.IMAGES.text()+service.timingSummary()+"\n";
+        if (s.plan!=null) result+=UiText.DEVICE_PLAN.text()+s.plan.total()+UiText.IMAGES.text()+service.timingSummary()+"\n"+disconnectPolicyText(s.plan)+"\n";
         if(s.warningSettingsSupported) result+=String.format(UiText.locale(),UiText.ACTIVE_WARNING_THRESHOLDS_PAN_3F_TILT_3F_DEVICE.text(),s.warningPanMdeg/1000.0,s.warningTiltMdeg/1000.0,s.motionConfigRevision);
         return result;
     }
@@ -713,7 +738,17 @@ public final class MainActivity extends Activity {
         EditText panJogTempo=inputs.get("panJogSpeed");
         if(panJogTempo!=null) panJogTempo.setEnabled(service==null || !service.connected || (service.state.jogMaximumVelocityMdeg>0 && !service.jog.held && !service.jog.stopping));
         if(jogTempoLabel!=null && jogTempo!=null) {
-            String tempo=service!=null && service.connected && service.state.jogMaximumVelocityMdeg==0 ? manualTempo.getText()+"‰" : "P"+panJogTempo.getText()+" · T"+jogTempo.getText()+"°/s";
+            String tempo="P"+panJogTempo.getText()+" · T"+jogTempo.getText()+"°/s";
+            if(service!=null && service.connected) {
+                if(service.state.jogMaximumVelocityMdeg==0) tempo=manualTempo.getText()+"‰";
+                else {
+                    try {
+                        tempo=String.format(UiText.locale(),"P%.1f · T%.1f°/s",
+                            Math.min(number("panJogSpeed"),service.jogVelocityLimit(0)/1000.0),
+                            Math.min(number("jogSpeed"),service.jogVelocityLimit(1)/1000.0));
+                    } catch(IllegalArgumentException ignored) { /* Keep the edited value visible until it is valid. */ }
+                }
+            }
             String label=UiText.HOLD.text()+tempo;
             if(!jogTempoLabel.getText().toString().equals(label)) jogTempoLabel.setText(label);
         }
@@ -735,6 +770,12 @@ public final class MainActivity extends Activity {
             activeProfile.setText(UiText.ACTIVE.text()+name+(selected!=null && !selected.name.equals(name)?UiText.APPLY_THE_SELECTION_ABOVE_USING_USE_CAMERA_PROFILE.text():""));
         }
         TextView manualHint=pages[1].findViewWithTag("alignmentHint"); if(manualHint!=null) manualHint.setText(alignmentHelp());
+        if(panOriginStatus!=null) {
+            if(service==null || !service.hasPanOrigin()) panOriginStatus.setText(UiText.PAN_ORIGIN_NOT_SET.text());
+            else panOriginStatus.setText(String.format(UiText.locale(),UiText.LOGICAL_PAN_WITH_RANGE.text(),
+                service.panFromOrigin(service.state.pan),service.panFromOrigin(service.state.panMax),
+                service.panFromOrigin(service.state.panMin)));
+        }
         if(endpointSummary!=null) endpointSummary.setText(endpointLabel("start","Start")+"\n"+endpointLabel("end",UiText.END.text()));
         if(runProgress!=null) {
             long completed=savedPlot!=null?savedPlot.model.captures.size():service==null?0:service.state.completed;
@@ -856,7 +897,7 @@ public final class MainActivity extends Activity {
     private int integer(String key) { double n=number(key); if (n!=Math.rint(n) || n<Integer.MIN_VALUE || n>Integer.MAX_VALUE) throw new IllegalArgumentException(UiText.WHOLE_MILLISECONDS_NUMBERS_REQUIRED.text()); return (int)n; }
     private void saveInputs() {
         SharedPreferences.Editor editor=preferences.edit(); for (Map.Entry<String,EditText> input:inputs.entrySet()) editor.putString(input.getKey(),input.getValue().getText().toString());
-        editor.putInt("mode",modePicker.getSelectedItemPosition()).putBoolean("stopOnLoss",stopOnLoss.isChecked()).apply();
+        editor.putInt("mode",modePicker.getSelectedItemPosition()).apply();
         if(service!=null) for(String key:new String[]{"startPan","startTilt","endPan","endTilt"}) service.draftEndpoints.put(key,inputs.get(key).getText().toString());
     }
     private boolean permission() {

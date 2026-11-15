@@ -3,6 +3,7 @@ package de.tomnaiser.panoramaandroid;
 /** Validated firmware state in device millidegrees. Never inferred from button clicks. */
 public final class DeviceState {
     boolean jogSupported;
+    boolean tiltRecoveryJog;
     int jogMaximumVelocityMdeg;
     int jogMaximumPanVelocityMdeg;
     int runMaximumTempo=1000, warningPanMdeg, warningTiltMdeg;
@@ -10,6 +11,7 @@ public final class DeviceState {
     boolean warningSettingsSupported;
     CaptureStabilitySettings captureStability;
     boolean recoveryPauseSupported;
+    boolean endpointPlans;
     public String firmware = "—", hardware = "—", state = "UNKNOWN", phase = "NONE", lastError = "—";
     public long runId, completed, total, lastStatusMs;
     long nextImageIndex, timingRunId, timingImageIndex, moveMaximumMs;
@@ -53,6 +55,14 @@ public final class DeviceState {
                 if(f.length!=1 || !(f[0].equals("0") || f[0].equals("1")))
                     throw new IllegalArgumentException(UiText.INVALID_NAVIGATION_CAPABILITY.text());
                 inactiveNavigation=f[0].equals("1"); break;
+            case "ENDPOINT_PLAN_CAPABILITIES":
+                if (f.length != 1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException(UiText.INVALID_PLAN_PARAMETERS.text());
+                endpointPlans = f[0].equals("1"); break;
+            case "TILT_RECOVERY_JOG_CAPABILITIES":
+                if (f.length != 1 || !(f[0].equals("0") || f[0].equals("1")))
+                    throw new IllegalArgumentException(UiText.INVALID_MOTION_PROFILE_CAPABILITY.text());
+                tiltRecoveryJog = f[0].equals("1"); break;
             case "PLAN":
                 // Older firmware publishes an empty recipe after ESTOP without a run.
                 if(f.length==16 && f[0].equals("0") && f[1].equals("1") && f[2].equals("0")) {
@@ -131,6 +141,12 @@ public final class DeviceState {
     }
     public boolean positionSafe() {
         return limitsKnown && confirmed && pan >= panMin && pan <= panMax && tilt >= tiltMin && tilt <= tiltMax;
+    }
+    boolean jogDirectionAllowed(int axis,int direction) {
+        if(positionSafe()) return true;
+        return limitsKnown && confirmed && tiltRecoveryJog && jogMaximumVelocityMdeg>0 &&
+            axis==1 && pan>=panMin && pan<=panMax &&
+            (direction==-1 && tilt>tiltMax || direction==1 && tilt<tiltMin);
     }
     public void validateTarget(int x, int y) {
         if (!limitsKnown || !confirmed) throw new IllegalArgumentException(UiText.SAFETY_LIMITS_NOT_CONFIRMED.text());

@@ -27,16 +27,19 @@ final class RasterRecovery {
     String unit() { return source.mode==0?UiText.COLUMN.text():UiText.TILT_BAND.text(); }
     int startColumn(boolean previous) {
         int requested=Math.max(0,(source.mode==0?nextIndex/source.rows:source.target(nextIndex)[3])-(previous?1:0));
-        if(source.mode==0) return requested;
-        // Cutting a spherical recipe changes the interpolation divisor. Move the
-        // boundary backwards if integer rounding would alter any original latitude.
-        // Zero always reproduces the original recipe exactly; never omit a band.
+        if(source.mode==0 && source.version!=3) return requested;
+        // Cutting an interpolated recipe changes the divisor. Move the
+        // boundary backwards if rounding would alter an original coordinate.
+        boolean rectangular=source.mode==0;
+        int first=rectangular?source.startPan:source.startTilt;
+        int last=rectangular?source.endPan:source.endTilt;
+        int count=rectangular?source.columns:source.rows;
         for(int start=requested;start>=0;start--) {
-            int latitude=PanoramaPlan.interpolate(source.startTilt,source.endTilt,start,source.rows-1);
+            int coordinate=PanoramaPlan.interpolate(first,last,start,count-1);
             boolean exact=true;
-            for(int band=start;band<source.rows;band++)
-                if(PanoramaPlan.interpolate(source.startTilt,source.endTilt,band,source.rows-1)!=
-                   PanoramaPlan.interpolate(latitude,source.endTilt,band-start,source.rows-start-1)) {exact=false;break;}
+            for(int index=start;index<count;index++)
+                if(PanoramaPlan.interpolate(first,last,index,count-1)!=
+                   PanoramaPlan.interpolate(coordinate,last,index-start,count-start-1)) {exact=false;break;}
             if(exact) return start;
         }
         throw new IllegalStateException(UiText.ORIGINAL_BAND_BOUNDARIES_MISSING.text());

@@ -8,7 +8,8 @@ public final class PlotTest {
         assertEquals(2,c.ordinal);assertEquals(9,c.warningFlags);assertEquals(50999,c.targetPan);assertEquals(51713,c.pan);
         assertTrue(CaptureWarning.describe(c.warningFlags).contains("Pan-Abweichung"));
         assertTrue(CaptureWarning.describe(c.warningFlags).contains("Ziel nicht genau erreicht"));
-        for(String[] fields:new String[][]{{"1","0","8"},{"0","1","8"},{"1","1","16"},{"1","1","0"},{"1","1"}}) {
+        assertTrue(CaptureWarning.describe(CaptureWarning.parse(new String[]{"1","2","16"}).flags).contains("Restbewegung"));
+        for(String[] fields:new String[][]{{"1","0","8"},{"0","1","8"},{"1","1","32"},{"1","1","0"},{"1","1"}}) {
             try {CaptureWarning.parse(fields);fail("Malformed warning accepted");} catch(IllegalArgumentException expected) { }
         }
     }

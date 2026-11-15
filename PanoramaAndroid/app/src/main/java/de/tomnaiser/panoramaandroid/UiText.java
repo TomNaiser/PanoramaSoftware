@@ -7,6 +7,18 @@ import java.util.function.Supplier;
  * Protocol identifiers, stored values and export schemas never pass through this catalogue.
  */
 enum UiText {
+    REST_MOVEMENT_CAPTURE_WARNING("Restbewegung bei der Aufnahme", "Residual movement during capture"),
+    SETTLING_PRESET("Beruhigungszeit", "Settling time"),
+    SETTLING_SHORT("Kurz · 0,5 s", "Short · 0.5 s"),
+    SETTLING_MEDIUM("Mittel · 1,0 s", "Medium · 1.0 s"),
+    SETTLING_LONG("Lang · 2,0 s", "Long · 2.0 s"),
+    SET_PAN_ORIGIN("Pan hier nullen", "Set Pan zero here"),
+    PAN_ORIGIN_NOT_SET("Pan-Nullpunkt der Ausrichtung noch nicht gesetzt", "Pan zero for alignment has not been set"),
+    LOGICAL_PAN_WITH_RANGE("Pan %.3f° · Fahrbereich %.3f° bis %.3f°", "Pan %.3f° · travel range %.3f° to %.3f°"),
+    LOGICAL_PAN_TARGET("Logisches Pan-Ziel (°)", "Logical Pan target (°)"),
+    AUTONOMOUS_RUN("Der Kopf nimmt bei Verbindungsverlust weiter auf.", "The head continues capturing if the connection drops."),
+    STOP_ON_LOSS_RUN("Der Kopf stoppt bei Verbindungsverlust nach %d s.", "The head stops after %d s without a connection."),
+    ENDPOINT_PLAN_REQUIRES_NEWER_FIRMWARE("Dieses Raster benötigt eine neuere Firmware für exakte Endpunkte.", "This grid requires newer firmware for exact endpoints."),
     BLUETOOTH_CONNECTED_BUT_NO_V2_RESPONSE_FROM_THE("Bluetooth verbunden, aber keine V2-Antwort vom Panoramagerät", "Bluetooth connected, but no V2 response from the panorama device"),
     BLUETOOTH_CONNECTION_TIMED_OUT("Zeitüberschreitung beim Bluetooth-Aufbau", "Bluetooth connection timed out"),
     DEVICE_UNREACHABLE_CHECK_POWER_RANGE_AND_THE_PC("Gerät nicht erreichbar. Stromversorgung, Reichweite und PC-Verbindung prüfen.", "Device unreachable. Check power, range and the PC connection."),
